@@ -1,12 +1,16 @@
 
-import React from 'react';
-import { CheckCircle, Circle, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, Circle, Plus, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
+import TasksModal from './TasksModal';
+import AddTaskModal from './AddTaskModal';
 
 const TaskList = () => {
   const { tasks, updateTask } = useAppContext();
+  const [showAllTasks, setShowAllTasks] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
   
   const recentTasks = tasks.slice(0, 3);
 
@@ -30,10 +34,16 @@ const TaskList = () => {
     return (
       <div className="text-center py-4 text-gray-500">
         <p className="text-sm">Nenhuma tarefa cadastrada</p>
-        <Button size="sm" variant="ghost" className="mt-2">
+        <Button 
+          size="sm" 
+          variant="ghost" 
+          className="mt-2"
+          onClick={() => setShowAddTask(true)}
+        >
           <Plus className="h-4 w-4 mr-1" />
           Adicionar primeira tarefa
         </Button>
+        <AddTaskModal open={showAddTask} onOpenChange={setShowAddTask} />
       </div>
     );
   }
@@ -76,14 +86,26 @@ const TaskList = () => {
       ))}
       
       <div className="flex justify-between pt-2 border-t">
-        <Button size="sm" variant="ghost">
+        <Button 
+          size="sm" 
+          variant="ghost"
+          onClick={() => setShowAllTasks(true)}
+        >
+          <Eye className="h-4 w-4 mr-1" />
           Ver Todas ({tasks.length})
         </Button>
-        <Button size="sm" variant="ghost">
+        <Button 
+          size="sm" 
+          variant="ghost"
+          onClick={() => setShowAddTask(true)}
+        >
           <Plus className="h-4 w-4 mr-1" />
           Adicionar
         </Button>
       </div>
+
+      <TasksModal open={showAllTasks} onOpenChange={setShowAllTasks} />
+      <AddTaskModal open={showAddTask} onOpenChange={setShowAddTask} />
     </div>
   );
 };

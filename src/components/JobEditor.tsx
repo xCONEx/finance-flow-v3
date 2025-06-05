@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,9 +47,9 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
           eventDate: job.eventDate.split('T')[0],
           estimatedHours: job.estimatedHours,
           difficultyLevel: job.difficultyLevel,
-          logistics: typeof job.logistics === 'string' ? 0 : job.logistics || 0,
-          equipment: typeof job.equipment === 'string' ? 0 : job.equipment || 0,
-          assistance: typeof job.assistance === 'string' ? 0 : job.assistance || 0,
+          logistics: job.logistics || 0,
+          equipment: job.equipment || 0,
+          assistance: job.assistance || 0,
           status: job.status,
           category: job.category,
           discountValue: job.discountValue,
@@ -62,6 +61,29 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
       }
     }
   }, [jobId, jobs]);
+
+  // Auto-save quando status for alterado
+  const handleStatusChange = async (newStatus: Job['status']) => {
+    if (!jobId) {
+      setFormData(prev => ({ ...prev, status: newStatus }));
+      return;
+    }
+
+    try {
+      await updateJob(jobId, { status: newStatus });
+      setFormData(prev => ({ ...prev, status: newStatus }));
+      toast({
+        title: "Status Atualizado",
+        description: `Job marcado como ${newStatus}.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar status.",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Calcular valores automaticamente
   useEffect(() => {
@@ -194,7 +216,7 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value: Job['status']) => setFormData({...formData, status: value})}>
+              <Select value={formData.status} onValueChange={handleStatusChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

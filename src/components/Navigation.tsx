@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { Home, Calculator, Kanban, Users, Settings as SettingsIcon, DollarSign, Briefcase, Clock, Menu, User } from 'lucide-react';
+import { Home, Calculator, Kanban, Users, Settings as SettingsIcon, DollarSign, Briefcase, Clock, Menu, User, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { usePrivacy } from '../contexts/PrivacyContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 interface NavigationProps {
@@ -15,6 +16,7 @@ interface NavigationProps {
 const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
   const { user } = useAuth();
   const { currentTheme } = useTheme();
+  const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const mainTabs = [
@@ -105,6 +107,15 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={toggleValuesVisibility}
+                title={valuesHidden ? "Mostrar valores" : "Ocultar valores"}
+              >
+                {valuesHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => onTabChange('settings')}
                 className={activeTab === 'settings' ? `bg-gradient-to-r ${currentTheme.primary} text-white` : ''}
               >
@@ -112,6 +123,7 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
               </Button>
               
               <Avatar className="h-8 w-8 cursor-pointer" onClick={() => onTabChange('profile')}>
+                <AvatarImage src={user?.photoURL || ''} alt={user?.name || 'User'} />
                 <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white`}>
                   {user?.name?.charAt(0) || 'U'}
                 </AvatarFallback>
@@ -160,12 +172,22 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
             <Button
               variant="ghost"
               size="sm"
+              onClick={toggleValuesVisibility}
+              title={valuesHidden ? "Mostrar valores" : "Ocultar valores"}
+            >
+              {valuesHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onTabChange('settings')}
             >
               <SettingsIcon className="h-5 w-5" />
             </Button>
             
             <Avatar className="h-8 w-8 cursor-pointer" onClick={() => onTabChange('profile')}>
+              <AvatarImage src={user?.photoURL || ''} alt={user?.name || 'User'} />
               <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white`}>
                 {user?.name?.charAt(0) || 'U'}
               </AvatarFallback>
