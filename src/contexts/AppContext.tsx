@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Job, MonthlyCost, WorkItem, Task, WorkRoutine, Company } from '../types';
 import { useAuth } from './AuthContext';
@@ -70,6 +71,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const dataSource = agencyData || userData;
       if (!dataSource) {
         console.log('⚠️ Nenhuma fonte de dados encontrada');
+        setLoading(false);
         return;
       }
 
@@ -89,6 +91,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }));
         setWorkItems(convertedWorkItems);
         console.log('✅ Equipamentos importados:', convertedWorkItems.length);
+      } else {
+        setWorkItems([]);
+        console.log('📦 Nenhum equipamento encontrado');
       }
 
       // Importar despesas -> monthlyCosts
@@ -105,6 +110,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }));
         setMonthlyCosts(convertedMonthlyCosts);
         console.log('✅ Despesas importadas:', convertedMonthlyCosts.length);
+      } else {
+        setMonthlyCosts([]);
+        console.log('💰 Nenhuma despesa encontrada');
       }
 
       // Importar jobs
@@ -133,6 +141,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }));
         setJobs(convertedJobs);
         console.log('✅ Jobs importados:', convertedJobs.length);
+      } else {
+        setJobs([]);
+        console.log('💼 Nenhum job encontrado');
       }
 
       // Importar rotina
@@ -148,6 +159,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
         setWorkRoutine(convertedRoutine);
         console.log('✅ Rotina importada:', convertedRoutine);
+      } else {
+        setWorkRoutine(null);
+        console.log('⏰ Nenhuma rotina encontrada');
       }
 
       // Importar tasks
@@ -167,9 +181,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }));
           setTasks(convertedTasks);
           console.log('✅ Tasks importadas:', convertedTasks.length);
+        } else {
+          setTasks([]);
+          console.log('📋 Nenhuma task encontrada');
         }
       } catch (error) {
         console.error('⚠️ Erro ao carregar tasks:', error);
+        setTasks([]);
       }
 
       console.log('🎉 Importação concluída com sucesso!');

@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Plus, Trash2, Briefcase, Edit } from 'lucide-react';
+import { Plus, Trash2, Briefcase, Edit, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,8 +80,9 @@ const WorkItems = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="text-center">
-          <p>Carregando itens de trabalho...</p>
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Carregando itens de trabalho...</span>
         </div>
       </div>
     );
@@ -94,7 +96,14 @@ const WorkItems = () => {
             <Briefcase className="text-purple-600" />
             Itens de Trabalho
           </h2>
-          <p className="text-gray-600">Gerencie equipamentos, softwares e outros itens</p>
+          <p className="text-gray-600">
+            Gerencie equipamentos, softwares e outros itens
+            {workItems.length > 0 && (
+              <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                {workItems.length} {workItems.length === 1 ? 'item importado' : 'itens importados'}
+              </span>
+            )}
+          </p>
         </div>
         <Button onClick={() => setShowForm(true)} disabled={submitting}>
           <Plus className="h-4 w-4 mr-2" />

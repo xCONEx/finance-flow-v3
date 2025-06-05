@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, DollarSign } from 'lucide-react';
+import { Plus, Trash2, DollarSign, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,9 @@ import { useAppContext } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 
 const MonthlyCosts = () => {
-  const { monthlyCosts, addMonthlyCost, deleteMonthlyCost } = useAppContext();
+  const { monthlyCosts, addMonthlyCost, deleteMonthlyCost, loading } = useAppContext();
   const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
     category: '',
@@ -18,7 +19,7 @@ const MonthlyCosts = () => {
     month: new Date().toISOString().slice(0, 7)
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.description || !formData.category || formData.value <= 0) {
       toast({
@@ -29,29 +30,59 @@ const MonthlyCosts = () => {
       return;
     }
 
-    addMonthlyCost(formData);
-    setFormData({
-      description: '',
-      category: '',
-      value: 0,
-      month: new Date().toISOString().slice(0, 7)
-    });
-    setShowForm(false);
-    toast({
-      title: "Custo Adicionado",
-      description: "O custo mensal foi cadastrado com sucesso.",
-    });
+    setSubmitting(true);
+    try {
+      await addMonthlyCost(formData);
+      setFormData({
+        description: '',
+        category: '',
+        value: 0,
+        month: new Date().toISOString().slice(0, 7)
+      });
+      setShowForm(false);
+      toast({
+        title: "Custo Adicionado",
+        description: "O custo mensal foi cadastrado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar custo mensal.",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteMonthlyCost(id);
-    toast({
-      title: "Custo Removido",
-      description: "O custo foi excluído com sucesso.",
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteMonthlyCost(id);
+      toast({
+        title: "Custo Removido",
+        description: "O custo foi excluído com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao remover custo.",
+        variant: "destructive"
+      });
+    }
   };
 
   const totalCosts = monthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Carregando custos mensais...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -61,9 +92,16 @@ const MonthlyCosts = () => {
             <DollarSign className="text-purple-600" />
             Custos Mensais
           </h2>
-          <p className="text-gray-600">Gerencie seus custos fixos e variáveis</p>
+          <p className="text-gray-600">
+            Gerencie seus custos fixos e variáveis 
+            {monthlyCosts.length > 0 && (
+              <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                {monthlyCosts.length} {monthlyCosts.length === 1 ? 'custo importado' : 'custos importados'}
+              </span>
+            )}
+          </p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={() => setShowForm(true)} disabled={submitting}>
           <Plus className="h-4 w-4 mr-2" />
           Adicionar Custo
         </Button>
@@ -165,6 +203,7 @@ const MonthlyCosts = () => {
                     size="sm"
                     variant="outline"
                     onClick={() => handleDelete(cost.id)}
+                    disabled={submitting}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
