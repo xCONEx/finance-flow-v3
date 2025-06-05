@@ -42,6 +42,7 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@react-pdf/renderer": "^4.3.0",
     "@tanstack/react-query": "^5.56.2",
+    "@types/jspdf": "^2.0.0",
     "@types/papaparse": "^5.3.16",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

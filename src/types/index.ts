@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -25,9 +24,9 @@ export interface Job {
   eventDate: string;
   estimatedHours: number;
   difficultyLevel: 'fácil' | 'médio' | 'difícil' | 'muito difícil';
-  logistics: string;
-  equipment: string;
-  assistance: string;
+  logistics: number;
+  equipment: number;
+  assistance: number;
   status: 'pendente' | 'aprovado';
   category: string;
   discountValue: number;

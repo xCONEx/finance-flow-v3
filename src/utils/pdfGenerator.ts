@@ -2,7 +2,6 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Job, WorkItem, MonthlyCost } from '../types';
-import { useAuth } from '../contexts/AuthContext';
 
 declare module 'jspdf' {
   interface jsPDF {
