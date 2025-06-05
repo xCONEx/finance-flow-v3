@@ -1,0 +1,73 @@
+
+import React from 'react';
+import { CheckCircle, Circle, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useAppContext } from '../contexts/AppContext';
+
+const TaskList = () => {
+  const { tasks, updateTask } = useAppContext();
+  
+  const recentTasks = tasks.slice(0, 3);
+
+  const toggleTask = (taskId: string, completed: boolean) => {
+    updateTask(taskId, { completed });
+  };
+
+  if (recentTasks.length === 0) {
+    return (
+      <div className="text-center py-4 text-gray-500">
+        <p className="text-sm">Nenhuma tarefa cadastrada</p>
+        <Button size="sm" variant="ghost" className="mt-2">
+          <Plus className="h-4 w-4 mr-1" />
+          Adicionar primeira tarefa
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {recentTasks.map((task) => (
+        <div key={task.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+          <button
+            onClick={() => toggleTask(task.id, !task.completed)}
+            className="text-purple-600 hover:text-purple-700"
+          >
+            {task.completed ? (
+              <CheckCircle className="h-5 w-5" />
+            ) : (
+              <Circle className="h-5 w-5" />
+            )}
+          </button>
+          <div className="flex-1">
+            <p className={`text-sm ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+              {task.title}
+            </p>
+            {task.dueDate && (
+              <p className="text-xs text-gray-500">
+                Vence em: {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+              </p>
+            )}
+          </div>
+          <div className={`w-2 h-2 rounded-full ${
+            task.priority === 'alta' ? 'bg-red-500' :
+            task.priority === 'média' ? 'bg-yellow-500' :
+            'bg-green-500'
+          }`} />
+        </div>
+      ))}
+      
+      <div className="flex justify-between pt-2 border-t">
+        <Button size="sm" variant="ghost">
+          Ver Todas
+        </Button>
+        <Button size="sm" variant="ghost">
+          <Plus className="h-4 w-4 mr-1" />
+          Adicionar
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default TaskList;

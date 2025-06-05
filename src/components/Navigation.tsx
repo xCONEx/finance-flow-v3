@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Home, Calculator, Kanban, Users, Settings } from 'lucide-react';
+import React from 'react';
+import { Home, Calculator, Kanban, Users, Settings, DollarSign, Briefcase, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface NavigationProps {
@@ -13,6 +13,9 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'calculator', label: 'Calculadora', icon: Calculator },
     { id: 'kanban', label: 'Projetos', icon: Kanban },
+    { id: 'costs', label: 'Custos', icon: DollarSign },
+    { id: 'items', label: 'Itens', icon: Briefcase },
+    { id: 'routine', label: 'Rotina', icon: Clock },
     { id: 'team', label: 'Equipe', icon: Users },
     { id: 'settings', label: 'Configurações', icon: Settings }
   ];
@@ -32,12 +35,13 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
           </div>
 
           {/* Navigation Tabs */}
-          <div className="hidden md:flex space-x-1">
+          <div className="hidden md:flex space-x-1 overflow-x-auto">
             {tabs.map((tab) => (
               <Button
                 key={tab.id}
                 variant={activeTab === tab.id ? "default" : "ghost"}
                 onClick={() => onTabChange(tab.id)}
+                size="sm"
                 className={`flex items-center space-x-2 transition-all duration-200 ${
                   activeTab === tab.id 
                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md' 
@@ -61,8 +65,8 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
 
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-        <div className="grid grid-cols-5 h-16">
-          {tabs.map((tab) => (
+        <div className="grid grid-cols-4 h-16">
+          {tabs.slice(0, 4).map((tab) => (
             <Button
               key={tab.id}
               variant="ghost"

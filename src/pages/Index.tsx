@@ -6,6 +6,9 @@ import PricingCalculator from '../components/PricingCalculator';
 import ProjectKanban from '../components/ProjectKanban';
 import TeamManagement from '../components/TeamManagement';
 import Settings from '../components/Settings';
+import MonthlyCosts from '../components/MonthlyCosts';
+import WorkItems from '../components/WorkItems';
+import WorkRoutine from '../components/WorkRoutine';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -18,6 +21,12 @@ const Index = () => {
         return <PricingCalculator />;
       case 'kanban':
         return <ProjectKanban />;
+      case 'costs':
+        return <MonthlyCosts />;
+      case 'items':
+        return <WorkItems />;
+      case 'routine':
+        return <WorkRoutine />;
       case 'team':
         return <TeamManagement />;
       case 'settings':
