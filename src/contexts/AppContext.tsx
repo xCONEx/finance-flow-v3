@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Job, MonthlyCost, WorkItem, Task, WorkRoutine, Company } from '../types';
 import { useAuth } from './AuthContext';
-import { firestoreService, FirestoreUser, FirestoreAgency } from '../services/firestore';
+import { firestoreService } from '../services/firestore';
 
 interface AppContextType {
   jobs: Job[];
@@ -44,7 +43,7 @@ export const useAppContext = () => {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, userData, agencyData } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [monthlyCosts, setMonthlyCosts] = useState<MonthlyCost[]>([]);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -52,125 +51,155 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [workRoutine, setWorkRoutine] = useState<WorkRoutine | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(false);
-  const [currentDataSource, setCurrentDataSource] = useState<{ uid: string; isAgency: boolean } | null>(null);
 
-  // Load data from Firestore
+  // Importar dados do Firebase quando userData ou agencyData estiverem disponíveis
   useEffect(() => {
-    if (user) {
-      loadUserData();
+    if (user && (userData || agencyData)) {
+      importFirebaseData();
     }
-  }, [user]);
+  }, [user, userData, agencyData]);
 
-  const loadUserData = async () => {
+  const importFirebaseData = async () => {
     if (!user) return;
     
+    console.log('📥 Iniciando importação de dados do Firebase...');
     setLoading(true);
+    
     try {
-      // Verificar se o usuário pertence a uma agência
-      const userAgency = await firestoreService.getUserAgency(user.id);
-      
-      let userData: FirestoreUser | FirestoreAgency;
-      let dataSource: { uid: string; isAgency: boolean };
-
-      if (userAgency) {
-        // Usar dados da agência
-        userData = userAgency;
-        dataSource = { uid: userAgency.id, isAgency: true };
-      } else {
-        // Usar dados do usuário individual
-        const individualData = await firestoreService.getUserData(user.id);
-        if (!individualData) return;
-        userData = individualData;
-        dataSource = { uid: user.id, isAgency: false };
+      // Determinar qual fonte de dados usar (agência ou usuário individual)
+      const dataSource = agencyData || userData;
+      if (!dataSource) {
+        console.log('⚠️ Nenhuma fonte de dados encontrada');
+        return;
       }
 
-      setCurrentDataSource(dataSource);
+      console.log('📊 Importando dados de:', agencyData ? 'agência' : 'usuário individual');
 
-      // Converter equipaments para workItems
-      const convertedWorkItems: WorkItem[] = userData.equipaments.map(item => ({
-        id: item.id,
-        description: item.description,
-        category: item.category,
-        value: item.value,
-        depreciationYears: 5, // valor padrão
-        createdAt: new Date().toISOString(),
-        userId: user.id
-      }));
+      // Importar equipamentos -> workItems
+      if (dataSource.equipaments && dataSource.equipaments.length > 0) {
+        console.log(`📦 Importando ${dataSource.equipaments.length} equipamentos...`);
+        const convertedWorkItems: WorkItem[] = dataSource.equipaments.map(item => ({
+          id: item.id,
+          description: item.description,
+          category: item.category,
+          value: item.value,
+          depreciationYears: 5, // valor padrão
+          createdAt: new Date().toISOString(),
+          userId: user.id
+        }));
+        setWorkItems(convertedWorkItems);
+        console.log('✅ Equipamentos importados:', convertedWorkItems.length);
+      }
 
-      // Converter expenses para monthlyCosts
-      const convertedMonthlyCosts: MonthlyCost[] = userData.expenses.map(expense => ({
-        id: expense.id,
-        description: expense.description,
-        category: expense.category,
-        value: expense.value,
-        month: new Date().toISOString().slice(0, 7), // formato YYYY-MM
-        createdAt: new Date().toISOString(),
-        userId: user.id
-      }));
+      // Importar despesas -> monthlyCosts
+      if (dataSource.expenses && dataSource.expenses.length > 0) {
+        console.log(`💰 Importando ${dataSource.expenses.length} despesas...`);
+        const convertedMonthlyCosts: MonthlyCost[] = dataSource.expenses.map(expense => ({
+          id: expense.id,
+          description: expense.description,
+          category: expense.category,
+          value: expense.value,
+          month: new Date().toISOString().slice(0, 7), // formato YYYY-MM
+          createdAt: new Date().toISOString(),
+          userId: user.id
+        }));
+        setMonthlyCosts(convertedMonthlyCosts);
+        console.log('✅ Despesas importadas:', convertedMonthlyCosts.length);
+      }
 
-      // Converter jobs
-      const convertedJobs: Job[] = userData.jobs.map(job => ({
-        id: crypto.randomUUID(),
-        description: job.descriptions,
-        client: job.client,
-        eventDate: job.eventDate,
-        estimatedHours: job.hours,
-        difficultyLevel: job.difficulty as any,
-        logistics: job.logistics,
-        equipment: job.equipment,
-        assistance: job.assistance,
-        status: job.status as any,
-        category: job.category,
-        discountValue: 0,
-        totalCosts: job.value,
-        serviceValue: job.value,
-        valueWithDiscount: job.value,
-        profitMargin: job.profit,
-        createdAt: job.date,
-        updatedAt: job.date,
-        userId: user.id
-      }));
+      // Importar jobs
+      if (dataSource.jobs && dataSource.jobs.length > 0) {
+        console.log(`💼 Importando ${dataSource.jobs.length} jobs...`);
+        const convertedJobs: Job[] = dataSource.jobs.map(job => ({
+          id: crypto.randomUUID(),
+          description: job.descriptions,
+          client: job.client,
+          eventDate: job.eventDate,
+          estimatedHours: job.hours,
+          difficultyLevel: job.difficulty as any,
+          logistics: job.logistics,
+          equipment: job.equipment,
+          assistance: job.assistance,
+          status: job.status as any,
+          category: job.category,
+          discountValue: 0,
+          totalCosts: job.value,
+          serviceValue: job.value,
+          valueWithDiscount: job.value,
+          profitMargin: job.profit,
+          createdAt: job.date,
+          updatedAt: job.date,
+          userId: user.id
+        }));
+        setJobs(convertedJobs);
+        console.log('✅ Jobs importados:', convertedJobs.length);
+      }
 
-      // Converter routine
-      const convertedRoutine: WorkRoutine = {
-        desiredSalary: userData.routine.desiredSalary,
-        workDaysPerMonth: userData.routine.workDays,
-        workHoursPerDay: userData.routine.dailyHours,
-        valuePerDay: userData.routine.dalilyValue,
-        valuePerHour: userData.routine.dalilyValue / userData.routine.dailyHours,
-        userId: user.id
-      };
+      // Importar rotina
+      if (dataSource.routine) {
+        console.log('⏰ Importando rotina de trabalho...');
+        const convertedRoutine: WorkRoutine = {
+          desiredSalary: dataSource.routine.desiredSalary,
+          workDaysPerMonth: dataSource.routine.workDays,
+          workHoursPerDay: dataSource.routine.dailyHours,
+          valuePerDay: dataSource.routine.dalilyValue,
+          valuePerHour: dataSource.routine.dalilyValue / dataSource.routine.dailyHours,
+          userId: user.id
+        };
+        setWorkRoutine(convertedRoutine);
+        console.log('✅ Rotina importada:', convertedRoutine);
+      }
 
-      // Carregar tasks
-      const userTasks = await firestoreService.getUserTasks(user.id);
-      const convertedTasks: Task[] = userTasks.map(task => ({
-        id: crypto.randomUUID(),
-        title: task.name,
-        description: task.description,
-        completed: task.status === 'completed',
-        priority: 'média' as any,
-        dueDate: task.date,
-        createdAt: task.date,
-        userId: user.id
-      }));
+      // Importar tasks
+      try {
+        console.log('📋 Carregando tasks do usuário...');
+        const userTasks = await firestoreService.getUserTasks(user.id);
+        if (userTasks && userTasks.length > 0) {
+          const convertedTasks: Task[] = userTasks.map(task => ({
+            id: crypto.randomUUID(),
+            title: task.name,
+            description: task.description,
+            completed: task.status === 'completed',
+            priority: 'média' as any,
+            dueDate: task.date,
+            createdAt: task.date,
+            userId: user.id
+          }));
+          setTasks(convertedTasks);
+          console.log('✅ Tasks importadas:', convertedTasks.length);
+        }
+      } catch (error) {
+        console.error('⚠️ Erro ao carregar tasks:', error);
+      }
 
-      setWorkItems(convertedWorkItems);
-      setMonthlyCosts(convertedMonthlyCosts);
-      setJobs(convertedJobs);
-      setWorkRoutine(convertedRoutine);
-      setTasks(convertedTasks);
+      console.log('🎉 Importação concluída com sucesso!');
+      console.log('📊 Resumo da importação:', {
+        workItems: workItems.length,
+        monthlyCosts: monthlyCosts.length,
+        jobs: jobs.length,
+        tasks: tasks.length,
+        workRoutine: !!workRoutine
+      });
 
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('❌ Erro durante a importação:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const getCurrentDataSource = () => {
+    return {
+      uid: agencyData ? agencyData.id : user?.id || '',
+      isAgency: !!agencyData
+    };
+  };
+
   // Work Items operations
   const addWorkItem = async (itemData: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => {
-    if (!user || !currentDataSource) return;
+    if (!user) return;
 
+    const dataSource = getCurrentDataSource();
     const newItem = {
       id: crypto.randomUUID(),
       description: itemData.description,
@@ -179,7 +208,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     try {
-      await firestoreService.addEquipament(currentDataSource.uid, newItem);
+      await firestoreService.addEquipament(dataSource.uid, newItem);
       
       const convertedItem: WorkItem = {
         ...itemData,
@@ -196,14 +225,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateWorkItem = async (id: string, itemData: Partial<WorkItem>) => {
-    if (!user || !currentDataSource) return;
+    if (!user) return;
+
+    const dataSource = getCurrentDataSource();
 
     try {
-      // Encontrar o item atual
       const currentItem = workItems.find(item => item.id === id);
       if (!currentItem) return;
 
-      // Remover o item antigo
       const oldFirestoreItem = {
         id: currentItem.id,
         description: currentItem.description,
@@ -211,9 +240,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: currentItem.value
       };
       
-      await firestoreService.removeEquipament(currentDataSource.uid, oldFirestoreItem);
+      await firestoreService.removeEquipament(dataSource.uid, oldFirestoreItem);
 
-      // Adicionar o item atualizado
       const updatedFirestoreItem = {
         id: id,
         description: itemData.description || currentItem.description,
@@ -221,7 +249,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: itemData.value || currentItem.value
       };
 
-      await firestoreService.addEquipament(currentDataSource.uid, updatedFirestoreItem);
+      await firestoreService.addEquipament(dataSource.uid, updatedFirestoreItem);
 
       setWorkItems(prev => prev.map(item => 
         item.id === id ? { ...item, ...itemData } : item
@@ -233,7 +261,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteWorkItem = async (id: string) => {
-    if (!user || !currentDataSource) return;
+    if (!user) return;
+
+    const dataSource = getCurrentDataSource();
 
     try {
       const itemToDelete = workItems.find(item => item.id === id);
@@ -246,7 +276,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: itemToDelete.value
       };
 
-      await firestoreService.removeEquipament(currentDataSource.uid, firestoreItem);
+      await firestoreService.removeEquipament(dataSource.uid, firestoreItem);
       setWorkItems(prev => prev.filter(item => item.id !== id));
     } catch (error) {
       console.error('Error deleting work item:', error);
@@ -256,8 +286,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Monthly Costs operations
   const addMonthlyCost = async (costData: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId'>) => {
-    if (!user || !currentDataSource) return;
+    if (!user) return;
 
+    const dataSource = getCurrentDataSource();
     const newCost = {
       id: crypto.randomUUID(),
       description: costData.description,
@@ -266,7 +297,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     try {
-      await firestoreService.addExpense(currentDataSource.uid, newCost);
+      await firestoreService.addExpense(dataSource.uid, newCost);
       
       const convertedCost: MonthlyCost = {
         ...costData,
@@ -283,7 +314,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateMonthlyCost = async (id: string, costData: Partial<MonthlyCost>) => {
-    if (!user || !currentDataSource) return;
+    if (!user) return;
+
+    const dataSource = getCurrentDataSource();
 
     try {
       const currentCost = monthlyCosts.find(cost => cost.id === id);
@@ -296,7 +329,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: currentCost.value
       };
       
-      await firestoreService.removeExpense(currentDataSource.uid, oldFirestoreCost);
+      await firestoreService.removeExpense(dataSource.uid, oldFirestoreCost);
 
       const updatedFirestoreCost = {
         id: id,
@@ -305,7 +338,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: costData.value || currentCost.value
       };
 
-      await firestoreService.addExpense(currentDataSource.uid, updatedFirestoreCost);
+      await firestoreService.addExpense(dataSource.uid, updatedFirestoreCost);
 
       setMonthlyCosts(prev => prev.map(cost => 
         cost.id === id ? { ...cost, ...costData } : cost
@@ -317,7 +350,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteMonthlyCost = async (id: string) => {
-    if (!user || !currentDataSource) return;
+    if (!user) return;
+
+    const dataSource = getCurrentDataSource();
 
     try {
       const costToDelete = monthlyCosts.find(cost => cost.id === id);
@@ -330,7 +365,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: costToDelete.value
       };
 
-      await firestoreService.removeExpense(currentDataSource.uid, firestoreCost);
+      await firestoreService.removeExpense(dataSource.uid, firestoreCost);
       setMonthlyCosts(prev => prev.filter(cost => cost.id !== id));
     } catch (error) {
       console.error('Error deleting monthly cost:', error);
@@ -340,8 +375,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Work Routine operations
   const updateWorkRoutine = async (routine: Omit<WorkRoutine, 'userId'>) => {
-    if (!user || !currentDataSource) return;
+    if (!user) return;
 
+    const dataSource = getCurrentDataSource();
     const firestoreRoutine = {
       dailyHours: routine.workHoursPerDay,
       dalilyValue: routine.valuePerDay,
@@ -350,7 +386,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     try {
-      await firestoreService.updateRoutine(currentDataSource.uid, firestoreRoutine);
+      await firestoreService.updateRoutine(dataSource.uid, firestoreRoutine);
       
       const newRoutine: WorkRoutine = {
         ...routine,
