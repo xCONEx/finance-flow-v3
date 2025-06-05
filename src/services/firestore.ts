@@ -10,7 +10,8 @@ import {
   arrayUnion,
   arrayRemove,
   deleteField,
-  addDoc
+  addDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { User } from '../types';
@@ -252,7 +253,8 @@ class FirestoreService {
       console.log('📋 Buscando tasks para ownerUID:', userId);
       const tasksQuery = query(
         collection(db, 'tasks'),
-        where('ownerUID', '==', userId)
+        where('ownerUID', '==', userId),
+        where('status', '!=', 'deleted') // Filtrar tasks deletadas
       );
       const querySnapshot = await getDocs(tasksQuery);
       const tasks = querySnapshot.docs.map(doc => ({
@@ -281,9 +283,9 @@ class FirestoreService {
 
   async updateTask(taskId: string, taskData: Partial<FirestoreTask>): Promise<void> {
     try {
-      console.log('📝 Atualizando task:', taskId);
+      console.log('📝 Atualizando task:', taskId, taskData);
       await updateDoc(doc(db, 'tasks', taskId), taskData);
-      console.log('✅ Task atualizada');
+      console.log('✅ Task atualizada no Firestore');
     } catch (error) {
       console.error('❌ Erro ao atualizar task:', error);
       throw error;
@@ -292,11 +294,9 @@ class FirestoreService {
 
   async deleteTask(taskId: string): Promise<void> {
     try {
-      console.log('🗑️ Deletando task:', taskId);
-      await updateDoc(doc(db, 'tasks', taskId), {
-        status: 'deleted'
-      });
-      console.log('✅ Task deletada');
+      console.log('🗑️ Deletando task completamente:', taskId);
+      await deleteDoc(doc(db, 'tasks', taskId));
+      console.log('✅ Task deletada do Firestore');
     } catch (error) {
       console.error('❌ Erro ao deletar task:', error);
       throw error;

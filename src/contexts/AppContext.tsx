@@ -507,13 +507,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const dataSource = getCurrentDataSource();
 
     try {
-      const currentJob = jobs.find(job => job.id === id);
-      if (!currentJob) return;
-
-      // Atualizar estado local primeiro
+      console.log('🔄 Atualizando job:', id, jobData);
+      
+      // Atualizar estado local primeiro para feedback imediato
       setJobs(prev => prev.map(job => 
         job.id === id ? { ...job, ...jobData, updatedAt: new Date().toISOString() } : job
       ));
+
+      const currentJob = jobs.find(job => job.id === id);
+      if (!currentJob) return;
 
       // Converter para formato Firebase
       const updatedJob = { ...currentJob, ...jobData };
@@ -529,7 +531,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         hours: updatedJob.estimatedHours,
         logistics: typeof updatedJob.logistics === 'number' ? updatedJob.logistics : 0,
         profit: updatedJob.profitMargin,
-        status: updatedJob.status,
+        status: updatedJob.status, // Manter o status atualizado
         value: updatedJob.serviceValue
       };
 
@@ -539,7 +541,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await firestoreService.getUserData(dataSource.uid);
       
       if (currentData && currentData.jobs) {
-        // Atualizar array de jobs
+        // Atualizar array de jobs no Firebase
         const updatedJobs = currentData.jobs.map((job: any) => 
           job.date === currentJob.createdAt ? firestoreJob : job
         );
@@ -551,9 +553,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      console.log('✅ Job atualizado com sucesso');
+      console.log('✅ Job atualizado no Firebase');
     } catch (error) {
       console.error('❌ Erro ao atualizar job:', error);
+      // Reverter mudança local em caso de erro
+      setJobs(prev => prev.map(job => 
+        job.id === id ? { ...job, ...jobData } : job
+      ));
       throw error;
     }
   };
@@ -593,7 +599,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Tasks operations (mantendo a estrutura existente por enquanto)
+  // Tasks operations - corrigindo para melhor sincronização
   const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
     if (!user) return;
     
@@ -601,7 +607,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       name: taskData.title,
       description: taskData.description,
       date: taskData.dueDate || new Date().toISOString(),
-      status: taskData.completed ? 'completed' : 'pending',
+      status: taskData.completed ? 'completed' : taskData.status || 'todo',
       ownerUID: user.id
     };
 
@@ -627,19 +633,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) return;
 
     try {
-      const firestoreUpdate = {
-        name: taskData.title,
-        description: taskData.description,
-        date: taskData.dueDate,
-        status: taskData.completed ? 'completed' : 'pending'
-      };
+      // Atualizar no Firebase primeiro
+      const firestoreUpdate: any = {};
+      
+      if (taskData.title !== undefined) {
+        firestoreUpdate.name = taskData.title;
+      }
+      if (taskData.description !== undefined) {
+        firestoreUpdate.description = taskData.description;
+      }
+      if (taskData.dueDate !== undefined) {
+        firestoreUpdate.date = taskData.dueDate;
+      }
+      if (taskData.completed !== undefined) {
+        firestoreUpdate.status = taskData.completed ? 'completed' : 'pending';
+      }
+      if (taskData.status !== undefined) {
+        firestoreUpdate.status = taskData.status;
+      }
 
+      console.log('🔄 Atualizando task no Firebase:', id, firestoreUpdate);
       await firestoreService.updateTask(id, firestoreUpdate);
       
+      // Atualizar estado local apenas após sucesso no Firebase
       setTasks(prev => prev.map(task => 
         task.id === id ? { ...task, ...taskData } : task
       ));
-      console.log('✅ Task atualizada no Firebase');
+      console.log('✅ Task atualizada no Firebase e estado local');
     } catch (error) {
       console.error('❌ Erro ao atualizar task:', error);
       throw error;
@@ -648,9 +668,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteTask = async (id: string) => {
     try {
+      console.log('🗑️ Deletando task:', id);
       await firestoreService.deleteTask(id);
+      
+      // Remover do estado local apenas após sucesso no Firebase
       setTasks(prev => prev.filter(task => task.id !== id));
-      console.log('✅ Task deletada no Firebase');
+      console.log('✅ Task deletada do Firebase e estado local');
     } catch (error) {
       console.error('❌ Erro ao deletar task:', error);
       throw error;
