@@ -9,8 +9,13 @@ export const formatCurrency = (value: number): string => {
 };
 
 export const parseCurrency = (value: string): number => {
-  const numericValue = value.replace(/[^\d,]/g, '').replace(',', '.');
-  return parseFloat(numericValue) || 0;
+  // Remove all non-numeric characters except comma and dot
+  const cleanValue = value.replace(/[^\d,]/g, '');
+  
+  // Replace comma with dot for parsing
+  const normalizedValue = cleanValue.replace(',', '.');
+  
+  return parseFloat(normalizedValue) || 0;
 };
 
 export const formatCurrencyInput = (value: string): string => {
@@ -31,4 +36,12 @@ export const getDifficultyMultiplier = (difficulty: string): number => {
     case 'muito difícil': return 2;
     default: return 1;
   }
+};
+
+export const formatPercentage = (value: number): string => {
+  return `${value.toFixed(1)}%`;
+};
+
+export const formatNumber = (value: number): string => {
+  return value.toLocaleString('pt-BR');
 };

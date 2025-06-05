@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus } from 'lucide-react';
@@ -9,10 +9,12 @@ import { formatCurrency } from '../utils/formatters';
 import CostDistributionChart from './CostDistributionChart';
 import RecentJobs from './RecentJobs';
 import TaskList from './TaskList';
+import AddTaskModal from './AddTaskModal';
 
 const Dashboard = () => {
-  const { jobs, monthlyCosts, workItems, workRoutine, tasks } = useAppContext();
+  const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useAppContext();
   const { currentTheme } = useTheme();
+  const [showTaskModal, setShowTaskModal] = useState(false);
 
   const approvedJobs = jobs.filter(job => job.status === 'aprovado');
   const totalJobs = approvedJobs.length;
@@ -56,6 +58,39 @@ const Dashboard = () => {
     }
   ];
 
+  const handleQuickAddCost = () => {
+    addMonthlyCost({
+      description: 'Novo Custo',
+      category: 'Geral',
+      value: 0,
+      month: new Date().toISOString().slice(0, 7)
+    });
+  };
+
+  const handleExportReport = () => {
+    // Generate a simple report
+    const report = {
+      data: new Date().toISOString(),
+      totalJobs,
+      totalJobsValue,
+      totalMonthlyCosts,
+      totalEquipmentValue,
+      hourlyRate,
+      completedTasks,
+      totalTasks
+    };
+
+    const dataStr = JSON.stringify(report, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `financeflow-report-${new Date().toISOString().slice(0, 10)}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       {/* Header */}
@@ -64,10 +99,13 @@ const Dashboard = () => {
         <p className="text-gray-600 dark:text-gray-400">Visão geral do seu negócio</p>
       </div>
 
-      {/* Metrics Cards */}
+      {/* Metrics Cards with Hover Effects */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((metric, index) => (
-          <Card key={index} className={metric.bgColor}>
+          <Card 
+            key={index} 
+            className={`${metric.bgColor} transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer`}
+          >
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -84,7 +122,7 @@ const Dashboard = () => {
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Cost Distribution Chart */}
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-1 transition-all duration-300 hover:shadow-lg">
           <CardHeader>
             <CardTitle>Distribuição de Custos</CardTitle>
           </CardHeader>
@@ -94,7 +132,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Recent Jobs */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 transition-all duration-300 hover:shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Últimos Jobs Calculados</CardTitle>
             <Button variant="outline" size="sm">
@@ -110,13 +148,17 @@ const Dashboard = () => {
       {/* Tasks and Quick Actions */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Task List */}
-        <Card>
+        <Card className="transition-all duration-300 hover:shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5" />
               Tarefas ({completedTasks}/{totalTasks})
             </CardTitle>
-            <Button size="sm" className={`bg-gradient-to-r ${currentTheme.primary}`}>
+            <Button 
+              size="sm" 
+              className={`bg-gradient-to-r ${currentTheme.primary}`}
+              onClick={() => setShowTaskModal(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar
             </Button>
@@ -127,20 +169,31 @@ const Dashboard = () => {
         </Card>
 
         {/* Quick Actions */}
-        <Card>
+        <Card className="transition-all duration-300 hover:shadow-lg">
           <CardHeader>
             <CardTitle>Ações Rápidas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90`}>
+            <Button 
+              className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
+              onClick={() => window.location.hash = '#calculadora'}
+            >
               <Calculator className="mr-2 h-4 w-4" />
               Nova Calculadora
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full transition-all duration-300 hover:scale-105"
+              onClick={handleQuickAddCost}
+            >
               <DollarSign className="mr-2 h-4 w-4" />
               Adicionar Custo
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full transition-all duration-300 hover:scale-105"
+              onClick={handleExportReport}
+            >
               <TrendingUp className="mr-2 h-4 w-4" />
               Exportar Relatório
             </Button>
@@ -167,6 +220,8 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      <AddTaskModal open={showTaskModal} onOpenChange={setShowTaskModal} />
     </div>
   );
 };

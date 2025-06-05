@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Briefcase } from 'lucide-react';
+import { Plus, Trash2, Briefcase, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { useAppContext } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -74,7 +75,7 @@ const WorkItems = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
           <CardContent className="p-6">
             <div className="text-center">
               <h3 className="text-lg font-semibold text-blue-800">Total de Itens</h3>
@@ -85,7 +86,7 @@ const WorkItems = () => {
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
           <CardContent className="p-6">
             <div className="text-center">
               <h3 className="text-lg font-semibold text-green-800">Valor Equipamentos</h3>
@@ -128,13 +129,11 @@ const WorkItems = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="value">Valor (R$)</Label>
-                  <Input
+                  <CurrencyInput
                     id="value"
-                    type="number"
-                    step="0.01"
                     value={formData.value}
-                    onChange={(e) => setFormData({...formData, value: Number(e.target.value)})}
-                    placeholder="15000.00"
+                    onChange={(value) => setFormData({...formData, value})}
+                    placeholder="15.000,00"
                   />
                 </div>
                 <div className="space-y-2">
@@ -142,6 +141,7 @@ const WorkItems = () => {
                   <Input
                     id="depreciationYears"
                     type="number"
+                    inputMode="numeric"
                     min="1"
                     max="20"
                     value={formData.depreciationYears}
@@ -164,7 +164,7 @@ const WorkItems = () => {
       {/* Items List */}
       <div className="grid gap-4">
         {workItems.map((item) => (
-          <Card key={item.id}>
+          <Card key={item.id} className="transition-all duration-300 hover:shadow-lg">
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
                 <div>
@@ -181,7 +181,15 @@ const WorkItems = () => {
                   <Button
                     size="sm"
                     variant="outline"
+                    className="transition-all duration-300 hover:scale-105"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handleDelete(item.id)}
+                    className="transition-all duration-300 hover:scale-105"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

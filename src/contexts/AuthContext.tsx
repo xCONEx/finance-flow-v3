@@ -36,7 +36,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Mock login - replace with Firebase
+    // Check for admin credentials
+    if (email === 'adm.financeflow@gmail.com' && password === 'senha123') {
+      const adminUser: User = {
+        id: 'admin-1',
+        email,
+        name: 'Administrador',
+        userType: 'admin',
+        createdAt: new Date().toISOString()
+      };
+      setUser(adminUser);
+      localStorage.setItem('financeflow_user', JSON.stringify(adminUser));
+      return;
+    }
+
+    // Mock login for regular users
     const mockUser: User = {
       id: '1',
       email,

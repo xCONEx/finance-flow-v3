@@ -7,13 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { CurrencyInput } from '@/components/ui/currency-input';
+import { PercentageInput } from '@/components/ui/percentage-input';
 import { toast } from '@/hooks/use-toast';
 import { useAppContext } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, calculateDepreciation, getDifficultyMultiplier } from '../utils/formatters';
 
 const PricingCalculator = () => {
-  const { calculateJobPrice, addJob, workRoutine } = useAppContext();
+  const { addJob, workRoutine, monthlyCosts, workItems } = useAppContext();
   const { currentTheme } = useTheme();
   
   const [formData, setFormData] = useState({
@@ -23,17 +25,24 @@ const PricingCalculator = () => {
     estimatedHours: 0,
     difficultyLevel: 'médio' as 'fácil' | 'médio' | 'difícil' | 'muito difícil',
     logistics: '',
+    logisticsValue: 0,
     equipment: '',
+    equipmentValue: 0,
     assistance: '',
+    assistanceValue: 0,
     category: '',
-    discountValue: 0
+    discountPercentage: 0
   });
 
   const [calculatedPrice, setCalculatedPrice] = useState({
     totalCosts: 0,
     serviceValue: 0,
     valueWithDiscount: 0,
-    hourlyRate: 0
+    hourlyRate: 0,
+    baseHourlyRate: 0,
+    monthlyCostsPortion: 0,
+    depreciationCosts: 0,
+    additionalCosts: 0
   });
 
   const jobCategories = [
@@ -66,12 +75,49 @@ const PricingCalculator = () => {
       return;
     }
 
-    const result = calculateJobPrice(formData.estimatedHours, formData.difficultyLevel);
-    const valueWithDiscount = result.totalCosts - formData.discountValue;
+    // Calcular valor base por hora da rotina
+    const baseHourlyRate = workRoutine.valuePerHour;
+
+    // Calcular custos mensais proporcionais às horas
+    const totalMonthlyCosts = monthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
+    const monthlyCostsPortion = (totalMonthlyCosts / (workRoutine.workDaysPerMonth * workRoutine.workHoursPerDay)) * formData.estimatedHours;
+
+    // Calcular depreciação de equipamentos
+    const totalDepreciation = workItems.reduce((sum, item) => {
+      return sum + calculateDepreciation(item.value, item.depreciationYears);
+    }, 0) * formData.estimatedHours;
+
+    // Custos adicionais do projeto
+    const additionalCosts = formData.logisticsValue + formData.equipmentValue + formData.assistanceValue;
+
+    // Aplicar multiplicador de dificuldade
+    const difficultyMultiplier = getDifficultyMultiplier(formData.difficultyLevel);
+    const adjustedHourlyRate = baseHourlyRate * difficultyMultiplier;
+
+    // Calcular valor total do serviço
+    const serviceValue = adjustedHourlyRate * formData.estimatedHours;
+    
+    // Somar todos os custos
+    const totalCosts = serviceValue + monthlyCostsPortion + totalDepreciation + additionalCosts;
+
+    // Aplicar desconto
+    const discountAmount = (totalCosts * formData.discountPercentage) / 100;
+    const valueWithDiscount = totalCosts - discountAmount;
     
     setCalculatedPrice({
-      ...result,
-      valueWithDiscount
+      totalCosts,
+      serviceValue,
+      valueWithDiscount,
+      hourlyRate: adjustedHourlyRate,
+      baseHourlyRate,
+      monthlyCostsPortion,
+      depreciationCosts: totalDepreciation,
+      additionalCosts
+    });
+
+    toast({
+      title: "Preço Calculado!",
+      description: "O orçamento foi calculado com base nos seus dados.",
     });
   };
 
@@ -96,7 +142,7 @@ const PricingCalculator = () => {
       assistance: formData.assistance,
       status: 'pendente',
       category: formData.category,
-      discountValue: formData.discountValue,
+      discountValue: (calculatedPrice.totalCosts * formData.discountPercentage) / 100,
       totalCosts: calculatedPrice.totalCosts,
       serviceValue: calculatedPrice.serviceValue,
       valueWithDiscount: calculatedPrice.valueWithDiscount,
@@ -116,16 +162,23 @@ const PricingCalculator = () => {
       estimatedHours: 0,
       difficultyLevel: 'médio',
       logistics: '',
+      logisticsValue: 0,
       equipment: '',
+      equipmentValue: 0,
       assistance: '',
+      assistanceValue: 0,
       category: '',
-      discountValue: 0
+      discountPercentage: 0
     });
     setCalculatedPrice({
       totalCosts: 0,
       serviceValue: 0,
       valueWithDiscount: 0,
-      hourlyRate: 0
+      hourlyRate: 0,
+      baseHourlyRate: 0,
+      monthlyCostsPortion: 0,
+      depreciationCosts: 0,
+      additionalCosts: 0
     });
   };
 
@@ -182,9 +235,10 @@ const PricingCalculator = () => {
                 <Input
                   id="estimatedHours"
                   type="number"
+                  inputMode="numeric"
                   placeholder="8"
-                  value={formData.estimatedHours}
-                  onChange={(e) => setFormData({...formData, estimatedHours: Number(e.target.value)})}
+                  value={formData.estimatedHours || ''}
+                  onChange={(e) => setFormData({...formData, estimatedHours: Number(e.target.value) || 0})}
                 />
               </div>
 
@@ -218,46 +272,69 @@ const PricingCalculator = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="assistance">Assistência</Label>
-                <Input
-                  id="assistance"
-                  placeholder="Número de assistentes"
-                  value={formData.assistance}
-                  onChange={(e) => setFormData({...formData, assistance: e.target.value})}
+                <Label htmlFor="discountPercentage">Desconto (%)</Label>
+                <PercentageInput
+                  id="discountPercentage"
+                  value={formData.discountPercentage}
+                  onChange={(value) => setFormData({...formData, discountPercentage: value})}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="logistics">Logística</Label>
-              <Textarea
-                id="logistics"
-                placeholder="Detalhes da logística..."
-                value={formData.logistics}
-                onChange={(e) => setFormData({...formData, logistics: e.target.value})}
-              />
-            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="logistics">Logística</Label>
+                <Textarea
+                  id="logistics"
+                  placeholder="Detalhes da logística..."
+                  value={formData.logistics}
+                  onChange={(e) => setFormData({...formData, logistics: e.target.value})}
+                />
+                <div className="space-y-2">
+                  <Label htmlFor="logisticsValue">Valor da Logística</Label>
+                  <CurrencyInput
+                    id="logisticsValue"
+                    value={formData.logisticsValue}
+                    onChange={(value) => setFormData({...formData, logisticsValue: value})}
+                  />
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="equipment">Equipamentos</Label>
-              <Textarea
-                id="equipment"
-                placeholder="Equipamentos necessários..."
-                value={formData.equipment}
-                onChange={(e) => setFormData({...formData, equipment: e.target.value})}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="equipment">Equipamentos</Label>
+                <Textarea
+                  id="equipment"
+                  placeholder="Equipamentos necessários..."
+                  value={formData.equipment}
+                  onChange={(e) => setFormData({...formData, equipment: e.target.value})}
+                />
+                <div className="space-y-2">
+                  <Label htmlFor="equipmentValue">Valor dos Equipamentos</Label>
+                  <CurrencyInput
+                    id="equipmentValue"
+                    value={formData.equipmentValue}
+                    onChange={(value) => setFormData({...formData, equipmentValue: value})}
+                  />
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="discount">Valor de Desconto (R$)</Label>
-              <Input
-                id="discount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.discountValue}
-                onChange={(e) => setFormData({...formData, discountValue: Number(e.target.value)})}
-              />
+              <div className="space-y-2">
+                <Label htmlFor="assistance">Assistência</Label>
+                <Textarea
+                  id="assistance"
+                  placeholder="Detalhes da assistência..."
+                  value={formData.assistance}
+                  onChange={(e) => setFormData({...formData, assistance: e.target.value})}
+                />
+                <div className="space-y-2">
+                  <Label htmlFor="assistanceValue">Valor da Assistência</Label>
+                  <CurrencyInput
+                    id="assistanceValue"
+                    value={formData.assistanceValue}
+                    onChange={(value) => setFormData({...formData, assistanceValue: value})}
+                  />
+                </div>
+              </div>
             </div>
 
             <Button onClick={calculatePrice} className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90`}>
@@ -277,33 +354,39 @@ const PricingCalculator = () => {
               <>
                 <div className="space-y-4">
                   <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
-                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Custos Totais</h3>
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor Final</h3>
                     <div className={`text-2xl font-bold text-${currentTheme.accent}`}>
-                      {formatCurrency(calculatedPrice.totalCosts)}
+                      {formatCurrency(calculatedPrice.valueWithDiscount)}
                     </div>
                   </div>
                   
-                  <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
-                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor do Serviço</h3>
-                    <div className={`text-2xl font-bold text-${currentTheme.accent}`}>
-                      {formatCurrency(calculatedPrice.serviceValue)}
+                  <div className="text-sm space-y-2">
+                    <div className="flex justify-between">
+                      <span>Valor/Hora:</span>
+                      <span className="font-semibold">{formatCurrency(calculatedPrice.hourlyRate)}</span>
                     </div>
-                  </div>
-
-                  {formData.discountValue > 0 && (
-                    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
-                      <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor com Desconto</h3>
-                      <div className={`text-2xl font-bold text-${currentTheme.accent}`}>
-                        {formatCurrency(calculatedPrice.valueWithDiscount)}
+                    <div className="flex justify-between">
+                      <span>Serviço:</span>
+                      <span>{formatCurrency(calculatedPrice.serviceValue)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Custos Mensais:</span>
+                      <span>{formatCurrency(calculatedPrice.monthlyCostsPortion)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Depreciação:</span>
+                      <span>{formatCurrency(calculatedPrice.depreciationCosts)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Custos Adicionais:</span>
+                      <span>{formatCurrency(calculatedPrice.additionalCosts)}</span>
+                    </div>
+                    {formData.discountPercentage > 0 && (
+                      <div className="flex justify-between text-red-600">
+                        <span>Desconto ({formData.discountPercentage}%):</span>
+                        <span>-{formatCurrency((calculatedPrice.totalCosts * formData.discountPercentage) / 100)}</span>
                       </div>
-                    </div>
-                  )}
-
-                  <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
-                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor/Hora (com dificuldade)</h3>
-                    <div className={`text-lg font-bold text-${currentTheme.accent}`}>
-                      {formatCurrency(calculatedPrice.hourlyRate)}
-                    </div>
+                    )}
                   </div>
                 </div>
 
