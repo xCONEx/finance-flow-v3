@@ -30,6 +30,7 @@ interface AppContextType {
     valueWithDiscount?: number;
     hourlyRate: number;
   };
+  importJsonData: (jsonData: any) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -76,7 +77,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       console.log('📊 Importando dados de:', agencyData ? 'agência' : 'usuário individual');
 
-      // Importar equipamentos -> workItems (corrigindo para "equipments")
+      // Importar equipamentos -> workItems (corrigindo para "equipamentos")
       if (dataSource.equipments && dataSource.equipments.length > 0) {
         console.log(`📦 Importando ${dataSource.equipments.length} equipamentos...`);
         const convertedWorkItems: WorkItem[] = dataSource.equipments.map(item => ({
@@ -205,7 +206,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  // Work Items operations - corrigindo para usar "equipments"
+  // Work Items operations - corrigindo para usar "equipamentos"
   const addWorkItem = async (itemData: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => {
     if (!user) return;
 

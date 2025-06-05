@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               email: firebaseUser.email || '',
               uid: firebaseUser.uid,
               logobase64: '',
-              equipaments: [],
+              equipments: [],
               expenses: [],
               jobs: [],
               routine: {
@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('✅ Usuário criado com dados padrão');
           } else {
             console.log('📦 Dados do usuário encontrados:', {
-              equipaments: userData.equipaments?.length || 0,
+              equipments: userData.equipments?.length || 0,
               expenses: userData.expenses?.length || 0,
               jobs: userData.jobs?.length || 0,
               routine: userData.routine
@@ -86,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userAgency) {
             console.log('🏢 Usuário encontrado em agência:', userAgency.id);
             console.log('📦 Dados da agência carregados:', {
-              equipaments: userAgency.equipaments?.length || 0,
+              equipments: userAgency.equipments?.length || 0,
               expenses: userAgency.expenses?.length || 0,
               jobs: userAgency.jobs?.length || 0,
               colaboradores: userAgency.colaboradores?.length || 0
@@ -157,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: email,
         uid: userCredential.user.uid,
         logobase64: '',
-        equipaments: [],
+        equipments: [],
         expenses: [],
         jobs: [],
         routine: {
