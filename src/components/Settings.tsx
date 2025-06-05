@@ -1,27 +1,17 @@
-
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Palette, Database, Crown, Moon, Sun, User } from 'lucide-react';
+import React from 'react';
+import { Settings as SettingsIcon, Palette, Database, Crown, Moon, Sun, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const Settings = () => {
   const { isDark, currentTheme, toggleDarkMode, changeTheme } = useTheme();
-  const { user, logout } = useAuth();
-  
-  const [userData, setUserData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: '',
-    company: ''
-  });
+  const { user } = useAuth();
 
   const themes = [
     { id: 'purple-blue', name: 'Roxo & Azul', colors: 'from-purple-600 to-blue-600' },
@@ -41,11 +31,11 @@ const Settings = () => {
         <p className="text-gray-600 dark:text-gray-400">Personalize sua experiência no FinanceFlow</p>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
+      <Tabs defaultValue="about" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Perfil</span>
+          <TabsTrigger value="about" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            <span className="hidden sm:inline">Sobre</span>
           </TabsTrigger>
           <TabsTrigger value="appearance" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
@@ -61,74 +51,68 @@ const Settings = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile" className="space-y-6">
+        <TabsContent value="about" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Informações do Perfil</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                📘 Sobre o FinanceFlow
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white text-2xl`}>
-                    {userData.name.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
+            <CardContent className="space-y-6">
+              <div className="text-center space-y-4">
+                <div className={`w-20 h-20 bg-gradient-to-r ${currentTheme.primary} rounded-2xl flex items-center justify-center mx-auto`}>
+                  <span className="text-white font-bold text-2xl">FF</span>
+                </div>
+                
                 <div className="space-y-2">
-                  <Button variant="outline">Alterar Foto</Button>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    JPG, PNG até 2MB
+                  <h3 className="text-2xl font-bold">📱 FinanceFlow</h3>
+                  <p className="text-lg text-gray-600 dark:text-gray-400">
+                    Sistema de gestão e precificação para audiovisual
                   </p>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo</Label>
-                  <Input
-                    id="name"
-                    value={userData.name}
-                    onChange={(e) => setUserData({...userData, name: e.target.value})}
-                  />
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">🛠️ Desenvolvedor</h4>
+                    <p className="text-blue-700 dark:text-blue-300">Yuri Adriel</p>
+                  </div>
+                  
+                  <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg">
+                    <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2">🔢 Versão</h4>
+                    <p className="text-green-700 dark:text-green-300">1.0.0</p>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={userData.email}
-                    onChange={(e) => setUserData({...userData, email: e.target.value})}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    value={userData.phone}
-                    onChange={(e) => setUserData({...userData, phone: e.target.value})}
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="company">Empresa</Label>
-                  <Input
-                    id="company"
-                    value={userData.company}
-                    onChange={(e) => setUserData({...userData, company: e.target.value})}
-                    placeholder="Nome da empresa"
-                  />
+                <div className="space-y-4">
+                  <div className="p-4 bg-gradient-to-r from-pink-50 to-red-50 dark:from-pink-900/20 dark:to-red-900/20 rounded-lg">
+                    <h4 className="font-semibold text-pink-800 dark:text-pink-200 mb-2">📸 Instagram</h4>
+                    <p className="text-pink-700 dark:text-pink-300">@euyuriadriel</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => window.open('https://instagram.com/euyuriadriel', '_blank')}
+                    >
+                      Visitar Perfil
+                    </Button>
+                  </div>
+                  
+                  <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg">
+                    <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">🚀 Status</h4>
+                    <p className="text-yellow-700 dark:text-yellow-300">Sistema em produção</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button className={`bg-gradient-to-r ${currentTheme.primary}`}>
-                  Salvar Alterações
-                </Button>
-                <Button variant="outline" onClick={logout}>
-                  Sair da Conta
-                </Button>
+              <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-lg text-center">
+                <h4 className="font-semibold mb-2">💡 Sobre o Sistema</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  O FinanceFlow foi desenvolvido para profissionais do audiovisual que precisam de uma ferramenta 
+                  completa para calcular custos, gerenciar projetos e organizar suas finanças de forma eficiente.
+                </p>
               </div>
             </CardContent>
           </Card>

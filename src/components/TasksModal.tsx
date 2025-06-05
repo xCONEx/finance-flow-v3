@@ -16,12 +16,14 @@ const TasksModal = ({ open, onOpenChange }: TasksModalProps) => {
 
   const toggleTask = async (taskId: string, completed: boolean) => {
     try {
+      // Corrigido: usar apenas campos válidos
       await updateTask(taskId, { completed });
       toast({
         title: completed ? "Tarefa Concluída" : "Tarefa Reaberta",
         description: completed ? "A tarefa foi marcada como concluída." : "A tarefa foi reaberta.",
       });
     } catch (error) {
+      console.error('Erro ao atualizar task:', error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar tarefa.",

@@ -25,6 +25,7 @@ export const PrivacyProvider = ({ children }: PrivacyProviderProps) => {
   const [valuesHidden, setValuesHidden] = useState(false);
 
   const toggleValuesVisibility = () => {
+    console.log('Toggling values visibility from', valuesHidden, 'to', !valuesHidden);
     setValuesHidden(!valuesHidden);
   };
 
