@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Job, MonthlyCost, WorkItem, Task, WorkRoutine, Company } from '../types';
 import { useAuth } from './AuthContext';
@@ -206,7 +205,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  // Work Items operations
+  // Work Items operations - usando métodos específicos conforme tipo
   const addWorkItem = async (itemData: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => {
     if (!user) return;
 
@@ -219,7 +218,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     try {
-      await firestoreService.addEquipament(dataSource.uid, newItem);
+      if (dataSource.isAgency) {
+        console.log('📦 Adicionando item para agência:', dataSource.uid);
+        await firestoreService.addAgencyEquipament(dataSource.uid, newItem);
+      } else {
+        console.log('📦 Adicionando item para usuário:', dataSource.uid);
+        await firestoreService.addEquipament(dataSource.uid, newItem);
+      }
       
       const convertedItem: WorkItem = {
         ...itemData,
@@ -229,8 +234,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       
       setWorkItems(prev => [convertedItem, ...prev]);
+      console.log('✅ Item adicionado com sucesso');
     } catch (error) {
-      console.error('Error adding work item:', error);
+      console.error('❌ Erro ao adicionar item de trabalho:', error);
       throw error;
     }
   };
@@ -250,8 +256,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         category: currentItem.category,
         value: currentItem.value
       };
-      
-      await firestoreService.removeEquipament(dataSource.uid, oldFirestoreItem);
 
       const updatedFirestoreItem = {
         id: id,
@@ -260,13 +264,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: itemData.value || currentItem.value
       };
 
-      await firestoreService.addEquipament(dataSource.uid, updatedFirestoreItem);
+      if (dataSource.isAgency) {
+        console.log('🔄 Atualizando item da agência:', dataSource.uid);
+        await firestoreService.removeAgencyEquipament(dataSource.uid, oldFirestoreItem);
+        await firestoreService.addAgencyEquipament(dataSource.uid, updatedFirestoreItem);
+      } else {
+        console.log('🔄 Atualizando item do usuário:', dataSource.uid);
+        await firestoreService.removeEquipament(dataSource.uid, oldFirestoreItem);
+        await firestoreService.addEquipament(dataSource.uid, updatedFirestoreItem);
+      }
 
       setWorkItems(prev => prev.map(item => 
         item.id === id ? { ...item, ...itemData } : item
       ));
+      console.log('✅ Item atualizado com sucesso');
     } catch (error) {
-      console.error('Error updating work item:', error);
+      console.error('❌ Erro ao atualizar item de trabalho:', error);
       throw error;
     }
   };
@@ -287,15 +300,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: itemToDelete.value
       };
 
-      await firestoreService.removeEquipament(dataSource.uid, firestoreItem);
+      if (dataSource.isAgency) {
+        console.log('🗑️ Removendo item da agência:', dataSource.uid);
+        await firestoreService.removeAgencyEquipament(dataSource.uid, firestoreItem);
+      } else {
+        console.log('🗑️ Removendo item do usuário:', dataSource.uid);
+        await firestoreService.removeEquipament(dataSource.uid, firestoreItem);
+      }
+
       setWorkItems(prev => prev.filter(item => item.id !== id));
+      console.log('✅ Item removido com sucesso');
     } catch (error) {
-      console.error('Error deleting work item:', error);
+      console.error('❌ Erro ao deletar item de trabalho:', error);
       throw error;
     }
   };
 
-  // Monthly Costs operations
+  // Monthly Costs operations - usando métodos específicos conforme tipo
   const addMonthlyCost = async (costData: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId'>) => {
     if (!user) return;
 
@@ -308,7 +329,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     try {
-      await firestoreService.addExpense(dataSource.uid, newCost);
+      if (dataSource.isAgency) {
+        console.log('💰 Adicionando custo para agência:', dataSource.uid);
+        await firestoreService.addAgencyExpense(dataSource.uid, newCost);
+      } else {
+        console.log('💰 Adicionando custo para usuário:', dataSource.uid);
+        await firestoreService.addExpense(dataSource.uid, newCost);
+      }
       
       const convertedCost: MonthlyCost = {
         ...costData,
@@ -318,8 +345,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       
       setMonthlyCosts(prev => [convertedCost, ...prev]);
+      console.log('✅ Custo adicionado com sucesso');
     } catch (error) {
-      console.error('Error adding monthly cost:', error);
+      console.error('❌ Erro ao adicionar custo mensal:', error);
       throw error;
     }
   };
@@ -339,8 +367,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         category: currentCost.category,
         value: currentCost.value
       };
-      
-      await firestoreService.removeExpense(dataSource.uid, oldFirestoreCost);
 
       const updatedFirestoreCost = {
         id: id,
@@ -349,13 +375,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: costData.value || currentCost.value
       };
 
-      await firestoreService.addExpense(dataSource.uid, updatedFirestoreCost);
+      if (dataSource.isAgency) {
+        console.log('🔄 Atualizando custo da agência:', dataSource.uid);
+        await firestoreService.removeAgencyExpense(dataSource.uid, oldFirestoreCost);
+        await firestoreService.addAgencyExpense(dataSource.uid, updatedFirestoreCost);
+      } else {
+        console.log('🔄 Atualizando custo do usuário:', dataSource.uid);
+        await firestoreService.removeExpense(dataSource.uid, oldFirestoreCost);
+        await firestoreService.addExpense(dataSource.uid, updatedFirestoreCost);
+      }
 
       setMonthlyCosts(prev => prev.map(cost => 
         cost.id === id ? { ...cost, ...costData } : cost
       ));
+      console.log('✅ Custo atualizado com sucesso');
     } catch (error) {
-      console.error('Error updating monthly cost:', error);
+      console.error('❌ Erro ao atualizar custo mensal:', error);
       throw error;
     }
   };
@@ -376,10 +411,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: costToDelete.value
       };
 
-      await firestoreService.removeExpense(dataSource.uid, firestoreCost);
+      if (dataSource.isAgency) {
+        console.log('🗑️ Removendo custo da agência:', dataSource.uid);
+        await firestoreService.removeAgencyExpense(dataSource.uid, firestoreCost);
+      } else {
+        console.log('🗑️ Removendo custo do usuário:', dataSource.uid);
+        await firestoreService.removeExpense(dataSource.uid, firestoreCost);
+      }
+
       setMonthlyCosts(prev => prev.filter(cost => cost.id !== id));
+      console.log('✅ Custo removido com sucesso');
     } catch (error) {
-      console.error('Error deleting monthly cost:', error);
+      console.error('❌ Erro ao deletar custo mensal:', error);
       throw error;
     }
   };

@@ -59,7 +59,7 @@ export interface FirestoreTask {
   description: string;
   date: string;
   status: string;
-  ownerUID: string;
+  ownerUID: string; // Confirma que tasks usam ownerUID
 }
 
 export interface FirestoreAgency extends FirestoreUser {
@@ -72,7 +72,7 @@ export interface FirestoreAgency extends FirestoreUser {
 }
 
 class FirestoreService {
-  // User operations - usando coleção 'usuarios'
+  // User operations - usando coleção 'usuarios' com uid
   async getUserData(uid: string): Promise<FirestoreUser | null> {
     try {
       console.log('🔍 Buscando dados do usuário na coleção usuarios:', uid);
@@ -111,76 +111,89 @@ class FirestoreService {
       await updateDoc(doc(db, 'usuarios', uid), {
         [field]: value
       });
+      console.log('✅ Campo atualizado:', field);
     } catch (error) {
-      console.error('Error updating user field:', error);
+      console.error('❌ Erro ao atualizar campo do usuário:', error);
       throw error;
     }
   }
 
-  // Equipaments operations
+  // Equipaments operations - estrutura de array no documento do usuário/agência
   async addEquipament(uid: string, equipament: any): Promise<void> {
     try {
+      console.log('📦 Adicionando equipamento para uid:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
         equipaments: arrayUnion(equipament)
       });
+      console.log('✅ Equipamento adicionado');
     } catch (error) {
-      console.error('Error adding equipament:', error);
+      console.error('❌ Erro ao adicionar equipamento:', error);
       throw error;
     }
   }
 
   async removeEquipament(uid: string, equipament: any): Promise<void> {
     try {
+      console.log('🗑️ Removendo equipamento para uid:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
         equipaments: arrayRemove(equipament)
       });
+      console.log('✅ Equipamento removido');
     } catch (error) {
-      console.error('Error removing equipament:', error);
+      console.error('❌ Erro ao remover equipamento:', error);
       throw error;
     }
   }
 
   async updateEquipaments(uid: string, equipaments: any[]): Promise<void> {
     try {
+      console.log('🔄 Atualizando lista de equipamentos para uid:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
         equipaments: equipaments
       });
+      console.log('✅ Lista de equipamentos atualizada');
     } catch (error) {
-      console.error('Error updating equipaments:', error);
+      console.error('❌ Erro ao atualizar equipamentos:', error);
       throw error;
     }
   }
 
-  // Expenses operations
+  // Expenses operations - estrutura de array no documento do usuário/agência
   async addExpense(uid: string, expense: any): Promise<void> {
     try {
+      console.log('💰 Adicionando despesa para uid:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
         expenses: arrayUnion(expense)
       });
+      console.log('✅ Despesa adicionada');
     } catch (error) {
-      console.error('Error adding expense:', error);
+      console.error('❌ Erro ao adicionar despesa:', error);
       throw error;
     }
   }
 
   async removeExpense(uid: string, expense: any): Promise<void> {
     try {
+      console.log('🗑️ Removendo despesa para uid:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
         expenses: arrayRemove(expense)
       });
+      console.log('✅ Despesa removida');
     } catch (error) {
-      console.error('Error removing expense:', error);
+      console.error('❌ Erro ao remover despesa:', error);
       throw error;
     }
   }
 
   async updateExpenses(uid: string, expenses: any[]): Promise<void> {
     try {
+      console.log('🔄 Atualizando lista de despesas para uid:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
         expenses: expenses
       });
+      console.log('✅ Lista de despesas atualizada');
     } catch (error) {
-      console.error('Error updating expenses:', error);
+      console.error('❌ Erro ao atualizar despesas:', error);
       throw error;
     }
   }
@@ -222,19 +235,21 @@ class FirestoreService {
   // Routine operations
   async updateRoutine(uid: string, routine: any): Promise<void> {
     try {
+      console.log('⏰ Atualizando rotina para uid:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
         routine: routine
       });
+      console.log('✅ Rotina atualizada');
     } catch (error) {
-      console.error('Error updating routine:', error);
+      console.error('❌ Erro ao atualizar rotina:', error);
       throw error;
     }
   }
 
-  // Tasks operations - usando coleção 'tasks' com ownerUID
+  // Tasks operations - usando coleção 'tasks' separada com ownerUID
   async getUserTasks(userId: string): Promise<FirestoreTask[]> {
     try {
-      console.log('🔍 Buscando tasks do usuário:', userId);
+      console.log('📋 Buscando tasks para ownerUID:', userId);
       const tasksQuery = query(
         collection(db, 'tasks'),
         where('ownerUID', '==', userId)
@@ -254,9 +269,11 @@ class FirestoreService {
 
   async addTask(taskData: FirestoreTask): Promise<void> {
     try {
+      console.log('📝 Adicionando task com ownerUID:', taskData.ownerUID);
       await setDoc(doc(collection(db, 'tasks')), taskData);
+      console.log('✅ Task adicionada');
     } catch (error) {
-      console.error('Error adding task:', error);
+      console.error('❌ Erro ao adicionar task:', error);
       throw error;
     }
   }
@@ -264,7 +281,9 @@ class FirestoreService {
   // Agency operations - verificando colaboradores com estrutura correta
   async getUserAgency(uid: string): Promise<(FirestoreAgency & { id: string }) | null> {
     try {
-      console.log('🏢 Buscando agência do usuário:', uid);
+      console.log('🏢 Buscando agência para uid:', uid);
+      
+      // Primeiro verificar se é colaborador
       const agenciesQuery = query(
         collection(db, 'agencias'),
         where('colaboradores', 'array-contains', { uid: uid })
@@ -277,7 +296,7 @@ class FirestoreService {
           id: agencyDoc.id,
           ...agencyDoc.data()
         } as FirestoreAgency & { id: string };
-        console.log('✅ Agência encontrada:', agencyData.id);
+        console.log('✅ Agência encontrada como colaborador:', agencyData.id);
         return agencyData;
       }
       
@@ -315,6 +334,59 @@ class FirestoreService {
       return null;
     } catch (error) {
       console.error('Error getting agency data:', error);
+      throw error;
+    }
+  }
+
+  // Métodos específicos para agências (quando necessário)
+  async addAgencyEquipament(agencyId: string, equipament: any): Promise<void> {
+    try {
+      console.log('📦 Adicionando equipamento para agência:', agencyId);
+      await updateDoc(doc(db, 'agencias', agencyId), {
+        equipaments: arrayUnion(equipament)
+      });
+      console.log('✅ Equipamento adicionado à agência');
+    } catch (error) {
+      console.error('❌ Erro ao adicionar equipamento à agência:', error);
+      throw error;
+    }
+  }
+
+  async removeAgencyEquipament(agencyId: string, equipament: any): Promise<void> {
+    try {
+      console.log('🗑️ Removendo equipamento da agência:', agencyId);
+      await updateDoc(doc(db, 'agencias', agencyId), {
+        equipaments: arrayRemove(equipament)
+      });
+      console.log('✅ Equipamento removido da agência');
+    } catch (error) {
+      console.error('❌ Erro ao remover equipamento da agência:', error);
+      throw error;
+    }
+  }
+
+  async addAgencyExpense(agencyId: string, expense: any): Promise<void> {
+    try {
+      console.log('💰 Adicionando despesa para agência:', agencyId);
+      await updateDoc(doc(db, 'agencias', agencyId), {
+        expenses: arrayUnion(expense)
+      });
+      console.log('✅ Despesa adicionada à agência');
+    } catch (error) {
+      console.error('❌ Erro ao adicionar despesa à agência:', error);
+      throw error;
+    }
+  }
+
+  async removeAgencyExpense(agencyId: string, expense: any): Promise<void> {
+    try {
+      console.log('🗑️ Removendo despesa da agência:', agencyId);
+      await updateDoc(doc(db, 'agencias', agencyId), {
+        expenses: arrayRemove(expense)
+      });
+      console.log('✅ Despesa removida da agência');
+    } catch (error) {
+      console.error('❌ Erro ao remover despesa da agência:', error);
       throw error;
     }
   }
