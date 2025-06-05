@@ -1,5 +1,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
+} from 'firebase/auth';
+import { auth } from '../services/firebase';
+import { firestoreService, FirestoreUser } from '../services/firestore';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -27,70 +37,108 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate loading user from localStorage
-    const savedUser = localStorage.getItem('financeflow_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          // Verificar se o usuário existe no Firestore
+          let userData = await firestoreService.getUserData(firebaseUser.uid);
+          
+          // Se não existir, criar um novo documento
+          if (!userData) {
+            const newUserData: FirestoreUser = {
+              email: firebaseUser.email || '',
+              uid: firebaseUser.uid,
+              logobase64: '',
+              equipaments: [],
+              expenses: [],
+              jobs: [],
+              routine: {
+                dailyHours: 8,
+                dalilyValue: 0,
+                desiredSalary: 0,
+                workDays: 22
+              }
+            };
+            
+            await firestoreService.createUser(newUserData);
+            userData = newUserData;
+          }
+
+          // Converter para o formato do contexto
+          const appUser: User = {
+            id: firebaseUser.uid,
+            email: userData.email,
+            name: firebaseUser.displayName || userData.email.split('@')[0],
+            userType: 'individual',
+            createdAt: new Date().toISOString()
+          };
+
+          setUser(appUser);
+        } catch (error) {
+          console.error('Error loading user data:', error);
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Check for admin credentials
-    if (email === 'adm.financeflow@gmail.com' && password === 'senha123') {
-      const adminUser: User = {
-        id: 'admin-1',
-        email,
-        name: 'Administrador',
-        userType: 'admin',
-        createdAt: new Date().toISOString()
-      };
-      setUser(adminUser);
-      localStorage.setItem('financeflow_user', JSON.stringify(adminUser));
-      return;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
-
-    // Mock login for regular users
-    const mockUser: User = {
-      id: '1',
-      email,
-      name: 'Usuário Demo',
-      userType: 'individual',
-      createdAt: new Date().toISOString()
-    };
-    setUser(mockUser);
-    localStorage.setItem('financeflow_user', JSON.stringify(mockUser));
   };
 
   const loginWithGoogle = async () => {
-    // Mock Google login - replace with Firebase
-    const mockUser: User = {
-      id: '1',
-      email: 'user@gmail.com',
-      name: 'Usuário Google',
-      userType: 'individual',
-      createdAt: new Date().toISOString()
-    };
-    setUser(mockUser);
-    localStorage.setItem('financeflow_user', JSON.stringify(mockUser));
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error('Google login error:', error);
+      throw error;
+    }
   };
 
   const register = async (email: string, password: string, name: string) => {
-    // Mock register - replace with Firebase
-    const mockUser: User = {
-      id: '1',
-      email,
-      name,
-      userType: 'individual',
-      createdAt: new Date().toISOString()
-    };
-    setUser(mockUser);
-    localStorage.setItem('financeflow_user', JSON.stringify(mockUser));
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Criar documento do usuário no Firestore
+      const newUserData: FirestoreUser = {
+        email: email,
+        uid: userCredential.user.uid,
+        logobase64: '',
+        equipaments: [],
+        expenses: [],
+        jobs: [],
+        routine: {
+          dailyHours: 8,
+          dalilyValue: 0,
+          desiredSalary: 0,
+          workDays: 22
+        }
+      };
+
+      await firestoreService.createUser(newUserData);
+    } catch (error) {
+      console.error('Register error:', error);
+      throw error;
+    }
   };
 
   const logout = async () => {
-    setUser(null);
-    localStorage.removeItem('financeflow_user');
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw error;
+    }
   };
 
   return (

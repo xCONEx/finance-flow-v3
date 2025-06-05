@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Clock, Calculator, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +10,9 @@ import { toast } from '@/hooks/use-toast';
 import { formatCurrency } from '../utils/formatters';
 
 const WorkRoutine = () => {
-  const { workRoutine, updateWorkRoutine } = useAppContext();
+  const { workRoutine, updateWorkRoutine, loading } = useAppContext();
   const { currentTheme } = useTheme();
+  const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     desiredSalary: 0,
@@ -28,7 +28,7 @@ const WorkRoutine = () => {
     }
   }, [workRoutine]);
 
-  const calculateValues = () => {
+  const calculateValues = async () => {
     const valuePerDay = formData.desiredSalary / formData.workDaysPerMonth;
     const valuePerHour = valuePerDay / formData.workHoursPerDay;
     
@@ -39,13 +39,34 @@ const WorkRoutine = () => {
     };
     
     setFormData(updatedRoutine);
-    updateWorkRoutine(updatedRoutine);
+    setSubmitting(true);
     
-    toast({
-      title: "Rotina Atualizada",
-      description: "Os valores foram calculados e salvos com sucesso.",
-    });
+    try {
+      await updateWorkRoutine(updatedRoutine);
+      toast({
+        title: "Rotina Atualizada",
+        description: "Os valores foram calculados e salvos com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar rotina de trabalho.",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <p>Carregando rotina de trabalho...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -73,6 +94,7 @@ const WorkRoutine = () => {
                 value={formData.desiredSalary}
                 onChange={(e) => setFormData({...formData, desiredSalary: Number(e.target.value)})}
                 placeholder="8000.00"
+                disabled={submitting}
               />
             </div>
             
@@ -84,6 +106,7 @@ const WorkRoutine = () => {
                 value={formData.workDaysPerMonth}
                 onChange={(e) => setFormData({...formData, workDaysPerMonth: Number(e.target.value)})}
                 placeholder="22"
+                disabled={submitting}
               />
             </div>
             
@@ -95,12 +118,17 @@ const WorkRoutine = () => {
                 value={formData.workHoursPerDay}
                 onChange={(e) => setFormData({...formData, workHoursPerDay: Number(e.target.value)})}
                 placeholder="8"
+                disabled={submitting}
               />
             </div>
 
-            <Button onClick={calculateValues} className={`w-full bg-gradient-to-r ${currentTheme.primary}`}>
+            <Button 
+              onClick={calculateValues} 
+              className={`w-full bg-gradient-to-r ${currentTheme.primary}`}
+              disabled={submitting}
+            >
               <Calculator className="h-4 w-4 mr-2" />
-              Calcular Valores
+              {submitting ? 'Salvando...' : 'Calcular Valores'}
             </Button>
           </CardContent>
         </Card>

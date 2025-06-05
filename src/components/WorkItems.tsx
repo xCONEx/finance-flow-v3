@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, Briefcase, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +9,9 @@ import { useAppContext } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 
 const WorkItems = () => {
-  const { workItems, addWorkItem, deleteWorkItem } = useAppContext();
+  const { workItems, addWorkItem, deleteWorkItem, loading } = useAppContext();
   const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
     category: '',
@@ -19,7 +19,7 @@ const WorkItems = () => {
     depreciationYears: 5
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.description || !formData.category || formData.value <= 0) {
       toast({
@@ -30,32 +30,61 @@ const WorkItems = () => {
       return;
     }
 
-    addWorkItem(formData);
-    setFormData({
-      description: '',
-      category: '',
-      value: 0,
-      depreciationYears: 5
-    });
-    setShowForm(false);
-    toast({
-      title: "Item Adicionado",
-      description: "O item de trabalho foi cadastrado com sucesso.",
-    });
+    setSubmitting(true);
+    try {
+      await addWorkItem(formData);
+      setFormData({
+        description: '',
+        category: '',
+        value: 0,
+        depreciationYears: 5
+      });
+      setShowForm(false);
+      toast({
+        title: "Item Adicionado",
+        description: "O item de trabalho foi cadastrado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar item de trabalho.",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteWorkItem(id);
-    toast({
-      title: "Item Removido",
-      description: "O item foi excluído com sucesso.",
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteWorkItem(id);
+      toast({
+        title: "Item Removido",
+        description: "O item foi excluído com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao remover item.",
+        variant: "destructive"
+      });
+    }
   };
 
   const totalValue = workItems.reduce((sum, item) => sum + item.value, 0);
   const equipmentValue = workItems
     .filter(item => item.category.toLowerCase().includes('equipamento'))
     .reduce((sum, item) => sum + item.value, 0);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <p>Carregando itens de trabalho...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -67,7 +96,7 @@ const WorkItems = () => {
           </h2>
           <p className="text-gray-600">Gerencie equipamentos, softwares e outros itens</p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={() => setShowForm(true)} disabled={submitting}>
           <Plus className="h-4 w-4 mr-2" />
           Adicionar Item
         </Button>
@@ -114,6 +143,7 @@ const WorkItems = () => {
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     placeholder="Ex: Câmera Sony A7 III"
+                    disabled={submitting}
                   />
                 </div>
                 <div className="space-y-2">
@@ -123,6 +153,7 @@ const WorkItems = () => {
                     value={formData.category}
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
                     placeholder="Ex: Equipamento"
+                    disabled={submitting}
                   />
                 </div>
               </div>
@@ -147,12 +178,15 @@ const WorkItems = () => {
                     value={formData.depreciationYears}
                     onChange={(e) => setFormData({...formData, depreciationYears: Number(e.target.value)})}
                     placeholder="5"
+                    disabled={submitting}
                   />
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button type="submit">Adicionar</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? 'Adicionando...' : 'Adicionar'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)} disabled={submitting}>
                   Cancelar
                 </Button>
               </div>
@@ -190,6 +224,7 @@ const WorkItems = () => {
                     variant="outline"
                     onClick={() => handleDelete(item.id)}
                     className="transition-all duration-300 hover:scale-105"
+                    disabled={submitting}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
