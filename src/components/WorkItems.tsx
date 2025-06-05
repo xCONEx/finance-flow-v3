@@ -14,7 +14,8 @@ const WorkItems = () => {
   const [formData, setFormData] = useState({
     description: '',
     category: '',
-    value: 0
+    value: 0,
+    depreciationYears: 5
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -32,7 +33,8 @@ const WorkItems = () => {
     setFormData({
       description: '',
       category: '',
-      value: 0
+      value: 0,
+      depreciationYears: 5
     });
     setShowForm(false);
     toast({
@@ -123,16 +125,30 @@ const WorkItems = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="value">Valor (R$)</Label>
-                <Input
-                  id="value"
-                  type="number"
-                  step="0.01"
-                  value={formData.value}
-                  onChange={(e) => setFormData({...formData, value: Number(e.target.value)})}
-                  placeholder="15000.00"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="value">Valor (R$)</Label>
+                  <Input
+                    id="value"
+                    type="number"
+                    step="0.01"
+                    value={formData.value}
+                    onChange={(e) => setFormData({...formData, value: Number(e.target.value)})}
+                    placeholder="15000.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="depreciationYears">Anos de Depreciação</Label>
+                  <Input
+                    id="depreciationYears"
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={formData.depreciationYears}
+                    onChange={(e) => setFormData({...formData, depreciationYears: Number(e.target.value)})}
+                    placeholder="5"
+                  />
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button type="submit">Adicionar</Button>
@@ -154,6 +170,7 @@ const WorkItems = () => {
                 <div>
                   <h3 className="font-semibold">{item.description}</h3>
                   <p className="text-sm text-gray-600">Categoria: {item.category}</p>
+                  <p className="text-xs text-gray-500">Depreciação: {item.depreciationYears} anos</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
