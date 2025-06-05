@@ -1,19 +1,31 @@
 
 import React, { useState, useEffect } from 'react';
-import { Clock, Calculator } from 'lucide-react';
+import { Clock, Calculator, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '../contexts/AppContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { toast } from '@/hooks/use-toast';
+import { formatCurrency } from '../utils/formatters';
 
 const WorkRoutine = () => {
   const { workRoutine, updateWorkRoutine } = useAppContext();
-  const [formData, setFormData] = useState(workRoutine);
+  const { currentTheme } = useTheme();
+  
+  const [formData, setFormData] = useState({
+    desiredSalary: 0,
+    workDaysPerMonth: 22,
+    workHoursPerDay: 8,
+    valuePerDay: 0,
+    valuePerHour: 0
+  });
 
   useEffect(() => {
-    setFormData(workRoutine);
+    if (workRoutine) {
+      setFormData(workRoutine);
+    }
   }, [workRoutine]);
 
   const calculateValues = () => {
@@ -36,13 +48,13 @@ const WorkRoutine = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20 md:pb-6">
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
-          <Clock className="text-purple-600" />
+          <Clock className={`text-${currentTheme.accent}`} />
           Rotina de Trabalho
         </h2>
-        <p className="text-gray-600">Calcule seu valor por hora baseado no salário desejado</p>
+        <p className="text-gray-600 dark:text-gray-400">Calcule seu valor por hora baseado no salário desejado</p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -86,7 +98,7 @@ const WorkRoutine = () => {
               />
             </div>
 
-            <Button onClick={calculateValues} className="w-full">
+            <Button onClick={calculateValues} className={`w-full bg-gradient-to-r ${currentTheme.primary}`}>
               <Calculator className="h-4 w-4 mr-2" />
               Calcular Valores
             </Button>
@@ -94,32 +106,32 @@ const WorkRoutine = () => {
         </Card>
 
         {/* Results */}
-        <Card className="bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200">
+        <Card className={`bg-gradient-to-br ${currentTheme.secondary} border-${currentTheme.accent}/20`}>
           <CardHeader>
-            <CardTitle className="text-purple-800">Resultados Calculados</CardTitle>
+            <CardTitle className={`text-${currentTheme.accent}`}>Resultados Calculados</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center space-y-4">
-              <div className="p-4 bg-white rounded-lg border border-purple-200">
-                <h3 className="font-semibold text-gray-700 mb-2">Valor por Dia</h3>
-                <div className="text-2xl font-bold text-purple-600">
-                  R$ {formData.valuePerDay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor por Dia</h3>
+                <div className={`text-2xl font-bold text-${currentTheme.accent}`}>
+                  {formatCurrency(formData.valuePerDay)}
                 </div>
               </div>
               
-              <div className="p-4 bg-white rounded-lg border border-purple-200">
-                <h3 className="font-semibold text-gray-700 mb-2">Valor por Hora</h3>
-                <div className="text-2xl font-bold text-purple-600">
-                  R$ {formData.valuePerHour.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor por Hora</h3>
+                <div className={`text-2xl font-bold text-${currentTheme.accent}`}>
+                  {formatCurrency(formData.valuePerHour)}
                 </div>
               </div>
             </div>
 
             {formData.valuePerHour > 0 && (
-              <div className="p-4 bg-white rounded-lg border border-purple-200">
-                <h4 className="font-semibold text-gray-700 mb-2">Resumo:</h4>
-                <div className="text-sm text-gray-600 space-y-1">
-                  <p>• Salário mensal: R$ {formData.desiredSalary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Resumo:</h4>
+                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                  <p>• Salário mensal: {formatCurrency(formData.desiredSalary)}</p>
                   <p>• {formData.workDaysPerMonth} dias de trabalho por mês</p>
                   <p>• {formData.workHoursPerDay} horas por dia</p>
                   <p>• Total de {formData.workDaysPerMonth * formData.workHoursPerDay} horas mensais</p>
@@ -136,7 +148,7 @@ const WorkRoutine = () => {
           <CardTitle>💡 Dicas para Precificação</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
+          <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400">
             <div>
               <h4 className="font-semibold mb-2">Use estes valores como base para:</h4>
               <ul className="space-y-1 list-disc list-inside">
@@ -151,8 +163,8 @@ const WorkRoutine = () => {
               <ul className="space-y-1 list-disc list-inside">
                 <li>Custos operacionais (equipamentos, softwares)</li>
                 <li>Impostos e taxas</li>
-                <li>Margem de lucro desejada</li>
-                <li>Complexidade do projeto</li>
+                <li>Nível de dificuldade do projeto</li>
+                <li>Prazo de entrega</li>
               </ul>
             </div>
           </div>

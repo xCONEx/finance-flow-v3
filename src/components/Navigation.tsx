@@ -1,7 +1,11 @@
 
-import React from 'react';
-import { Home, Calculator, Kanban, Users, Settings, DollarSign, Briefcase, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Home, Calculator, Kanban, Users, Settings as SettingsIcon, DollarSign, Briefcase, Clock, Menu, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 interface NavigationProps {
   activeTab: string;
@@ -9,70 +13,177 @@ interface NavigationProps {
 }
 
 const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
-  const tabs = [
+  const { user } = useAuth();
+  const { currentTheme } = useTheme();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const mainTabs = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'calculator', label: 'Calculadora', icon: Calculator },
-    { id: 'kanban', label: 'Projetos', icon: Kanban },
     { id: 'costs', label: 'Custos', icon: DollarSign },
     { id: 'items', label: 'Itens', icon: Briefcase },
-    { id: 'routine', label: 'Rotina', icon: Clock },
-    { id: 'team', label: 'Equipe', icon: Users },
-    { id: 'settings', label: 'Configurações', icon: Settings }
+    { id: 'routine', label: 'Rotina', icon: Clock }
   ];
 
+  const companyTabs = [
+    { id: 'kanban', label: 'Projetos', icon: Kanban },
+    { id: 'team', label: 'Equipe', icon: Users }
+  ];
+
+  const isCompanyUser = user?.userType === 'company_owner' || user?.userType === 'employee';
+
+  const handleTabChange = (tab: string) => {
+    onTabChange(tab);
+    setSidebarOpen(false);
+  };
+
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 backdrop-blur-md bg-white/90">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">FF</span>
+    <>
+      {/* Desktop Navigation */}
+      <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 backdrop-blur-md bg-white/90 dark:bg-gray-900/90 hidden md:block">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center space-x-4">
+              <div className={`w-8 h-8 bg-gradient-to-r ${currentTheme.primary} rounded-lg flex items-center justify-center`}>
+                <span className="text-white font-bold text-sm">FF</span>
+              </div>
+              <span className={`font-bold text-xl bg-gradient-to-r ${currentTheme.primary} bg-clip-text text-transparent`}>
+                FinanceFlow
+              </span>
+
+              {/* Company Menu */}
+              {isCompanyUser && (
+                <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-64">
+                    <div className="space-y-4 py-4">
+                      <h3 className="font-semibold text-lg">Menu Empresa</h3>
+                      {companyTabs.map((tab) => (
+                        <Button
+                          key={tab.id}
+                          variant={activeTab === tab.id ? "default" : "ghost"}
+                          onClick={() => handleTabChange(tab.id)}
+                          className="w-full justify-start"
+                        >
+                          <tab.icon className="h-4 w-4 mr-2" />
+                          {tab.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              )}
             </div>
-            <span className="font-bold text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+
+            {/* Navigation Tabs */}
+            <div className="flex space-x-1">
+              {mainTabs.map((tab) => (
+                <Button
+                  key={tab.id}
+                  variant={activeTab === tab.id ? "default" : "ghost"}
+                  onClick={() => onTabChange(tab.id)}
+                  size="sm"
+                  className={`flex items-center space-x-2 ${
+                    activeTab === tab.id 
+                      ? `bg-gradient-to-r ${currentTheme.primary} text-white` 
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  <tab.icon className="h-4 w-4" />
+                  <span className="hidden lg:inline">{tab.label}</span>
+                </Button>
+              ))}
+            </div>
+
+            {/* User Menu */}
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onTabChange('settings')}
+                className={activeTab === 'settings' ? `bg-gradient-to-r ${currentTheme.primary} text-white` : ''}
+              >
+                <SettingsIcon className="h-4 w-4" />
+              </Button>
+              
+              <Avatar className="h-8 w-8 cursor-pointer" onClick={() => onTabChange('profile')}>
+                <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white`}>
+                  {user?.name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Mobile Header */}
+      <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 md:hidden">
+        <div className="flex justify-between items-center h-16 px-4">
+          <div className="flex items-center space-x-3">
+            {isCompanyUser && (
+              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-64">
+                  <div className="space-y-4 py-4">
+                    <h3 className="font-semibold text-lg">Menu Empresa</h3>
+                    {companyTabs.map((tab) => (
+                      <Button
+                        key={tab.id}
+                        variant={activeTab === tab.id ? "default" : "ghost"}
+                        onClick={() => handleTabChange(tab.id)}
+                        className="w-full justify-start"
+                      >
+                        <tab.icon className="h-4 w-4 mr-2" />
+                        {tab.label}
+                      </Button>
+                    ))}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
+            
+            <span className={`font-bold text-lg bg-gradient-to-r ${currentTheme.primary} bg-clip-text text-transparent`}>
               FinanceFlow
             </span>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="hidden md:flex space-x-1 overflow-x-auto">
-            {tabs.map((tab) => (
-              <Button
-                key={tab.id}
-                variant={activeTab === tab.id ? "default" : "ghost"}
-                onClick={() => onTabChange(tab.id)}
-                size="sm"
-                className={`flex items-center space-x-2 transition-all duration-200 ${
-                  activeTab === tab.id 
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md' 
-                    : 'hover:bg-purple-50 hover:text-purple-600'
-                }`}
-              >
-                <tab.icon className="h-4 w-4" />
-                <span className="hidden lg:inline">{tab.label}</span>
-              </Button>
-            ))}
-          </div>
-
-          {/* Mobile Navigation */}
-          <div className="md:hidden">
-            <Button variant="ghost" size="sm">
-              <Home className="h-5 w-5" />
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onTabChange('settings')}
+            >
+              <SettingsIcon className="h-5 w-5" />
             </Button>
+            
+            <Avatar className="h-8 w-8 cursor-pointer" onClick={() => onTabChange('profile')}>
+              <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white`}>
+                {user?.name?.charAt(0) || 'U'}
+              </AvatarFallback>
+            </Avatar>
           </div>
         </div>
-      </div>
+      </nav>
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-        <div className="grid grid-cols-4 h-16">
-          {tabs.slice(0, 4).map((tab) => (
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-50">
+        <div className="grid grid-cols-5 h-16">
+          {mainTabs.map((tab) => (
             <Button
               key={tab.id}
               variant="ghost"
               onClick={() => onTabChange(tab.id)}
               className={`flex flex-col items-center justify-center h-full rounded-none space-y-1 ${
-                activeTab === tab.id ? 'text-purple-600 bg-purple-50' : 'text-gray-600'
+                activeTab === tab.id ? `text-${currentTheme.accent} bg-gray-50 dark:bg-gray-800` : 'text-gray-600 dark:text-gray-400'
               }`}
             >
               <tab.icon className="h-4 w-4" />
@@ -81,7 +192,7 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
           ))}
         </div>
       </div>
-    </nav>
+    </>
   );
 };
 

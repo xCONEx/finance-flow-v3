@@ -1,26 +1,34 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Job, MonthlyCost, WorkItem, Task, WorkRoutine, CompanyData } from '../types';
+import { Job, MonthlyCost, WorkItem, Task, WorkRoutine, Company } from '../types';
+import { useAuth } from './AuthContext';
 
 interface AppContextType {
   jobs: Job[];
   monthlyCosts: MonthlyCost[];
   workItems: WorkItem[];
   tasks: Task[];
-  workRoutine: WorkRoutine;
-  companyData: CompanyData;
-  addJob: (job: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  workRoutine: WorkRoutine | null;
+  company: Company | null;
+  addJob: (job: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => void;
   updateJob: (id: string, job: Partial<Job>) => void;
   deleteJob: (id: string) => void;
-  addMonthlyCost: (cost: Omit<MonthlyCost, 'id' | 'createdAt'>) => void;
+  addMonthlyCost: (cost: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId'>) => void;
+  updateMonthlyCost: (id: string, cost: Partial<MonthlyCost>) => void;
   deleteMonthlyCost: (id: string) => void;
-  addWorkItem: (item: Omit<WorkItem, 'id' | 'createdAt'>) => void;
+  addWorkItem: (item: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => void;
+  updateWorkItem: (id: string, item: Partial<WorkItem>) => void;
   deleteWorkItem: (id: string) => void;
-  addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => void;
   updateTask: (id: string, task: Partial<Task>) => void;
   deleteTask: (id: string) => void;
-  updateWorkRoutine: (routine: WorkRoutine) => void;
-  updateCompanyData: (data: CompanyData) => void;
+  updateWorkRoutine: (routine: Omit<WorkRoutine, 'userId'>) => void;
+  calculateJobPrice: (hours: number, difficulty: string) => {
+    totalCosts: number;
+    serviceValue: number;
+    valueWithDiscount?: number;
+    hourlyRate: number;
+  };
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -34,71 +42,68 @@ export const useAppContext = () => {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [monthlyCosts, setMonthlyCosts] = useState<MonthlyCost[]>([]);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [workRoutine, setWorkRoutine] = useState<WorkRoutine>({
-    desiredSalary: 0,
-    workDaysPerMonth: 22,
-    workHoursPerDay: 8,
-    valuePerDay: 0,
-    valuePerHour: 0
-  });
-  const [companyData, setCompanyData] = useState<CompanyData>({
-    name: 'FinanceFlow',
-    logo: '',
-    address: '',
-    phone: '',
-    email: ''
-  });
+  const [workRoutine, setWorkRoutine] = useState<WorkRoutine | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
 
   // Load data from localStorage on mount
   useEffect(() => {
-    const savedJobs = localStorage.getItem('financeflow_jobs');
-    const savedCosts = localStorage.getItem('financeflow_costs');
-    const savedItems = localStorage.getItem('financeflow_items');
-    const savedTasks = localStorage.getItem('financeflow_tasks');
-    const savedRoutine = localStorage.getItem('financeflow_routine');
-    const savedCompany = localStorage.getItem('financeflow_company');
+    if (user) {
+      const savedJobs = localStorage.getItem(`financeflow_jobs_${user.id}`);
+      const savedCosts = localStorage.getItem(`financeflow_costs_${user.id}`);
+      const savedItems = localStorage.getItem(`financeflow_items_${user.id}`);
+      const savedTasks = localStorage.getItem(`financeflow_tasks_${user.id}`);
+      const savedRoutine = localStorage.getItem(`financeflow_routine_${user.id}`);
 
-    if (savedJobs) setJobs(JSON.parse(savedJobs));
-    if (savedCosts) setMonthlyCosts(JSON.parse(savedCosts));
-    if (savedItems) setWorkItems(JSON.parse(savedItems));
-    if (savedTasks) setTasks(JSON.parse(savedTasks));
-    if (savedRoutine) setWorkRoutine(JSON.parse(savedRoutine));
-    if (savedCompany) setCompanyData(JSON.parse(savedCompany));
-  }, []);
+      if (savedJobs) setJobs(JSON.parse(savedJobs));
+      if (savedCosts) setMonthlyCosts(JSON.parse(savedCosts));
+      if (savedItems) setWorkItems(JSON.parse(savedItems));
+      if (savedTasks) setTasks(JSON.parse(savedTasks));
+      if (savedRoutine) setWorkRoutine(JSON.parse(savedRoutine));
+    }
+  }, [user]);
 
   // Save to localStorage whenever data changes
   useEffect(() => {
-    localStorage.setItem('financeflow_jobs', JSON.stringify(jobs));
-  }, [jobs]);
+    if (user) {
+      localStorage.setItem(`financeflow_jobs_${user.id}`, JSON.stringify(jobs));
+    }
+  }, [jobs, user]);
 
   useEffect(() => {
-    localStorage.setItem('financeflow_costs', JSON.stringify(monthlyCosts));
-  }, [monthlyCosts]);
+    if (user) {
+      localStorage.setItem(`financeflow_costs_${user.id}`, JSON.stringify(monthlyCosts));
+    }
+  }, [monthlyCosts, user]);
 
   useEffect(() => {
-    localStorage.setItem('financeflow_items', JSON.stringify(workItems));
-  }, [workItems]);
+    if (user) {
+      localStorage.setItem(`financeflow_items_${user.id}`, JSON.stringify(workItems));
+    }
+  }, [workItems, user]);
 
   useEffect(() => {
-    localStorage.setItem('financeflow_tasks', JSON.stringify(tasks));
-  }, [tasks]);
+    if (user) {
+      localStorage.setItem(`financeflow_tasks_${user.id}`, JSON.stringify(tasks));
+    }
+  }, [tasks, user]);
 
   useEffect(() => {
-    localStorage.setItem('financeflow_routine', JSON.stringify(workRoutine));
-  }, [workRoutine]);
+    if (user && workRoutine) {
+      localStorage.setItem(`financeflow_routine_${user.id}`, JSON.stringify(workRoutine));
+    }
+  }, [workRoutine, user]);
 
-  useEffect(() => {
-    localStorage.setItem('financeflow_company', JSON.stringify(companyData));
-  }, [companyData]);
-
-  const addJob = (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addJob = (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
+    if (!user) return;
     const newJob: Job = {
       ...jobData,
       id: crypto.randomUUID(),
+      userId: user.id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -115,36 +120,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setJobs(prev => prev.filter(job => job.id !== id));
   };
 
-  const addMonthlyCost = (costData: Omit<MonthlyCost, 'id' | 'createdAt'>) => {
+  const addMonthlyCost = (costData: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId'>) => {
+    if (!user) return;
     const newCost: MonthlyCost = {
       ...costData,
       id: crypto.randomUUID(),
+      userId: user.id,
       createdAt: new Date().toISOString()
     };
     setMonthlyCosts(prev => [newCost, ...prev]);
+  };
+
+  const updateMonthlyCost = (id: string, costData: Partial<MonthlyCost>) => {
+    setMonthlyCosts(prev => prev.map(cost => 
+      cost.id === id ? { ...cost, ...costData } : cost
+    ));
   };
 
   const deleteMonthlyCost = (id: string) => {
     setMonthlyCosts(prev => prev.filter(cost => cost.id !== id));
   };
 
-  const addWorkItem = (itemData: Omit<WorkItem, 'id' | 'createdAt'>) => {
+  const addWorkItem = (itemData: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => {
+    if (!user) return;
     const newItem: WorkItem = {
       ...itemData,
       id: crypto.randomUUID(),
+      userId: user.id,
       createdAt: new Date().toISOString()
     };
     setWorkItems(prev => [newItem, ...prev]);
+  };
+
+  const updateWorkItem = (id: string, itemData: Partial<WorkItem>) => {
+    setWorkItems(prev => prev.map(item => 
+      item.id === id ? { ...item, ...itemData } : item
+    ));
   };
 
   const deleteWorkItem = (id: string) => {
     setWorkItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const addTask = (taskData: Omit<Task, 'id' | 'createdAt'>) => {
+  const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
+    if (!user) return;
     const newTask: Task = {
       ...taskData,
       id: crypto.randomUUID(),
+      userId: user.id,
       createdAt: new Date().toISOString()
     };
     setTasks(prev => [newTask, ...prev]);
@@ -160,12 +183,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTasks(prev => prev.filter(task => task.id !== id));
   };
 
-  const updateWorkRoutine = (routine: WorkRoutine) => {
-    setWorkRoutine(routine);
+  const updateWorkRoutine = (routine: Omit<WorkRoutine, 'userId'>) => {
+    if (!user) return;
+    const newRoutine: WorkRoutine = {
+      ...routine,
+      userId: user.id
+    };
+    setWorkRoutine(newRoutine);
   };
 
-  const updateCompanyData = (data: CompanyData) => {
-    setCompanyData(data);
+  const calculateJobPrice = (hours: number, difficulty: string) => {
+    const hourlyRate = workRoutine?.valuePerHour || 50;
+    const difficultyMultiplier = difficulty === 'fácil' ? 1 : 
+                                difficulty === 'médio' ? 1.2 : 
+                                difficulty === 'difícil' ? 1.5 : 2;
+    
+    const baseServiceValue = hours * hourlyRate * difficultyMultiplier;
+    
+    // Calculate equipment depreciation
+    const equipmentCosts = workItems.reduce((total, item) => {
+      return total + (item.value / (item.depreciationYears * 12));
+    }, 0);
+    
+    const totalCosts = baseServiceValue + equipmentCosts;
+    
+    return {
+      totalCosts,
+      serviceValue: baseServiceValue,
+      hourlyRate: hourlyRate * difficultyMultiplier
+    };
   };
 
   return (
@@ -175,19 +221,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       workItems,
       tasks,
       workRoutine,
-      companyData,
+      company,
       addJob,
       updateJob,
       deleteJob,
       addMonthlyCost,
+      updateMonthlyCost,
       deleteMonthlyCost,
       addWorkItem,
+      updateWorkItem,
       deleteWorkItem,
       addTask,
       updateTask,
       deleteTask,
       updateWorkRoutine,
-      updateCompanyData
+      calculateJobPrice
     }}>
       {children}
     </AppContext.Provider>

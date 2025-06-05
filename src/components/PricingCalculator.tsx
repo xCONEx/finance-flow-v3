@@ -1,30 +1,44 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calculator, Save, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { useAppContext } from '../contexts/AppContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { formatCurrency } from '../utils/formatters';
 
 const PricingCalculator = () => {
+  const { calculateJobPrice, addJob, workRoutine } = useAppContext();
+  const { currentTheme } = useTheme();
+  
   const [formData, setFormData] = useState({
-    jobType: '',
-    hourlyRate: '',
-    workDays: '',
-    teamSize: '',
+    description: '',
+    client: '',
+    eventDate: '',
+    estimatedHours: 0,
+    difficultyLevel: 'médio' as 'fácil' | 'médio' | 'difícil' | 'muito difícil',
+    logistics: '',
     equipment: '',
-    software: '',
-    profitMargin: '30',
-    additionalCosts: ''
+    assistance: '',
+    category: '',
+    discountValue: 0
   });
 
-  const [calculatedPrice, setCalculatedPrice] = useState(0);
+  const [calculatedPrice, setCalculatedPrice] = useState({
+    totalCosts: 0,
+    serviceValue: 0,
+    valueWithDiscount: 0,
+    hourlyRate: 0
+  });
 
-  const jobTypes = [
+  const jobCategories = [
     "Filmagem de Casamento",
-    "Vídeo Institucional",
+    "Vídeo Institucional", 
     "Clipe Musical",
     "Reels/TikTok",
     "VSL (Video Sales Letter)",
@@ -34,22 +48,35 @@ const PricingCalculator = () => {
   ];
 
   const calculatePrice = () => {
-    const hourlyRate = parseFloat(formData.hourlyRate) || 0;
-    const workDays = parseFloat(formData.workDays) || 0;
-    const teamSize = parseFloat(formData.teamSize) || 1;
-    const equipment = parseFloat(formData.equipment) || 0;
-    const software = parseFloat(formData.software) || 0;
-    const profitMargin = parseFloat(formData.profitMargin) || 0;
-    const additionalCosts = parseFloat(formData.additionalCosts) || 0;
+    if (!workRoutine) {
+      toast({
+        title: "Erro",
+        description: "Configure sua rotina de trabalho primeiro.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    const baseCost = (hourlyRate * workDays * 8 * teamSize) + equipment + software + additionalCosts;
-    const finalPrice = baseCost * (1 + profitMargin / 100);
+    if (formData.estimatedHours <= 0) {
+      toast({
+        title: "Erro", 
+        description: "Informe as horas estimadas.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const result = calculateJobPrice(formData.estimatedHours, formData.difficultyLevel);
+    const valueWithDiscount = result.totalCosts - formData.discountValue;
     
-    setCalculatedPrice(finalPrice);
+    setCalculatedPrice({
+      ...result,
+      valueWithDiscount
+    });
   };
 
   const saveJob = () => {
-    if (!formData.jobType || calculatedPrice === 0) {
+    if (!formData.description || !formData.client || calculatedPrice.totalCosts === 0) {
       toast({
         title: "Erro",
         description: "Preencha os campos obrigatórios e calcule o preço primeiro.",
@@ -58,20 +85,58 @@ const PricingCalculator = () => {
       return;
     }
 
+    addJob({
+      description: formData.description,
+      client: formData.client,
+      eventDate: formData.eventDate,
+      estimatedHours: formData.estimatedHours,
+      difficultyLevel: formData.difficultyLevel,
+      logistics: formData.logistics,
+      equipment: formData.equipment,
+      assistance: formData.assistance,
+      status: 'pendente',
+      category: formData.category,
+      discountValue: formData.discountValue,
+      totalCosts: calculatedPrice.totalCosts,
+      serviceValue: calculatedPrice.serviceValue,
+      valueWithDiscount: calculatedPrice.valueWithDiscount,
+      profitMargin: ((calculatedPrice.valueWithDiscount - calculatedPrice.totalCosts) / calculatedPrice.totalCosts) * 100
+    });
+
     toast({
       title: "Job Salvo!",
-      description: `Orçamento de ${formData.jobType} salvo com sucesso.`,
+      description: `Orçamento de ${formData.description} salvo com sucesso.`,
+    });
+
+    // Reset form
+    setFormData({
+      description: '',
+      client: '',
+      eventDate: '',
+      estimatedHours: 0,
+      difficultyLevel: 'médio',
+      logistics: '',
+      equipment: '',
+      assistance: '',
+      category: '',
+      discountValue: 0
+    });
+    setCalculatedPrice({
+      totalCosts: 0,
+      serviceValue: 0,
+      valueWithDiscount: 0,
+      hourlyRate: 0
     });
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20 md:pb-6">
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
-          <Calculator className="text-purple-600" />
-          Calculadora de Precificação
+          <Calculator className={`text-${currentTheme.accent}`} />
+          Calculadora Inteligente
         </h2>
-        <p className="text-gray-600">Calcule o valor ideal para seus projetos audiovisuais</p>
+        <p className="text-gray-600 dark:text-gray-400">Calcule automaticamente baseado em seus custos e rotina</p>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -81,140 +146,179 @@ const PricingCalculator = () => {
             <CardTitle>Dados do Projeto</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição do Job *</Label>
+              <Textarea
+                id="description"
+                placeholder="Descreva o projeto..."
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+              />
+            </div>
+
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="jobType">Tipo de Job *</Label>
-                <Select value={formData.jobType} onValueChange={(value) => setFormData({...formData, jobType: value})}>
+                <Label htmlFor="client">Cliente *</Label>
+                <Input
+                  id="client"
+                  placeholder="Nome do cliente"
+                  value={formData.client}
+                  onChange={(e) => setFormData({...formData, client: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="eventDate">Data do Evento</Label>
+                <Input
+                  id="eventDate"
+                  type="date"
+                  value={formData.eventDate}
+                  onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="estimatedHours">Horas Estimadas *</Label>
+                <Input
+                  id="estimatedHours"
+                  type="number"
+                  placeholder="8"
+                  value={formData.estimatedHours}
+                  onChange={(e) => setFormData({...formData, estimatedHours: Number(e.target.value)})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="difficulty">Nível de Dificuldade</Label>
+                <Select value={formData.difficultyLevel} onValueChange={(value: any) => setFormData({...formData, difficultyLevel: value})}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo de projeto" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {jobTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    <SelectItem value="fácil">Fácil</SelectItem>
+                    <SelectItem value="médio">Médio</SelectItem>
+                    <SelectItem value="difícil">Difícil</SelectItem>
+                    <SelectItem value="muito difícil">Muito Difícil</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Categoria</Label>
+                <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobCategories.map((category) => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="hourlyRate">Valor por Hora (R$) *</Label>
+                <Label htmlFor="assistance">Assistência</Label>
                 <Input
-                  id="hourlyRate"
-                  type="number"
-                  placeholder="150"
-                  value={formData.hourlyRate}
-                  onChange={(e) => setFormData({...formData, hourlyRate: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="workDays">Número de Diárias *</Label>
-                <Input
-                  id="workDays"
-                  type="number"
-                  placeholder="2"
-                  value={formData.workDays}
-                  onChange={(e) => setFormData({...formData, workDays: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="teamSize">Tamanho da Equipe</Label>
-                <Input
-                  id="teamSize"
-                  type="number"
-                  placeholder="3"
-                  value={formData.teamSize}
-                  onChange={(e) => setFormData({...formData, teamSize: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="equipment">Custo de Equipamentos (R$)</Label>
-                <Input
-                  id="equipment"
-                  type="number"
-                  placeholder="500"
-                  value={formData.equipment}
-                  onChange={(e) => setFormData({...formData, equipment: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="software">Custo de Software (R$)</Label>
-                <Input
-                  id="software"
-                  type="number"
-                  placeholder="200"
-                  value={formData.software}
-                  onChange={(e) => setFormData({...formData, software: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="profitMargin">Margem de Lucro (%)</Label>
-                <Input
-                  id="profitMargin"
-                  type="number"
-                  placeholder="30"
-                  value={formData.profitMargin}
-                  onChange={(e) => setFormData({...formData, profitMargin: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="additionalCosts">Custos Adicionais (R$)</Label>
-                <Input
-                  id="additionalCosts"
-                  type="number"
-                  placeholder="300"
-                  value={formData.additionalCosts}
-                  onChange={(e) => setFormData({...formData, additionalCosts: e.target.value})}
+                  id="assistance"
+                  placeholder="Número de assistentes"
+                  value={formData.assistance}
+                  onChange={(e) => setFormData({...formData, assistance: e.target.value})}
                 />
               </div>
             </div>
 
-            <Button onClick={calculatePrice} className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+            <div className="space-y-2">
+              <Label htmlFor="logistics">Logística</Label>
+              <Textarea
+                id="logistics"
+                placeholder="Detalhes da logística..."
+                value={formData.logistics}
+                onChange={(e) => setFormData({...formData, logistics: e.target.value})}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="equipment">Equipamentos</Label>
+              <Textarea
+                id="equipment"
+                placeholder="Equipamentos necessários..."
+                value={formData.equipment}
+                onChange={(e) => setFormData({...formData, equipment: e.target.value})}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="discount">Valor de Desconto (R$)</Label>
+              <Input
+                id="discount"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.discountValue}
+                onChange={(e) => setFormData({...formData, discountValue: Number(e.target.value)})}
+              />
+            </div>
+
+            <Button onClick={calculatePrice} className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90`}>
               <Calculator className="mr-2 h-4 w-4" />
-              Calcular Preço
+              Calcular Preço Inteligente
             </Button>
           </CardContent>
         </Card>
 
         {/* Result */}
-        <Card className="bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200">
+        <Card className={`bg-gradient-to-br ${currentTheme.secondary} border-${currentTheme.accent}/20`}>
           <CardHeader>
-            <CardTitle className="text-center text-purple-800">Resultado</CardTitle>
+            <CardTitle className={`text-center text-${currentTheme.accent}`}>Resultado</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-6">
-            <div className="space-y-2">
-              <DollarSign className="mx-auto h-12 w-12 text-purple-600" />
-              <h3 className="text-2xl font-bold text-purple-800">Valor Sugerido</h3>
-              <div className="text-4xl font-bold text-purple-600">
-                R$ {calculatedPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
-
-            {calculatedPrice > 0 && (
-              <div className="space-y-4">
-                <div className="p-4 bg-white rounded-lg border border-purple-200">
-                  <p className="text-sm text-gray-600 mb-2">Breakdown:</p>
-                  <div className="text-left space-y-1 text-xs text-gray-700">
-                    <div className="flex justify-between">
-                      <span>Custo Base:</span>
-                      <span>R$ {(calculatedPrice / (1 + parseFloat(formData.profitMargin || '0') / 100)).toFixed(2)}</span>
+            {calculatedPrice.totalCosts > 0 ? (
+              <>
+                <div className="space-y-4">
+                  <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Custos Totais</h3>
+                    <div className={`text-2xl font-bold text-${currentTheme.accent}`}>
+                      {formatCurrency(calculatedPrice.totalCosts)}
                     </div>
-                    <div className="flex justify-between">
-                      <span>Margem ({formData.profitMargin}%):</span>
-                      <span>R$ {(calculatedPrice - (calculatedPrice / (1 + parseFloat(formData.profitMargin || '0') / 100))).toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor do Serviço</h3>
+                    <div className={`text-2xl font-bold text-${currentTheme.accent}`}>
+                      {formatCurrency(calculatedPrice.serviceValue)}
+                    </div>
+                  </div>
+
+                  {formData.discountValue > 0 && (
+                    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                      <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor com Desconto</h3>
+                      <div className={`text-2xl font-bold text-${currentTheme.accent}`}>
+                        {formatCurrency(calculatedPrice.valueWithDiscount)}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor/Hora (com dificuldade)</h3>
+                    <div className={`text-lg font-bold text-${currentTheme.accent}`}>
+                      {formatCurrency(calculatedPrice.hourlyRate)}
                     </div>
                   </div>
                 </div>
 
                 <Button onClick={saveJob} className="w-full bg-green-600 hover:bg-green-700">
                   <Save className="mr-2 h-4 w-4" />
-                  Salvar Orçamento
+                  Salvar Job
                 </Button>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <DollarSign className={`mx-auto h-12 w-12 text-${currentTheme.accent}`} />
+                <h3 className={`text-2xl font-bold text-${currentTheme.accent}`}>Calculadora Inteligente</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Configure sua rotina de trabalho e adicione itens/custos para usar a calculadora inteligente.
+                </p>
               </div>
             )}
           </CardContent>

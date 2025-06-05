@@ -1,4 +1,23 @@
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  avatar?: string;
+  userType: 'admin' | 'company_owner' | 'employee' | 'individual';
+  companyId?: string;
+  createdAt: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  logo?: string;
+  plan: 'free' | 'premium';
+  ownerId: string;
+  createdAt: string;
+}
+
 export interface Job {
   id: string;
   description: string;
@@ -18,6 +37,8 @@ export interface Job {
   profitMargin: number;
   createdAt: string;
   updatedAt: string;
+  userId: string;
+  companyId?: string;
 }
 
 export interface MonthlyCost {
@@ -27,6 +48,8 @@ export interface MonthlyCost {
   value: number;
   month: string;
   createdAt: string;
+  userId: string;
+  companyId?: string;
 }
 
 export interface WorkItem {
@@ -34,7 +57,10 @@ export interface WorkItem {
   description: string;
   category: string;
   value: number;
+  depreciationYears: number;
   createdAt: string;
+  userId: string;
+  companyId?: string;
 }
 
 export interface Task {
@@ -45,6 +71,7 @@ export interface Task {
   priority: 'baixa' | 'média' | 'alta';
   dueDate?: string;
   createdAt: string;
+  userId: string;
 }
 
 export interface WorkRoutine {
@@ -53,12 +80,19 @@ export interface WorkRoutine {
   workHoursPerDay: number;
   valuePerDay: number;
   valuePerHour: number;
+  userId: string;
 }
 
-export interface CompanyData {
+export interface Theme {
   name: string;
-  logo: string;
-  address: string;
-  phone: string;
-  email: string;
+  primary: string;
+  secondary: string;
+  accent: string;
+}
+
+export interface UserSettings {
+  theme: 'light' | 'dark';
+  colorTheme: string;
+  notifications: boolean;
+  language: 'pt-BR';
 }
