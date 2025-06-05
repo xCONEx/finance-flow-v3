@@ -5,9 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { useAppContext } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
+
+const EQUIPMENT_CATEGORIES = [
+  'Câmera',
+  'Lente', 
+  'Hardware',
+  'Software',
+  'Iluminação',
+  'Audio',
+  'Acessórios',
+  'Outros'
+];
 
 const WorkItems = () => {
   const { workItems, addWorkItem, updateWorkItem, deleteWorkItem, loading } = useAppContext();
@@ -107,7 +119,10 @@ const WorkItems = () => {
 
   const totalValue = workItems.reduce((sum, item) => sum + item.value, 0);
   const equipmentValue = workItems
-    .filter(item => item.category.toLowerCase().includes('equipamento'))
+    .filter(item => item.category.toLowerCase().includes('equipamento') || 
+                   item.category.toLowerCase().includes('câmera') ||
+                   item.category.toLowerCase().includes('lente') ||
+                   item.category.toLowerCase().includes('hardware'))
     .reduce((sum, item) => sum + item.value, 0);
 
   if (loading) {
@@ -190,13 +205,22 @@ const WorkItems = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category">Categoria</Label>
-                  <Input
-                    id="category"
+                  <Select
                     value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    placeholder="Ex: Equipamento"
+                    onValueChange={(value) => setFormData({...formData, category: value})}
                     disabled={submitting}
-                  />
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border shadow-lg z-50">
+                      {EQUIPMENT_CATEGORIES.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

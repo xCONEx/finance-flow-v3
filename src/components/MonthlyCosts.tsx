@@ -5,8 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
+
+const EXPENSE_CATEGORIES = [
+  'Moradia',
+  'Alimentação',
+  'Transporte',
+  'Saúde',
+  'Lazer',
+  'Outros'
+];
 
 const MonthlyCosts = () => {
   const { monthlyCosts, addMonthlyCost, updateMonthlyCost, deleteMonthlyCost, loading } = useAppContext();
@@ -173,13 +183,22 @@ const MonthlyCosts = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category">Categoria</Label>
-                  <Input
-                    id="category"
+                  <Select
                     value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    placeholder="Ex: Infraestrutura"
+                    onValueChange={(value) => setFormData({...formData, category: value})}
                     disabled={submitting}
-                  />
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border shadow-lg z-50">
+                      {EXPENSE_CATEGORIES.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

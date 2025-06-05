@@ -76,15 +76,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       console.log('📊 Importando dados de:', agencyData ? 'agência' : 'usuário individual');
 
-      // Importar equipamentos -> workItems
-      if (dataSource.equipaments && dataSource.equipaments.length > 0) {
-        console.log(`📦 Importando ${dataSource.equipaments.length} equipamentos...`);
-        const convertedWorkItems: WorkItem[] = dataSource.equipaments.map(item => ({
+      // Importar equipamentos -> workItems (corrigindo para "equipments")
+      if (dataSource.equipments && dataSource.equipments.length > 0) {
+        console.log(`📦 Importando ${dataSource.equipments.length} equipamentos...`);
+        const convertedWorkItems: WorkItem[] = dataSource.equipments.map(item => ({
           id: item.id,
           description: item.description,
           category: item.category,
           value: item.value,
-          depreciationYears: 5, // valor padrão
+          depreciationYears: 5,
           createdAt: new Date().toISOString(),
           userId: user.id
         }));
@@ -163,7 +163,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log('⏰ Nenhuma rotina encontrada');
       }
 
-      // Importar tasks
+      // Importar tasks - corrigindo para usar o serviço corretamente
       try {
         console.log('📋 Carregando tasks do usuário...');
         const userTasks = await firestoreService.getUserTasks(user.id);
@@ -205,7 +205,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  // Work Items operations - usando métodos específicos conforme tipo
+  // Work Items operations - corrigindo para usar "equipments"
   const addWorkItem = async (itemData: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => {
     if (!user) return;
 
@@ -220,10 +220,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       if (dataSource.isAgency) {
         console.log('📦 Adicionando item para agência:', dataSource.uid);
-        await firestoreService.addAgencyEquipament(dataSource.uid, newItem);
+        await firestoreService.addAgencyEquipment(dataSource.uid, newItem);
       } else {
         console.log('📦 Adicionando item para usuário:', dataSource.uid);
-        await firestoreService.addEquipament(dataSource.uid, newItem);
+        await firestoreService.addEquipment(dataSource.uid, newItem);
       }
       
       const convertedItem: WorkItem = {
@@ -266,12 +266,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (dataSource.isAgency) {
         console.log('🔄 Atualizando item da agência:', dataSource.uid);
-        await firestoreService.removeAgencyEquipament(dataSource.uid, oldFirestoreItem);
-        await firestoreService.addAgencyEquipament(dataSource.uid, updatedFirestoreItem);
+        await firestoreService.removeAgencyEquipment(dataSource.uid, oldFirestoreItem);
+        await firestoreService.addAgencyEquipment(dataSource.uid, updatedFirestoreItem);
       } else {
         console.log('🔄 Atualizando item do usuário:', dataSource.uid);
-        await firestoreService.removeEquipament(dataSource.uid, oldFirestoreItem);
-        await firestoreService.addEquipament(dataSource.uid, updatedFirestoreItem);
+        await firestoreService.removeEquipment(dataSource.uid, oldFirestoreItem);
+        await firestoreService.addEquipment(dataSource.uid, updatedFirestoreItem);
       }
 
       setWorkItems(prev => prev.map(item => 
@@ -302,10 +302,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (dataSource.isAgency) {
         console.log('🗑️ Removendo item da agência:', dataSource.uid);
-        await firestoreService.removeAgencyEquipament(dataSource.uid, firestoreItem);
+        await firestoreService.removeAgencyEquipment(dataSource.uid, firestoreItem);
       } else {
         console.log('🗑️ Removendo item do usuário:', dataSource.uid);
-        await firestoreService.removeEquipament(dataSource.uid, firestoreItem);
+        await firestoreService.removeEquipment(dataSource.uid, firestoreItem);
       }
 
       setWorkItems(prev => prev.filter(item => item.id !== id));
@@ -480,23 +480,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Tasks operations (mantendo a estrutura existente por enquanto)
   const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
     if (!user) return;
-    const newTask: Task = {
-      ...taskData,
-      id: crypto.randomUUID(),
-      userId: user.id,
-      createdAt: new Date().toISOString()
+    
+    const firestoreTask = {
+      name: taskData.title,
+      description: taskData.description,
+      date: taskData.dueDate || new Date().toISOString(),
+      status: taskData.completed ? 'completed' : 'pending',
+      ownerUID: user.id
     };
-    setTasks(prev => [newTask, ...prev]);
+
+    try {
+      const taskId = await firestoreService.addTask(firestoreTask);
+      
+      const newTask: Task = {
+        ...taskData,
+        id: taskId,
+        userId: user.id,
+        createdAt: new Date().toISOString()
+      };
+      
+      setTasks(prev => [newTask, ...prev]);
+      console.log('✅ Task adicionada ao Firebase');
+    } catch (error) {
+      console.error('❌ Erro ao adicionar task:', error);
+      throw error;
+    }
   };
 
   const updateTask = async (id: string, taskData: Partial<Task>) => {
-    setTasks(prev => prev.map(task => 
-      task.id === id ? { ...task, ...taskData } : task
-    ));
+    if (!user) return;
+
+    try {
+      const firestoreUpdate = {
+        name: taskData.title,
+        description: taskData.description,
+        date: taskData.dueDate,
+        status: taskData.completed ? 'completed' : 'pending'
+      };
+
+      await firestoreService.updateTask(id, firestoreUpdate);
+      
+      setTasks(prev => prev.map(task => 
+        task.id === id ? { ...task, ...taskData } : task
+      ));
+      console.log('✅ Task atualizada no Firebase');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar task:', error);
+      throw error;
+    }
   };
 
   const deleteTask = async (id: string) => {
-    setTasks(prev => prev.filter(task => task.id !== id));
+    try {
+      await firestoreService.deleteTask(id);
+      setTasks(prev => prev.filter(task => task.id !== id));
+      console.log('✅ Task deletada no Firebase');
+    } catch (error) {
+      console.error('❌ Erro ao deletar task:', error);
+      throw error;
+    }
   };
 
   const calculateJobPrice = (hours: number, difficulty: string) => {
@@ -518,6 +560,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       serviceValue: baseServiceValue,
       hourlyRate: hourlyRate * difficultyMultiplier
     };
+  };
+
+  // Função para importar dados JSON
+  const importJsonData = async (jsonData: any) => {
+    if (!user) return;
+
+    const dataSource = getCurrentDataSource();
+    
+    try {
+      await firestoreService.importUserData(dataSource.uid, jsonData);
+      await importFirebaseData(); // Recarregar dados após importação
+      console.log('✅ Dados JSON importados com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao importar dados JSON:', error);
+      throw error;
+    }
   };
 
   return (
@@ -542,7 +600,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateTask,
       deleteTask,
       updateWorkRoutine,
-      calculateJobPrice
+      calculateJobPrice,
+      importJsonData
     }}>
       {children}
     </AppContext.Provider>

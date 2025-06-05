@@ -10,7 +10,8 @@ import {
   getDocs,
   arrayUnion,
   arrayRemove,
-  deleteField
+  deleteField,
+  addDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { User } from '../types';
@@ -19,7 +20,7 @@ export interface FirestoreUser {
   email: string;
   uid: string;
   logobase64: string;
-  equipaments: Array<{
+  equipments: Array<{
     id: string;
     description: string;
     category: string;
@@ -59,7 +60,7 @@ export interface FirestoreTask {
   description: string;
   date: string;
   status: string;
-  ownerUID: string; // Confirma que tasks usam ownerUID
+  ownerUID: string;
 }
 
 export interface FirestoreAgency extends FirestoreUser {
@@ -80,7 +81,7 @@ class FirestoreService {
       if (userDoc.exists()) {
         const data = userDoc.data() as FirestoreUser;
         console.log('✅ Dados do usuário encontrados:', {
-          equipaments: data.equipaments?.length || 0,
+          equipments: data.equipments?.length || 0,
           expenses: data.expenses?.length || 0,
           jobs: data.jobs?.length || 0,
           routine: data.routine
@@ -118,12 +119,12 @@ class FirestoreService {
     }
   }
 
-  // Equipaments operations - estrutura de array no documento do usuário/agência
-  async addEquipament(uid: string, equipament: any): Promise<void> {
+  // Equipment operations - usando "equipments" ao invés de "equipaments"
+  async addEquipment(uid: string, equipment: any): Promise<void> {
     try {
       console.log('📦 Adicionando equipamento para uid:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
-        equipaments: arrayUnion(equipament)
+        equipments: arrayUnion(equipment)
       });
       console.log('✅ Equipamento adicionado');
     } catch (error) {
@@ -132,11 +133,11 @@ class FirestoreService {
     }
   }
 
-  async removeEquipament(uid: string, equipament: any): Promise<void> {
+  async removeEquipment(uid: string, equipment: any): Promise<void> {
     try {
       console.log('🗑️ Removendo equipamento para uid:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
-        equipaments: arrayRemove(equipament)
+        equipments: arrayRemove(equipment)
       });
       console.log('✅ Equipamento removido');
     } catch (error) {
@@ -145,11 +146,11 @@ class FirestoreService {
     }
   }
 
-  async updateEquipaments(uid: string, equipaments: any[]): Promise<void> {
+  async updateEquipments(uid: string, equipments: any[]): Promise<void> {
     try {
       console.log('🔄 Atualizando lista de equipamentos para uid:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
-        equipaments: equipaments
+        equipments: equipments
       });
       console.log('✅ Lista de equipamentos atualizada');
     } catch (error) {
@@ -158,7 +159,7 @@ class FirestoreService {
     }
   }
 
-  // Expenses operations - estrutura de array no documento do usuário/agência
+  // Expenses operations
   async addExpense(uid: string, expense: any): Promise<void> {
     try {
       console.log('💰 Adicionando despesa para uid:', uid);
@@ -267,18 +268,43 @@ class FirestoreService {
     }
   }
 
-  async addTask(taskData: FirestoreTask): Promise<void> {
+  async addTask(taskData: FirestoreTask): Promise<string> {
     try {
       console.log('📝 Adicionando task com ownerUID:', taskData.ownerUID);
-      await setDoc(doc(collection(db, 'tasks')), taskData);
-      console.log('✅ Task adicionada');
+      const docRef = await addDoc(collection(db, 'tasks'), taskData);
+      console.log('✅ Task adicionada com ID:', docRef.id);
+      return docRef.id;
     } catch (error) {
       console.error('❌ Erro ao adicionar task:', error);
       throw error;
     }
   }
 
-  // Agency operations - verificando colaboradores com estrutura correta
+  async updateTask(taskId: string, taskData: Partial<FirestoreTask>): Promise<void> {
+    try {
+      console.log('📝 Atualizando task:', taskId);
+      await updateDoc(doc(db, 'tasks', taskId), taskData);
+      console.log('✅ Task atualizada');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar task:', error);
+      throw error;
+    }
+  }
+
+  async deleteTask(taskId: string): Promise<void> {
+    try {
+      console.log('🗑️ Deletando task:', taskId);
+      await updateDoc(doc(db, 'tasks', taskId), {
+        status: 'deleted'
+      });
+      console.log('✅ Task deletada');
+    } catch (error) {
+      console.error('❌ Erro ao deletar task:', error);
+      throw error;
+    }
+  }
+
+  // Agency operations
   async getUserAgency(uid: string): Promise<(FirestoreAgency & { id: string }) | null> {
     try {
       console.log('🏢 Buscando agência para uid:', uid);
@@ -338,12 +364,12 @@ class FirestoreService {
     }
   }
 
-  // Métodos específicos para agências (quando necessário)
-  async addAgencyEquipament(agencyId: string, equipament: any): Promise<void> {
+  // Métodos específicos para agências
+  async addAgencyEquipment(agencyId: string, equipment: any): Promise<void> {
     try {
       console.log('📦 Adicionando equipamento para agência:', agencyId);
       await updateDoc(doc(db, 'agencias', agencyId), {
-        equipaments: arrayUnion(equipament)
+        equipments: arrayUnion(equipment)
       });
       console.log('✅ Equipamento adicionado à agência');
     } catch (error) {
@@ -352,11 +378,11 @@ class FirestoreService {
     }
   }
 
-  async removeAgencyEquipament(agencyId: string, equipament: any): Promise<void> {
+  async removeAgencyEquipment(agencyId: string, equipment: any): Promise<void> {
     try {
       console.log('🗑️ Removendo equipamento da agência:', agencyId);
       await updateDoc(doc(db, 'agencias', agencyId), {
-        equipaments: arrayRemove(equipament)
+        equipments: arrayRemove(equipment)
       });
       console.log('✅ Equipamento removido da agência');
     } catch (error) {
@@ -387,6 +413,37 @@ class FirestoreService {
       console.log('✅ Despesa removida da agência');
     } catch (error) {
       console.error('❌ Erro ao remover despesa da agência:', error);
+      throw error;
+    }
+  }
+
+  // Método para importar dados JSON
+  async importUserData(uid: string, jsonData: any): Promise<void> {
+    try {
+      console.log('📥 Importando dados JSON para uid:', uid);
+      
+      const updateData: any = {};
+      
+      if (jsonData.equipments) {
+        updateData.equipments = jsonData.equipments;
+      }
+      
+      if (jsonData.expenses) {
+        updateData.expenses = jsonData.expenses;
+      }
+      
+      if (jsonData.routine) {
+        updateData.routine = jsonData.routine;
+      }
+      
+      if (jsonData.jobs) {
+        updateData.jobs = jsonData.jobs;
+      }
+      
+      await updateDoc(doc(db, 'usuarios', uid), updateData);
+      console.log('✅ Dados JSON importados com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao importar dados JSON:', error);
       throw error;
     }
   }
