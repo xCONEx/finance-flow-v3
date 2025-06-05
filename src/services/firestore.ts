@@ -59,40 +59,56 @@ export interface FirestoreTask {
   description: string;
   date: string;
   status: string;
-  userId: string;
+  ownerUID: string;
 }
 
 export interface FirestoreAgency extends FirestoreUser {
-  colaboradores: string[];
+  colaboradores: Array<{
+    uid: string;
+    email: string;
+    name?: string;
+  }>;
+  ownerUID: string;
 }
 
 class FirestoreService {
-  // User operations
+  // User operations - usando coleção 'usuarios'
   async getUserData(uid: string): Promise<FirestoreUser | null> {
     try {
-      const userDoc = await getDoc(doc(db, 'users', uid));
+      console.log('🔍 Buscando dados do usuário na coleção usuarios:', uid);
+      const userDoc = await getDoc(doc(db, 'usuarios', uid));
       if (userDoc.exists()) {
-        return userDoc.data() as FirestoreUser;
+        const data = userDoc.data() as FirestoreUser;
+        console.log('✅ Dados do usuário encontrados:', {
+          equipaments: data.equipaments?.length || 0,
+          expenses: data.expenses?.length || 0,
+          jobs: data.jobs?.length || 0,
+          routine: data.routine
+        });
+        return data;
       }
+      console.log('❌ Usuário não encontrado na coleção usuarios');
       return null;
     } catch (error) {
-      console.error('Error getting user data:', error);
+      console.error('❌ Erro ao buscar dados do usuário:', error);
       throw error;
     }
   }
 
   async createUser(userData: FirestoreUser): Promise<void> {
     try {
-      await setDoc(doc(db, 'users', userData.uid), userData);
+      console.log('📝 Criando usuário na coleção usuarios:', userData.uid);
+      await setDoc(doc(db, 'usuarios', userData.uid), userData);
+      console.log('✅ Usuário criado com sucesso');
     } catch (error) {
-      console.error('Error creating user:', error);
+      console.error('❌ Erro ao criar usuário:', error);
       throw error;
     }
   }
 
   async updateUserField(uid: string, field: string, value: any): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         [field]: value
       });
     } catch (error) {
@@ -104,7 +120,7 @@ class FirestoreService {
   // Equipaments operations
   async addEquipament(uid: string, equipament: any): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         equipaments: arrayUnion(equipament)
       });
     } catch (error) {
@@ -115,7 +131,7 @@ class FirestoreService {
 
   async removeEquipament(uid: string, equipament: any): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         equipaments: arrayRemove(equipament)
       });
     } catch (error) {
@@ -126,7 +142,7 @@ class FirestoreService {
 
   async updateEquipaments(uid: string, equipaments: any[]): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         equipaments: equipaments
       });
     } catch (error) {
@@ -138,7 +154,7 @@ class FirestoreService {
   // Expenses operations
   async addExpense(uid: string, expense: any): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         expenses: arrayUnion(expense)
       });
     } catch (error) {
@@ -149,7 +165,7 @@ class FirestoreService {
 
   async removeExpense(uid: string, expense: any): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         expenses: arrayRemove(expense)
       });
     } catch (error) {
@@ -160,7 +176,7 @@ class FirestoreService {
 
   async updateExpenses(uid: string, expenses: any[]): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         expenses: expenses
       });
     } catch (error) {
@@ -172,7 +188,7 @@ class FirestoreService {
   // Jobs operations
   async addJob(uid: string, job: any): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         jobs: arrayUnion(job)
       });
     } catch (error) {
@@ -183,7 +199,7 @@ class FirestoreService {
 
   async removeJob(uid: string, job: any): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         jobs: arrayRemove(job)
       });
     } catch (error) {
@@ -194,7 +210,7 @@ class FirestoreService {
 
   async updateJobs(uid: string, jobs: any[]): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         jobs: jobs
       });
     } catch (error) {
@@ -206,7 +222,7 @@ class FirestoreService {
   // Routine operations
   async updateRoutine(uid: string, routine: any): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), {
+      await updateDoc(doc(db, 'usuarios', uid), {
         routine: routine
       });
     } catch (error) {
@@ -215,18 +231,24 @@ class FirestoreService {
     }
   }
 
-  // Tasks operations
+  // Tasks operations - usando coleção 'tasks' com ownerUID
   async getUserTasks(userId: string): Promise<FirestoreTask[]> {
     try {
+      console.log('🔍 Buscando tasks do usuário:', userId);
       const tasksQuery = query(
         collection(db, 'tasks'),
-        where('userId', '==', userId)
+        where('ownerUID', '==', userId)
       );
       const querySnapshot = await getDocs(tasksQuery);
-      return querySnapshot.docs.map(doc => doc.data() as FirestoreTask);
+      const tasks = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as FirestoreTask & { id: string }));
+      console.log('✅ Tasks encontradas:', tasks.length);
+      return tasks;
     } catch (error) {
-      console.error('Error getting user tasks:', error);
-      throw error;
+      console.error('❌ Erro ao buscar tasks:', error);
+      return [];
     }
   }
 
@@ -239,26 +261,48 @@ class FirestoreService {
     }
   }
 
-  // Agency operations
+  // Agency operations - verificando colaboradores com estrutura correta
   async getUserAgency(uid: string): Promise<(FirestoreAgency & { id: string }) | null> {
     try {
+      console.log('🏢 Buscando agência do usuário:', uid);
       const agenciesQuery = query(
         collection(db, 'agencias'),
-        where('colaboradores', 'array-contains', uid)
+        where('colaboradores', 'array-contains', { uid: uid })
       );
       const querySnapshot = await getDocs(agenciesQuery);
       
       if (!querySnapshot.empty) {
         const agencyDoc = querySnapshot.docs[0];
-        return {
+        const agencyData = {
           id: agencyDoc.id,
           ...agencyDoc.data()
         } as FirestoreAgency & { id: string };
+        console.log('✅ Agência encontrada:', agencyData.id);
+        return agencyData;
       }
+      
+      // Se não encontrar como colaborador, verificar se é owner
+      const ownerQuery = query(
+        collection(db, 'agencias'),
+        where('ownerUID', '==', uid)
+      );
+      const ownerSnapshot = await getDocs(ownerQuery);
+      
+      if (!ownerSnapshot.empty) {
+        const agencyDoc = ownerSnapshot.docs[0];
+        const agencyData = {
+          id: agencyDoc.id,
+          ...agencyDoc.data()
+        } as FirestoreAgency & { id: string };
+        console.log('✅ Agência encontrada como owner:', agencyData.id);
+        return agencyData;
+      }
+      
+      console.log('❌ Usuário não pertence a nenhuma agência');
       return null;
     } catch (error) {
-      console.error('Error getting user agency:', error);
-      throw error;
+      console.error('❌ Erro ao buscar agência:', error);
+      return null;
     }
   }
 

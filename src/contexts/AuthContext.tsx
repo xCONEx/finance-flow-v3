@@ -44,14 +44,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          console.log('🔄 Carregando dados do usuário do Firebase...');
+          console.log('🔄 Usuário autenticado, carregando dados...', firebaseUser.uid);
           
-          // Verificar se o usuário existe no Firestore
+          // Verificar se o usuário existe na coleção 'usuarios'
           let userData = await firestoreService.getUserData(firebaseUser.uid);
           
           // Se não existir, criar um novo documento
           if (!userData) {
-            console.log('👤 Criando novo usuário no Firestore...');
+            console.log('👤 Criando novo usuário na coleção usuarios...');
             const newUserData: FirestoreUser = {
               email: firebaseUser.email || '',
               uid: firebaseUser.uid,
@@ -69,8 +69,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             await firestoreService.createUser(newUserData);
             userData = newUserData;
+            console.log('✅ Usuário criado com dados padrão');
           } else {
-            console.log('📦 Dados do usuário encontrados no Firebase:', {
+            console.log('📦 Dados do usuário encontrados:', {
               equipaments: userData.equipaments?.length || 0,
               expenses: userData.expenses?.length || 0,
               jobs: userData.jobs?.length || 0,
@@ -108,12 +109,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(appUser);
           setUserData(userData);
 
-          console.log('✅ Dados importados com sucesso do Firebase!');
+          console.log('✅ Dados do usuário carregados com sucesso!');
 
         } catch (error) {
           console.error('❌ Erro ao carregar dados do usuário:', error);
         }
       } else {
+        console.log('👋 Usuário não autenticado');
         setUser(null);
         setUserData(null);
         setAgencyData(null);
@@ -150,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('📝 Criando nova conta...');
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Criar documento do usuário no Firestore
+      // Criar documento do usuário na coleção 'usuarios'
       const newUserData: FirestoreUser = {
         email: email,
         uid: userCredential.user.uid,
