@@ -223,10 +223,7 @@ class FirestoreService {
         where('userId', '==', userId)
       );
       const querySnapshot = await getDocs(tasksQuery);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as FirestoreTask[];
+      return querySnapshot.docs.map(doc => doc.data() as FirestoreTask);
     } catch (error) {
       console.error('Error getting user tasks:', error);
       throw error;
@@ -243,7 +240,7 @@ class FirestoreService {
   }
 
   // Agency operations
-  async getUserAgency(uid: string): Promise<FirestoreAgency | null> {
+  async getUserAgency(uid: string): Promise<(FirestoreAgency & { id: string }) | null> {
     try {
       const agenciesQuery = query(
         collection(db, 'agencias'),
@@ -256,7 +253,7 @@ class FirestoreService {
         return {
           id: agencyDoc.id,
           ...agencyDoc.data()
-        } as FirestoreAgency;
+        } as FirestoreAgency & { id: string };
       }
       return null;
     } catch (error) {
