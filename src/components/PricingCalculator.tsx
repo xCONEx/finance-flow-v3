@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calculator, Save, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,11 +23,8 @@ const PricingCalculator = () => {
     eventDate: '',
     estimatedHours: 0,
     difficultyLevel: 'médio' as 'fácil' | 'médio' | 'difícil' | 'muito difícil',
-    logistics: '',
     logisticsValue: 0,
-    equipment: '',
     equipmentValue: 0,
-    assistance: '',
     assistanceValue: 0,
     category: '',
     discountPercentage: 0
@@ -137,9 +133,9 @@ const PricingCalculator = () => {
       eventDate: formData.eventDate,
       estimatedHours: formData.estimatedHours,
       difficultyLevel: formData.difficultyLevel,
-      logistics: formData.logistics,
-      equipment: formData.equipment,
-      assistance: formData.assistance,
+      logistics: formData.logisticsValue,
+      equipment: formData.equipmentValue,
+      assistance: formData.assistanceValue,
       status: 'pendente',
       category: formData.category,
       discountValue: (calculatedPrice.totalCosts * formData.discountPercentage) / 100,
@@ -161,11 +157,8 @@ const PricingCalculator = () => {
       eventDate: '',
       estimatedHours: 0,
       difficultyLevel: 'médio',
-      logistics: '',
       logisticsValue: 0,
-      equipment: '',
       equipmentValue: 0,
-      assistance: '',
       assistanceValue: 0,
       category: '',
       discountPercentage: 0
@@ -283,57 +276,30 @@ const PricingCalculator = () => {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="logistics">Logística</Label>
-                <Textarea
-                  id="logistics"
-                  placeholder="Detalhes da logística..."
-                  value={formData.logistics}
-                  onChange={(e) => setFormData({...formData, logistics: e.target.value})}
+                <Label htmlFor="logisticsValue">Logística (R$)</Label>
+                <CurrencyInput
+                  id="logisticsValue"
+                  value={formData.logisticsValue}
+                  onChange={(value) => setFormData({...formData, logisticsValue: value})}
                 />
-                <div className="space-y-2">
-                  <Label htmlFor="logisticsValue">Valor da Logística</Label>
-                  <CurrencyInput
-                    id="logisticsValue"
-                    value={formData.logisticsValue}
-                    onChange={(value) => setFormData({...formData, logisticsValue: value})}
-                  />
-                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="equipment">Equipamentos</Label>
-                <Textarea
-                  id="equipment"
-                  placeholder="Equipamentos necessários..."
-                  value={formData.equipment}
-                  onChange={(e) => setFormData({...formData, equipment: e.target.value})}
+                <Label htmlFor="equipmentValue">Equipamentos (R$)</Label>
+                <CurrencyInput
+                  id="equipmentValue"
+                  value={formData.equipmentValue}
+                  onChange={(value) => setFormData({...formData, equipmentValue: value})}
                 />
-                <div className="space-y-2">
-                  <Label htmlFor="equipmentValue">Valor dos Equipamentos</Label>
-                  <CurrencyInput
-                    id="equipmentValue"
-                    value={formData.equipmentValue}
-                    onChange={(value) => setFormData({...formData, equipmentValue: value})}
-                  />
-                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="assistance">Assistência</Label>
-                <Textarea
-                  id="assistance"
-                  placeholder="Detalhes da assistência..."
-                  value={formData.assistance}
-                  onChange={(e) => setFormData({...formData, assistance: e.target.value})}
+                <Label htmlFor="assistanceValue">Assistência (R$)</Label>
+                <CurrencyInput
+                  id="assistanceValue"
+                  value={formData.assistanceValue}
+                  onChange={(value) => setFormData({...formData, assistanceValue: value})}
                 />
-                <div className="space-y-2">
-                  <Label htmlFor="assistanceValue">Valor da Assistência</Label>
-                  <CurrencyInput
-                    id="assistanceValue"
-                    value={formData.assistanceValue}
-                    onChange={(value) => setFormData({...formData, assistanceValue: value})}
-                  />
-                </div>
               </div>
             </div>
 
