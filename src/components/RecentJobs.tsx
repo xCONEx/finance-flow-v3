@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { Edit, Trash2, FileText, Calendar, DollarSign } from 'lucide-react';
+import { Edit, Trash2, FileText, Calendar, DollarSign, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAppContext } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import JobEditor from './JobEditor';
@@ -13,6 +14,7 @@ const RecentJobs = () => {
   const { jobs, deleteJob } = useAppContext();
   const { userData } = useAuth();
   const [editingJob, setEditingJob] = useState<string | null>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const recentJobs = jobs.slice(0, 3);
 
@@ -75,6 +77,19 @@ const RecentJobs = () => {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Últimos Jobs Calculados</h3>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setShowHistoryModal(true)}
+          className="flex items-center gap-1"
+        >
+          <History className="h-4 w-4" />
+          Ver Histórico
+        </Button>
+      </div>
+
       {recentJobs.map((job) => (
         <div key={job.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-3">
@@ -113,6 +128,51 @@ const RecentJobs = () => {
           </div>
         </div>
       ))}
+
+      {/* Modal de Histórico */}
+      <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Histórico Completo de Jobs</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {jobs.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">Nenhum job encontrado</p>
+            ) : (
+              jobs.map((job) => (
+                <div key={job.id} className="p-3 border rounded-lg">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-medium">{job.description}</h4>
+                      <p className="text-sm text-gray-600">Cliente: {job.client}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(job.eventDate).toLocaleDateString('pt-BR')} - 
+                        R$ {job.serviceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <Badge variant={job.status === 'aprovado' ? 'default' : 'secondary'}>
+                      {job.status}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setShowHistoryModal(false);
+                      handleEdit(job.id);
+                    }}>
+                      <Edit className="h-3 w-3 mr-1" />
+                      Editar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handlePrintPDF(job.id)}>
+                      <FileText className="h-3 w-3 mr-1" />
+                      PDF
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {editingJob && (
         <JobEditor

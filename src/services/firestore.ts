@@ -33,6 +33,7 @@ export interface FirestoreUser {
     value: number;
   }>;
   jobs: Array<{
+    id: string;
     assistance: string;
     category: string;
     client: string;
@@ -119,7 +120,7 @@ class FirestoreService {
     }
   }
 
-  // Equipment operations - usando "equipments" ao invés de "equipaments"
+  // Equipment operations
   async addEquipment(uid: string, equipment: any): Promise<void> {
     try {
       console.log('📦 Adicionando equipamento para uid:', uid);
@@ -199,36 +200,77 @@ class FirestoreService {
     }
   }
 
-  // Jobs operations
+  // Jobs operations - CORRIGIDO para usar IDs únicos
   async addJob(uid: string, job: any): Promise<void> {
     try {
+      console.log('💼 Adicionando job para uid:', uid);
+      const currentData = await this.getUserData(uid);
+      const jobs = currentData?.jobs || [];
+      
+      const newJob = {
+        ...job,
+        id: job.id || crypto.randomUUID() // Garantir que tem ID
+      };
+      
+      jobs.push(newJob);
+      
       await updateDoc(doc(db, 'usuarios', uid), {
-        jobs: arrayUnion(job)
+        jobs: jobs
       });
+      console.log('✅ Job adicionado com ID:', newJob.id);
     } catch (error) {
-      console.error('Error adding job:', error);
+      console.error('❌ Erro ao adicionar job:', error);
       throw error;
     }
   }
 
-  async removeJob(uid: string, job: any): Promise<void> {
+  async updateJob(uid: string, jobId: string, updatedJob: any): Promise<void> {
     try {
+      console.log('🔄 Atualizando job:', jobId);
+      const currentData = await this.getUserData(uid);
+      if (!currentData || !currentData.jobs) return;
+      
+      const jobs = currentData.jobs.map(job => 
+        job.id === jobId ? { ...job, ...updatedJob, id: jobId } : job
+      );
+      
       await updateDoc(doc(db, 'usuarios', uid), {
-        jobs: arrayRemove(job)
+        jobs: jobs
       });
+      console.log('✅ Job atualizado no Firebase');
     } catch (error) {
-      console.error('Error removing job:', error);
+      console.error('❌ Erro ao atualizar job:', error);
+      throw error;
+    }
+  }
+
+  async removeJob(uid: string, jobId: string): Promise<void> {
+    try {
+      console.log('🗑️ Removendo job:', jobId);
+      const currentData = await this.getUserData(uid);
+      if (!currentData || !currentData.jobs) return;
+      
+      const jobs = currentData.jobs.filter(job => job.id !== jobId);
+      
+      await updateDoc(doc(db, 'usuarios', uid), {
+        jobs: jobs
+      });
+      console.log('✅ Job removido do Firebase');
+    } catch (error) {
+      console.error('❌ Erro ao remover job:', error);
       throw error;
     }
   }
 
   async updateJobs(uid: string, jobs: any[]): Promise<void> {
     try {
+      console.log('🔄 Atualizando lista completa de jobs:', uid);
       await updateDoc(doc(db, 'usuarios', uid), {
         jobs: jobs
       });
+      console.log('✅ Lista de jobs atualizada');
     } catch (error) {
-      console.error('Error updating jobs:', error);
+      console.error('❌ Erro ao atualizar jobs:', error);
       throw error;
     }
   }
@@ -247,14 +289,13 @@ class FirestoreService {
     }
   }
 
-  // Tasks operations - usando coleção 'tasks' separada com ownerUID
+  // Tasks operations - usando coleção 'tasks' separada
   async getUserTasks(userId: string): Promise<FirestoreTask[]> {
     try {
       console.log('📋 Buscando tasks para ownerUID:', userId);
       const tasksQuery = query(
         collection(db, 'tasks'),
-        where('ownerUID', '==', userId),
-        where('status', '!=', 'deleted') // Filtrar tasks deletadas
+        where('ownerUID', '==', userId)
       );
       const querySnapshot = await getDocs(tasksQuery);
       const tasks = querySnapshot.docs.map(doc => ({

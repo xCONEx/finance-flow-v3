@@ -77,7 +77,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       console.log('📊 Importando dados de:', agencyData ? 'agência' : 'usuário individual');
 
-      // Importar equipamentos -> workItems (corrigindo para "equipamentos")
+      // Importar equipamentos -> workItems
       if (dataSource.equipments && dataSource.equipments.length > 0) {
         console.log(`📦 Importando ${dataSource.equipments.length} equipamentos...`);
         const convertedWorkItems: WorkItem[] = dataSource.equipments.map(item => ({
@@ -104,7 +104,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           description: expense.description,
           category: expense.category,
           value: expense.value,
-          month: new Date().toISOString().slice(0, 7), // formato YYYY-MM
+          month: new Date().toISOString().slice(0, 7),
           createdAt: new Date().toISOString(),
           userId: user.id
         }));
@@ -115,20 +115,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log('💰 Nenhuma despesa encontrada');
       }
 
-      // Importar jobs
+      // Importar jobs - CORRIGIDO
       if (dataSource.jobs && dataSource.jobs.length > 0) {
         console.log(`💼 Importando ${dataSource.jobs.length} jobs...`);
         const convertedJobs: Job[] = dataSource.jobs.map(job => ({
-          id: crypto.randomUUID(),
+          id: job.id || crypto.randomUUID(),
           description: job.descriptions || job.description || 'Job importado',
           client: job.client || 'Cliente não informado',
           eventDate: job.eventDate || new Date().toISOString(),
           estimatedHours: job.hours || 1,
-          difficultyLevel: (job.difficulty === 'fácil' || job.difficulty === 'médio' || job.difficulty === 'difícil' || job.difficulty === 'expert') ? job.difficulty : 'médio',
-          logistics: job.logistics || 'Não informado',
-          equipment: job.equipment || 'Não informado',
-          assistance: job.assistance || 'Não informado',
-          status: (job.status === 'pendente' || job.status === 'em-andamento' || job.status === 'concluido' || job.status === 'cancelado') ? job.status : 'pendente',
+          difficultyLevel: (job.difficulty === 'fácil' || job.difficulty === 'médio' || job.difficulty === 'difícil' || job.difficulty === 'muito difícil') ? job.difficulty : 'médio',
+          logistics: typeof job.logistics === 'number' ? job.logistics : 0,
+          equipment: typeof job.equipment === 'number' ? job.equipment : 0,
+          assistance: typeof job.assistance === 'number' ? job.assistance : 0,
+          status: (job.status === 'pendente' || job.status === 'aprovado' || job.status === 'em-andamento' || job.status === 'concluido' || job.status === 'cancelado') ? job.status : 'pendente',
           category: job.category || 'Geral',
           discountValue: 0,
           totalCosts: job.value || 0,
@@ -164,7 +164,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log('⏰ Nenhuma rotina encontrada');
       }
 
-      // Importar tasks - corrigindo para usar o serviço corretamente
+      // Importar tasks - CORRIGIDO
       try {
         console.log('📋 Carregando tasks do usuário...');
         const userTasks = await firestoreService.getUserTasks(user.id);
@@ -173,9 +173,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             id: task.id || crypto.randomUUID(),
             title: task.name || 'Task sem nome',
             description: task.description || '',
-            completed: task.status === 'completed' || task.status === 'concluida',
+            completed: task.status === 'completed' || task.status === 'delivered',
             priority: 'média' as const,
-            status: 'todo' as const, // Adicionando status obrigatório
+            status: (task.status === 'todo' || task.status === 'editing' || task.status === 'urgent' || task.status === 'delivered' || task.status === 'revision') ? task.status : 'todo',
             dueDate: task.date || new Date().toISOString(),
             createdAt: task.date || new Date().toISOString(),
             userId: user.id
@@ -205,6 +205,203 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       uid: agencyData ? agencyData.id : user?.id || '',
       isAgency: !!agencyData
     };
+  };
+
+  // Jobs operations - CORRIGIDO com salvamento automático
+  const addJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
+    if (!user) return;
+    
+    const dataSource = getCurrentDataSource();
+    const newJob: Job = {
+      ...jobData,
+      id: crypto.randomUUID(),
+      userId: user.id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Converter para formato Firebase
+    const firestoreJob = {
+      id: newJob.id,
+      assistance: typeof jobData.assistance === 'number' ? jobData.assistance : 0,
+      category: jobData.category,
+      client: jobData.client,
+      date: newJob.createdAt,
+      descriptions: jobData.description,
+      difficulty: jobData.difficultyLevel,
+      equipment: typeof jobData.equipment === 'number' ? jobData.equipment : 0,
+      eventDate: jobData.eventDate,
+      hours: jobData.estimatedHours,
+      logistics: typeof jobData.logistics === 'number' ? jobData.logistics : 0,
+      profit: jobData.profitMargin,
+      status: jobData.status,
+      value: jobData.serviceValue
+    };
+
+    try {
+      // Salvar no Firebase primeiro
+      await firestoreService.addJob(dataSource.uid, firestoreJob);
+      
+      // Atualizar estado local após sucesso
+      setJobs(prev => [newJob, ...prev]);
+      console.log('✅ Job adicionado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao adicionar job:', error);
+      throw error;
+    }
+  };
+
+  const updateJob = async (id: string, jobData: Partial<Job>) => {
+    if (!user) return;
+
+    const dataSource = getCurrentDataSource();
+
+    try {
+      console.log('🔄 Atualizando job:', id, jobData);
+      
+      // Encontrar job atual
+      const currentJob = jobs.find(job => job.id === id);
+      if (!currentJob) {
+        console.error('Job não encontrado:', id);
+        return;
+      }
+
+      // Converter para formato Firebase
+      const updatedJob = { ...currentJob, ...jobData };
+      const firestoreJob = {
+        id: id,
+        assistance: typeof updatedJob.assistance === 'number' ? updatedJob.assistance : 0,
+        category: updatedJob.category,
+        client: updatedJob.client,
+        date: updatedJob.createdAt,
+        descriptions: updatedJob.description,
+        difficulty: updatedJob.difficultyLevel,
+        equipment: typeof updatedJob.equipment === 'number' ? updatedJob.equipment : 0,
+        eventDate: updatedJob.eventDate,
+        hours: updatedJob.estimatedHours,
+        logistics: typeof updatedJob.logistics === 'number' ? updatedJob.logistics : 0,
+        profit: updatedJob.profitMargin,
+        status: updatedJob.status,
+        value: updatedJob.serviceValue
+      };
+
+      // Salvar no Firebase primeiro
+      await firestoreService.updateJob(dataSource.uid, id, firestoreJob);
+
+      // Atualizar estado local após sucesso
+      setJobs(prev => prev.map(job => 
+        job.id === id ? { ...job, ...jobData, updatedAt: new Date().toISOString() } : job
+      ));
+
+      console.log('✅ Job atualizado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar job:', error);
+      throw error;
+    }
+  };
+
+  const deleteJob = async (id: string) => {
+    if (!user) return;
+
+    const dataSource = getCurrentDataSource();
+
+    try {
+      // Remover do Firebase primeiro
+      await firestoreService.removeJob(dataSource.uid, id);
+      
+      // Atualizar estado local após sucesso
+      setJobs(prev => prev.filter(job => job.id !== id));
+      console.log('✅ Job removido com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao deletar job:', error);
+      throw error;
+    }
+  };
+
+  // Tasks operations - CORRIGIDO
+  const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
+    if (!user) return;
+    
+    const firestoreTask = {
+      name: taskData.title,
+      description: taskData.description,
+      date: taskData.dueDate || new Date().toISOString(),
+      status: taskData.completed ? 'delivered' : taskData.status || 'todo',
+      ownerUID: user.id
+    };
+
+    try {
+      const taskId = await firestoreService.addTask(firestoreTask);
+      
+      const newTask: Task = {
+        ...taskData,
+        id: taskId,
+        userId: user.id,
+        createdAt: new Date().toISOString()
+      };
+      
+      setTasks(prev => [newTask, ...prev]);
+      console.log('✅ Task adicionada ao Firebase');
+    } catch (error) {
+      console.error('❌ Erro ao adicionar task:', error);
+      throw error;
+    }
+  };
+
+  const updateTask = async (id: string, taskData: Partial<Task>) => {
+    if (!user) return;
+
+    try {
+      const firestoreUpdate: any = {};
+      
+      if (taskData.title !== undefined) {
+        firestoreUpdate.name = taskData.title;
+      }
+      if (taskData.description !== undefined) {
+        firestoreUpdate.description = taskData.description;
+      }
+      if (taskData.dueDate !== undefined) {
+        firestoreUpdate.date = taskData.dueDate;
+      }
+      if (taskData.completed !== undefined) {
+        firestoreUpdate.status = taskData.completed ? 'delivered' : 'todo';
+      }
+      if (taskData.status !== undefined) {
+        firestoreUpdate.status = taskData.status;
+      }
+
+      console.log('🔄 Atualizando task no Firebase:', id, firestoreUpdate);
+      
+      // Salvar no Firebase primeiro
+      await firestoreService.updateTask(id, firestoreUpdate);
+      
+      // Atualizar estado local após sucesso
+      setTasks(prev => prev.map(task => 
+        task.id === id ? { ...task, ...taskData } : task
+      ));
+      
+      console.log('✅ Task atualizada com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar task:', error);
+      throw error;
+    }
+  };
+
+  const deleteTask = async (id: string) => {
+    try {
+      console.log('🗑️ Deletando task:', id);
+      
+      // Remover do Firebase primeiro
+      await firestoreService.deleteTask(id);
+      
+      // Atualizar estado local após sucesso
+      setTasks(prev => prev.filter(task => task.id !== id));
+      
+      console.log('✅ Task deletada com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao deletar task:', error);
+      throw error;
+    }
   };
 
   // Work Items operations - corrigindo para usar "equipamentos"
@@ -452,230 +649,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setWorkRoutine(newRoutine);
     } catch (error) {
       console.error('Error updating work routine:', error);
-      throw error;
-    }
-  };
-
-  // Jobs operations (mantendo a estrutura existente por enquanto)
-  const addJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
-    if (!user) return;
-    
-    const dataSource = getCurrentDataSource();
-    const newJob: Job = {
-      ...jobData,
-      id: crypto.randomUUID(),
-      userId: user.id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    // Converter para formato Firebase
-    const firestoreJob = {
-      assistance: typeof jobData.assistance === 'number' ? jobData.assistance : 0,
-      category: jobData.category,
-      client: jobData.client,
-      date: newJob.createdAt,
-      descriptions: jobData.description,
-      difficulty: jobData.difficultyLevel,
-      equipment: typeof jobData.equipment === 'number' ? jobData.equipment : 0,
-      eventDate: jobData.eventDate,
-      hours: jobData.estimatedHours,
-      logistics: typeof jobData.logistics === 'number' ? jobData.logistics : 0,
-      profit: jobData.profitMargin,
-      status: jobData.status,
-      value: jobData.serviceValue
-    };
-
-    try {
-      if (dataSource.isAgency) {
-        await firestoreService.addAgencyJob(dataSource.uid, firestoreJob);
-      } else {
-        await firestoreService.addJob(dataSource.uid, firestoreJob);
-      }
-      
-      setJobs(prev => [newJob, ...prev]);
-      console.log('✅ Job adicionado com sucesso');
-    } catch (error) {
-      console.error('❌ Erro ao adicionar job:', error);
-      throw error;
-    }
-  };
-
-  const updateJob = async (id: string, jobData: Partial<Job>) => {
-    if (!user) return;
-
-    const dataSource = getCurrentDataSource();
-
-    try {
-      console.log('🔄 Atualizando job:', id, jobData);
-      
-      // Atualizar estado local primeiro para feedback imediato
-      setJobs(prev => prev.map(job => 
-        job.id === id ? { ...job, ...jobData, updatedAt: new Date().toISOString() } : job
-      ));
-
-      const currentJob = jobs.find(job => job.id === id);
-      if (!currentJob) return;
-
-      // Converter para formato Firebase
-      const updatedJob = { ...currentJob, ...jobData };
-      const firestoreJob = {
-        assistance: typeof updatedJob.assistance === 'number' ? updatedJob.assistance : 0,
-        category: updatedJob.category,
-        client: updatedJob.client,
-        date: updatedJob.createdAt,
-        descriptions: updatedJob.description,
-        difficulty: updatedJob.difficultyLevel,
-        equipment: typeof updatedJob.equipment === 'number' ? updatedJob.equipment : 0,
-        eventDate: updatedJob.eventDate,
-        hours: updatedJob.estimatedHours,
-        logistics: typeof updatedJob.logistics === 'number' ? updatedJob.logistics : 0,
-        profit: updatedJob.profitMargin,
-        status: updatedJob.status, // Manter o status atualizado
-        value: updatedJob.serviceValue
-      };
-
-      // Buscar jobs atuais
-      const currentData = dataSource.isAgency ? 
-        await firestoreService.getAgencyData(dataSource.uid) : 
-        await firestoreService.getUserData(dataSource.uid);
-      
-      if (currentData && currentData.jobs) {
-        // Atualizar array de jobs no Firebase
-        const updatedJobs = currentData.jobs.map((job: any) => 
-          job.date === currentJob.createdAt ? firestoreJob : job
-        );
-
-        if (dataSource.isAgency) {
-          await firestoreService.updateAgencyJobs(dataSource.uid, updatedJobs);
-        } else {
-          await firestoreService.updateJobs(dataSource.uid, updatedJobs);
-        }
-      }
-
-      console.log('✅ Job atualizado no Firebase');
-    } catch (error) {
-      console.error('❌ Erro ao atualizar job:', error);
-      // Reverter mudança local em caso de erro
-      setJobs(prev => prev.map(job => 
-        job.id === id ? { ...job, ...jobData } : job
-      ));
-      throw error;
-    }
-  };
-
-  const deleteJob = async (id: string) => {
-    if (!user) return;
-
-    const dataSource = getCurrentDataSource();
-
-    try {
-      const jobToDelete = jobs.find(job => job.id === id);
-      if (!jobToDelete) return;
-
-      setJobs(prev => prev.filter(job => job.id !== id));
-
-      // Buscar jobs atuais e remover o job
-      const currentData = dataSource.isAgency ? 
-        await firestoreService.getAgencyData(dataSource.uid) : 
-        await firestoreService.getUserData(dataSource.uid);
-      
-      if (currentData && currentData.jobs) {
-        const updatedJobs = currentData.jobs.filter((job: any) => 
-          job.date !== jobToDelete.createdAt
-        );
-
-        if (dataSource.isAgency) {
-          await firestoreService.updateAgencyJobs(dataSource.uid, updatedJobs);
-        } else {
-          await firestoreService.updateJobs(dataSource.uid, updatedJobs);
-        }
-      }
-
-      console.log('✅ Job removido com sucesso');
-    } catch (error) {
-      console.error('❌ Erro ao deletar job:', error);
-      throw error;
-    }
-  };
-
-  // Tasks operations - corrigindo para melhor sincronização
-  const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
-    if (!user) return;
-    
-    const firestoreTask = {
-      name: taskData.title,
-      description: taskData.description,
-      date: taskData.dueDate || new Date().toISOString(),
-      status: taskData.completed ? 'completed' : taskData.status || 'todo',
-      ownerUID: user.id
-    };
-
-    try {
-      const taskId = await firestoreService.addTask(firestoreTask);
-      
-      const newTask: Task = {
-        ...taskData,
-        id: taskId,
-        userId: user.id,
-        createdAt: new Date().toISOString()
-      };
-      
-      setTasks(prev => [newTask, ...prev]);
-      console.log('✅ Task adicionada ao Firebase');
-    } catch (error) {
-      console.error('❌ Erro ao adicionar task:', error);
-      throw error;
-    }
-  };
-
-  const updateTask = async (id: string, taskData: Partial<Task>) => {
-    if (!user) return;
-
-    try {
-      // Atualizar no Firebase primeiro
-      const firestoreUpdate: any = {};
-      
-      if (taskData.title !== undefined) {
-        firestoreUpdate.name = taskData.title;
-      }
-      if (taskData.description !== undefined) {
-        firestoreUpdate.description = taskData.description;
-      }
-      if (taskData.dueDate !== undefined) {
-        firestoreUpdate.date = taskData.dueDate;
-      }
-      if (taskData.completed !== undefined) {
-        firestoreUpdate.status = taskData.completed ? 'completed' : 'pending';
-      }
-      if (taskData.status !== undefined) {
-        firestoreUpdate.status = taskData.status;
-      }
-
-      console.log('🔄 Atualizando task no Firebase:', id, firestoreUpdate);
-      await firestoreService.updateTask(id, firestoreUpdate);
-      
-      // Atualizar estado local apenas após sucesso no Firebase
-      setTasks(prev => prev.map(task => 
-        task.id === id ? { ...task, ...taskData } : task
-      ));
-      console.log('✅ Task atualizada no Firebase e estado local');
-    } catch (error) {
-      console.error('❌ Erro ao atualizar task:', error);
-      throw error;
-    }
-  };
-
-  const deleteTask = async (id: string) => {
-    try {
-      console.log('🗑️ Deletando task:', id);
-      await firestoreService.deleteTask(id);
-      
-      // Remover do estado local apenas após sucesso no Firebase
-      setTasks(prev => prev.filter(task => task.id !== id));
-      console.log('✅ Task deletada do Firebase e estado local');
-    } catch (error) {
-      console.error('❌ Erro ao deletar task:', error);
       throw error;
     }
   };
