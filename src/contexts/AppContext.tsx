@@ -175,6 +175,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             description: task.description || '',
             completed: task.status === 'completed' || task.status === 'concluida',
             priority: 'média' as const,
+            status: 'todo' as const, // Adicionando status obrigatório
             dueDate: task.date || new Date().toISOString(),
             createdAt: task.date || new Date().toISOString(),
             userId: user.id

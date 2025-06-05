@@ -17,11 +17,11 @@ interface EditTaskModalProps {
 }
 
 const taskStatuses = [
-  { value: 'todo', label: 'A fazer', color: 'bg-gray-500' },
-  { value: 'editing', label: 'Em edição', color: 'bg-blue-500' },
-  { value: 'urgent', label: 'Urgente', color: 'bg-red-500' },
-  { value: 'delivered', label: 'Entregue', color: 'bg-green-500' },
-  { value: 'revision', label: 'Alteração', color: 'bg-yellow-500' }
+  { value: 'todo' as const, label: 'A fazer', color: 'bg-gray-500' },
+  { value: 'editing' as const, label: 'Em edição', color: 'bg-blue-500' },
+  { value: 'urgent' as const, label: 'Urgente', color: 'bg-red-500' },
+  { value: 'delivered' as const, label: 'Entregue', color: 'bg-green-500' },
+  { value: 'revision' as const, label: 'Alteração', color: 'bg-yellow-500' }
 ];
 
 const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskId }) => {
@@ -29,7 +29,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    status: 'todo',
+    status: 'todo' as 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision',
     priority: 'média' as 'baixa' | 'média' | 'alta',
     dueDate: ''
   });
@@ -41,7 +41,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
       setFormData({
         title: task.title,
         description: task.description || '',
-        status: (task as any).status || 'todo',
+        status: task.status || 'todo',
         priority: task.priority,
         dueDate: task.dueDate || ''
       });
