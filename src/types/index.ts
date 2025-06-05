@@ -1,8 +1,10 @@
+
 export interface User {
   id: string;
   email: string;
   name: string;
   avatar?: string;
+  photoURL?: string;
   userType: 'admin' | 'company_owner' | 'employee' | 'individual';
   companyId?: string;
   createdAt: string;
