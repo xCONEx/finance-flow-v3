@@ -70,6 +70,7 @@ export interface Task {
   description: string;
   completed: boolean;
   priority: 'baixa' | 'média' | 'alta';
+  status: 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision';
   dueDate?: string;
   createdAt: string;
   userId: string;
