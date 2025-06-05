@@ -43,6 +43,11 @@ const TaskList = () => {
             <p className={`text-sm ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
               {task.title}
             </p>
+            {task.description && (
+              <p className="text-xs text-gray-400 mt-1">
+                {task.description}
+              </p>
+            )}
             {task.dueDate && (
               <p className="text-xs text-gray-500">
                 Vence em: {new Date(task.dueDate).toLocaleDateString('pt-BR')}
@@ -59,7 +64,7 @@ const TaskList = () => {
       
       <div className="flex justify-between pt-2 border-t">
         <Button size="sm" variant="ghost">
-          Ver Todas
+          Ver Todas ({tasks.length})
         </Button>
         <Button size="sm" variant="ghost">
           <Plus className="h-4 w-4 mr-1" />

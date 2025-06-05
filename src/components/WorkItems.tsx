@@ -10,8 +10,9 @@ import { useAppContext } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 
 const WorkItems = () => {
-  const { workItems, addWorkItem, deleteWorkItem, loading } = useAppContext();
+  const { workItems, addWorkItem, updateWorkItem, deleteWorkItem, loading } = useAppContext();
   const [showForm, setShowForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
@@ -33,7 +34,21 @@ const WorkItems = () => {
 
     setSubmitting(true);
     try {
-      await addWorkItem(formData);
+      if (editingItem) {
+        await updateWorkItem(editingItem, formData);
+        toast({
+          title: "Item Atualizado",
+          description: "O item foi atualizado com sucesso.",
+        });
+        setEditingItem(null);
+      } else {
+        await addWorkItem(formData);
+        toast({
+          title: "Item Adicionado",
+          description: "O item de trabalho foi cadastrado com sucesso.",
+        });
+      }
+      
       setFormData({
         description: '',
         category: '',
@@ -41,19 +56,37 @@ const WorkItems = () => {
         depreciationYears: 5
       });
       setShowForm(false);
-      toast({
-        title: "Item Adicionado",
-        description: "O item de trabalho foi cadastrado com sucesso.",
-      });
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao adicionar item de trabalho.",
+        description: editingItem ? "Erro ao atualizar item." : "Erro ao adicionar item de trabalho.",
         variant: "destructive"
       });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEdit = (item: any) => {
+    setFormData({
+      description: item.description,
+      category: item.category,
+      value: item.value,
+      depreciationYears: item.depreciationYears || 5
+    });
+    setEditingItem(item.id);
+    setShowForm(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+    setShowForm(false);
+    setFormData({
+      description: '',
+      category: '',
+      value: 0,
+      depreciationYears: 5
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -136,11 +169,11 @@ const WorkItems = () => {
         </Card>
       </div>
 
-      {/* Add Form */}
+      {/* Add/Edit Form */}
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Novo Item de Trabalho</CardTitle>
+            <CardTitle>{editingItem ? 'Editar Item de Trabalho' : 'Novo Item de Trabalho'}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -193,9 +226,9 @@ const WorkItems = () => {
               </div>
               <div className="flex gap-2">
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Adicionando...' : 'Adicionar'}
+                  {submitting ? (editingItem ? 'Atualizando...' : 'Adicionando...') : (editingItem ? 'Atualizar' : 'Adicionar')}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)} disabled={submitting}>
+                <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={submitting}>
                   Cancelar
                 </Button>
               </div>
@@ -213,7 +246,7 @@ const WorkItems = () => {
                 <div>
                   <h3 className="font-semibold">{item.description}</h3>
                   <p className="text-sm text-gray-600">Categoria: {item.category}</p>
-                  <p className="text-xs text-gray-500">Depreciação: {item.depreciationYears} anos</p>
+                  <p className="text-xs text-gray-500">Depreciação: {item.depreciationYears || 5} anos</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
@@ -224,7 +257,9 @@ const WorkItems = () => {
                   <Button
                     size="sm"
                     variant="outline"
+                    onClick={() => handleEdit(item)}
                     className="transition-all duration-300 hover:scale-105"
+                    disabled={submitting}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>

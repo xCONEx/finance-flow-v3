@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, DollarSign, Loader2 } from 'lucide-react';
+import { Plus, Trash2, DollarSign, Edit, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,9 @@ import { useAppContext } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 
 const MonthlyCosts = () => {
-  const { monthlyCosts, addMonthlyCost, deleteMonthlyCost, loading } = useAppContext();
+  const { monthlyCosts, addMonthlyCost, updateMonthlyCost, deleteMonthlyCost, loading } = useAppContext();
   const [showForm, setShowForm] = useState(false);
+  const [editingCost, setEditingCost] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
@@ -32,7 +33,21 @@ const MonthlyCosts = () => {
 
     setSubmitting(true);
     try {
-      await addMonthlyCost(formData);
+      if (editingCost) {
+        await updateMonthlyCost(editingCost, formData);
+        toast({
+          title: "Custo Atualizado",
+          description: "O custo foi atualizado com sucesso.",
+        });
+        setEditingCost(null);
+      } else {
+        await addMonthlyCost(formData);
+        toast({
+          title: "Custo Adicionado",
+          description: "O custo mensal foi cadastrado com sucesso.",
+        });
+      }
+      
       setFormData({
         description: '',
         category: '',
@@ -40,19 +55,37 @@ const MonthlyCosts = () => {
         month: new Date().toISOString().slice(0, 7)
       });
       setShowForm(false);
-      toast({
-        title: "Custo Adicionado",
-        description: "O custo mensal foi cadastrado com sucesso.",
-      });
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao adicionar custo mensal.",
+        description: editingCost ? "Erro ao atualizar custo." : "Erro ao adicionar custo mensal.",
         variant: "destructive"
       });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEdit = (cost: any) => {
+    setFormData({
+      description: cost.description,
+      category: cost.category,
+      value: cost.value,
+      month: cost.month || new Date().toISOString().slice(0, 7)
+    });
+    setEditingCost(cost.id);
+    setShowForm(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCost(null);
+    setShowForm(false);
+    setFormData({
+      description: '',
+      category: '',
+      value: 0,
+      month: new Date().toISOString().slice(0, 7)
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -119,11 +152,11 @@ const MonthlyCosts = () => {
         </CardContent>
       </Card>
 
-      {/* Add Form */}
+      {/* Add/Edit Form */}
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Novo Custo Mensal</CardTitle>
+            <CardTitle>{editingCost ? 'Editar Custo Mensal' : 'Novo Custo Mensal'}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -135,6 +168,7 @@ const MonthlyCosts = () => {
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     placeholder="Ex: Aluguel do escritório"
+                    disabled={submitting}
                   />
                 </div>
                 <div className="space-y-2">
@@ -144,6 +178,7 @@ const MonthlyCosts = () => {
                     value={formData.category}
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
                     placeholder="Ex: Infraestrutura"
+                    disabled={submitting}
                   />
                 </div>
               </div>
@@ -157,6 +192,7 @@ const MonthlyCosts = () => {
                     value={formData.value}
                     onChange={(e) => setFormData({...formData, value: Number(e.target.value)})}
                     placeholder="1500.00"
+                    disabled={submitting}
                   />
                 </div>
                 <div className="space-y-2">
@@ -166,12 +202,15 @@ const MonthlyCosts = () => {
                     type="month"
                     value={formData.month}
                     onChange={(e) => setFormData({...formData, month: e.target.value})}
+                    disabled={submitting}
                   />
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button type="submit">Adicionar</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? (editingCost ? 'Atualizando...' : 'Adicionando...') : (editingCost ? 'Atualizar' : 'Adicionar')}
+                </Button>
+                <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={submitting}>
                   Cancelar
                 </Button>
               </div>
@@ -199,6 +238,14 @@ const MonthlyCosts = () => {
                       R$ {cost.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleEdit(cost)}
+                    disabled={submitting}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
                   <Button
                     size="sm"
                     variant="outline"

@@ -120,23 +120,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log(`💼 Importando ${dataSource.jobs.length} jobs...`);
         const convertedJobs: Job[] = dataSource.jobs.map(job => ({
           id: crypto.randomUUID(),
-          description: job.descriptions,
-          client: job.client,
-          eventDate: job.eventDate,
-          estimatedHours: job.hours,
-          difficultyLevel: job.difficulty as any,
-          logistics: job.logistics,
-          equipment: job.equipment,
-          assistance: job.assistance,
-          status: job.status as any,
-          category: job.category,
+          description: job.descriptions || job.description || 'Job importado',
+          client: job.client || 'Cliente não informado',
+          eventDate: job.eventDate || new Date().toISOString(),
+          estimatedHours: job.hours || 1,
+          difficultyLevel: (job.difficulty === 'fácil' || job.difficulty === 'médio' || job.difficulty === 'difícil' || job.difficulty === 'expert') ? job.difficulty : 'médio',
+          logistics: job.logistics || 'Não informado',
+          equipment: job.equipment || 'Não informado',
+          assistance: job.assistance || 'Não informado',
+          status: (job.status === 'pendente' || job.status === 'em-andamento' || job.status === 'concluido' || job.status === 'cancelado') ? job.status : 'pendente',
+          category: job.category || 'Geral',
           discountValue: 0,
-          totalCosts: job.value,
-          serviceValue: job.value,
-          valueWithDiscount: job.value,
-          profitMargin: job.profit,
-          createdAt: job.date,
-          updatedAt: job.date,
+          totalCosts: job.value || 0,
+          serviceValue: job.value || 0,
+          valueWithDiscount: job.value || 0,
+          profitMargin: job.profit || 0,
+          createdAt: job.date || new Date().toISOString(),
+          updatedAt: job.date || new Date().toISOString(),
           userId: user.id
         }));
         setJobs(convertedJobs);
@@ -150,11 +150,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (dataSource.routine) {
         console.log('⏰ Importando rotina de trabalho...');
         const convertedRoutine: WorkRoutine = {
-          desiredSalary: dataSource.routine.desiredSalary,
-          workDaysPerMonth: dataSource.routine.workDays,
-          workHoursPerDay: dataSource.routine.dailyHours,
-          valuePerDay: dataSource.routine.dalilyValue,
-          valuePerHour: dataSource.routine.dalilyValue / dataSource.routine.dailyHours,
+          desiredSalary: dataSource.routine.desiredSalary || 0,
+          workDaysPerMonth: dataSource.routine.workDays || 22,
+          workHoursPerDay: dataSource.routine.dailyHours || 8,
+          valuePerDay: dataSource.routine.dalilyValue || 0,
+          valuePerHour: (dataSource.routine.dalilyValue || 0) / (dataSource.routine.dailyHours || 8),
           userId: user.id
         };
         setWorkRoutine(convertedRoutine);
@@ -169,14 +169,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log('📋 Carregando tasks do usuário...');
         const userTasks = await firestoreService.getUserTasks(user.id);
         if (userTasks && userTasks.length > 0) {
-          const convertedTasks: Task[] = userTasks.map(task => ({
-            id: crypto.randomUUID(),
-            title: task.name,
-            description: task.description,
-            completed: task.status === 'completed',
-            priority: 'média' as any,
-            dueDate: task.date,
-            createdAt: task.date,
+          const convertedTasks: Task[] = userTasks.map((task: any) => ({
+            id: task.id || crypto.randomUUID(),
+            title: task.name || 'Task sem nome',
+            description: task.description || '',
+            completed: task.status === 'completed' || task.status === 'concluida',
+            priority: 'média' as const,
+            dueDate: task.date || new Date().toISOString(),
+            createdAt: task.date || new Date().toISOString(),
             userId: user.id
           }));
           setTasks(convertedTasks);
@@ -191,13 +191,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       console.log('🎉 Importação concluída com sucesso!');
-      console.log('📊 Resumo da importação:', {
-        workItems: workItems.length,
-        monthlyCosts: monthlyCosts.length,
-        jobs: jobs.length,
-        tasks: tasks.length,
-        workRoutine: !!workRoutine
-      });
 
     } catch (error) {
       console.error('❌ Erro durante a importação:', error);
