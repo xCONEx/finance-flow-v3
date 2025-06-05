@@ -25,21 +25,35 @@ export const PrivacyProvider = ({ children }: PrivacyProviderProps) => {
   const [valuesHidden, setValuesHidden] = useState(false);
 
   const toggleValuesVisibility = () => {
-    console.log('Toggling values visibility from', valuesHidden, 'to', !valuesHidden);
-    setValuesHidden(!valuesHidden);
+    console.log('🔄 PrivacyContext - toggleValuesVisibility chamado');
+    console.log('🔄 Estado atual valuesHidden:', valuesHidden);
+    
+    setValuesHidden(prev => {
+      const newValue = !prev;
+      console.log('🔄 Novo valor valuesHidden:', newValue);
+      return newValue;
+    });
   };
 
   const formatValue = (value: number | string) => {
+    console.log('💰 formatValue chamado com:', value, 'valuesHidden:', valuesHidden);
+    
     if (valuesHidden) {
+      console.log('💰 Retornando valor oculto');
       return '••••••';
     }
     
     const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
-    return numValue.toLocaleString('pt-BR', {
+    const formatted = numValue.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     });
+    
+    console.log('💰 Retornando valor formatado:', formatted);
+    return formatted;
   };
+
+  console.log('🏗️ PrivacyProvider renderizando, valuesHidden:', valuesHidden);
 
   return (
     <PrivacyContext.Provider value={{

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { CheckCircle, Circle, Calendar, AlertCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
@@ -16,7 +16,6 @@ const TasksModal = ({ open, onOpenChange }: TasksModalProps) => {
 
   const toggleTask = async (taskId: string, completed: boolean) => {
     try {
-      // Corrigido: usar apenas campos válidos
       await updateTask(taskId, { completed });
       toast({
         title: completed ? "Tarefa Concluída" : "Tarefa Reaberta",
@@ -40,6 +39,9 @@ const TasksModal = ({ open, onOpenChange }: TasksModalProps) => {
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Todas as Tarefas ({tasks.length})</DialogTitle>
+          <DialogDescription>
+            Gerencie todas as suas tarefas em um só lugar
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
