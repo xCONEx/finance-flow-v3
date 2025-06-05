@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Briefcase, Edit, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Briefcase, Edit, Loader2, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { useAppContext } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { generateWorkItemsPDF } from '../utils/pdfGenerator';
 
 const EQUIPMENT_CATEGORIES = [
   'Câmera',
@@ -23,6 +25,7 @@ const EQUIPMENT_CATEGORIES = [
 
 const WorkItems = () => {
   const { workItems, addWorkItem, updateWorkItem, deleteWorkItem, loading } = useAppContext();
+  const { userData } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -117,6 +120,32 @@ const WorkItems = () => {
     }
   };
 
+  const handleGeneratePDF = async () => {
+    try {
+      if (workItems.length === 0) {
+        toast({
+          title: "Erro",
+          description: "Não há itens para gerar o relatório.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      await generateWorkItemsPDF(workItems, userData);
+      toast({
+        title: "PDF Gerado",
+        description: "O relatório de itens de trabalho foi gerado com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar relatório PDF.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const totalValue = workItems.reduce((sum, item) => sum + item.value, 0);
   const equipmentValue = workItems
     .filter(item => item.category.toLowerCase().includes('equipamento') || 
@@ -153,10 +182,18 @@ const WorkItems = () => {
             )}
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)} disabled={submitting}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Item
-        </Button>
+        <div className="flex gap-2">
+          {workItems.length > 0 && (
+            <Button onClick={handleGeneratePDF} variant="outline">
+              <FileText className="h-4 w-4 mr-2" />
+              Gerar PDF
+            </Button>
+          )}
+          <Button onClick={() => setShowForm(true)} disabled={submitting}>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Item
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}

@@ -4,11 +4,14 @@ import { Edit, Trash2, FileText, Calendar, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAppContext } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import JobEditor from './JobEditor';
 import { toast } from '@/hooks/use-toast';
+import { generateJobPDF } from '../utils/pdfGenerator';
 
 const RecentJobs = () => {
   const { jobs, deleteJob } = useAppContext();
+  const { userData } = useAuth();
   const [editingJob, setEditingJob] = useState<string | null>(null);
 
   const recentJobs = jobs.slice(0, 3);
@@ -17,20 +20,47 @@ const RecentJobs = () => {
     setEditingJob(jobId);
   };
 
-  const handleDelete = (jobId: string) => {
-    deleteJob(jobId);
-    toast({
-      title: "Job Excluído",
-      description: "O job foi removido com sucesso.",
-    });
+  const handleDelete = async (jobId: string) => {
+    try {
+      await deleteJob(jobId);
+      toast({
+        title: "Job Excluído",
+        description: "O job foi removido com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir job.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handlePrintPDF = (jobId: string) => {
-    // TODO: Implementar geração de PDF
-    toast({
-      title: "PDF em desenvolvimento",
-      description: "A funcionalidade de PDF será implementada em breve.",
-    });
+  const handlePrintPDF = async (jobId: string) => {
+    try {
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) {
+        toast({
+          title: "Erro",
+          description: "Job não encontrado.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      await generateJobPDF(job, userData);
+      toast({
+        title: "PDF Gerado",
+        description: "O PDF do orçamento foi gerado com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar PDF do orçamento.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (recentJobs.length === 0) {

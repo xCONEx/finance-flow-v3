@@ -1,13 +1,16 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, DollarSign, Edit, Loader2 } from 'lucide-react';
+import { Plus, Trash2, DollarSign, Edit, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { useAppContext } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { generateExpensesPDF } from '../utils/pdfGenerator';
 
 const EXPENSE_CATEGORIES = [
   'Moradia',
@@ -20,6 +23,7 @@ const EXPENSE_CATEGORIES = [
 
 const MonthlyCosts = () => {
   const { monthlyCosts, addMonthlyCost, updateMonthlyCost, deleteMonthlyCost, loading } = useAppContext();
+  const { userData } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [editingCost, setEditingCost] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -81,7 +85,7 @@ const MonthlyCosts = () => {
       description: cost.description,
       category: cost.category,
       value: cost.value,
-      month: cost.month || new Date().toISOString().slice(0, 7)
+      month: cost.month
     });
     setEditingCost(cost.id);
     setShowForm(true);
@@ -114,7 +118,37 @@ const MonthlyCosts = () => {
     }
   };
 
-  const totalCosts = monthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
+  const handleGeneratePDF = async () => {
+    try {
+      if (monthlyCosts.length === 0) {
+        toast({
+          title: "Erro",
+          description: "Não há despesas para gerar o relatório.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      await generateExpensesPDF(monthlyCosts, userData);
+      toast({
+        title: "PDF Gerado",
+        description: "O relatório de despesas foi gerado com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar relatório PDF.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const totalMonthlyCosts = monthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonthCosts = monthlyCosts
+    .filter(cost => cost.month === currentMonth)
+    .reduce((sum, cost) => sum + cost.value, 0);
 
   if (loading) {
     return (
@@ -136,31 +170,52 @@ const MonthlyCosts = () => {
             Custos Mensais
           </h2>
           <p className="text-gray-600">
-            Gerencie seus custos fixos e variáveis 
+            Gerencie suas despesas e custos fixos mensais
             {monthlyCosts.length > 0 && (
               <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                {monthlyCosts.length} {monthlyCosts.length === 1 ? 'custo importado' : 'custos importados'}
+                {monthlyCosts.length} {monthlyCosts.length === 1 ? 'despesa importada' : 'despesas importadas'}
               </span>
             )}
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)} disabled={submitting}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Custo
-        </Button>
+        <div className="flex gap-2">
+          {monthlyCosts.length > 0 && (
+            <Button onClick={handleGeneratePDF} variant="outline">
+              <FileText className="h-4 w-4 mr-2" />
+              Gerar PDF
+            </Button>
+          )}
+          <Button onClick={() => setShowForm(true)} disabled={submitting}>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Custo
+          </Button>
+        </div>
       </div>
 
-      {/* Summary Card */}
-      <Card className="bg-gradient-to-r from-red-50 to-orange-50 border-red-200">
-        <CardContent className="p-6">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-red-800">Total de Custos Mensais</h3>
-            <div className="text-3xl font-bold text-red-600">
-              R$ {totalCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-gradient-to-r from-red-50 to-pink-50 border-red-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-red-800">Total Mensal</h3>
+              <div className="text-3xl font-bold text-red-600">
+                R$ {totalMonthlyCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-orange-800">Mês Atual</h3>
+              <div className="text-3xl font-bold text-orange-600">
+                R$ {currentMonthCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Add/Edit Form */}
       {showForm && (
@@ -204,14 +259,11 @@ const MonthlyCosts = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="value">Valor (R$)</Label>
-                  <Input
+                  <CurrencyInput
                     id="value"
-                    type="number"
-                    step="0.01"
                     value={formData.value}
-                    onChange={(e) => setFormData({...formData, value: Number(e.target.value)})}
-                    placeholder="1500.00"
-                    disabled={submitting}
+                    onChange={(value) => setFormData({...formData, value})}
+                    placeholder="1.500,00"
                   />
                 </div>
                 <div className="space-y-2">
@@ -241,13 +293,13 @@ const MonthlyCosts = () => {
       {/* Costs List */}
       <div className="grid gap-4">
         {monthlyCosts.map((cost) => (
-          <Card key={cost.id}>
+          <Card key={cost.id} className="transition-all duration-300 hover:shadow-lg">
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="font-semibold">{cost.description}</h3>
                   <p className="text-sm text-gray-600">Categoria: {cost.category}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-xs text-gray-500">
                     Mês: {new Date(cost.month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                   </p>
                 </div>
@@ -261,6 +313,7 @@ const MonthlyCosts = () => {
                     size="sm"
                     variant="outline"
                     onClick={() => handleEdit(cost)}
+                    className="transition-all duration-300 hover:scale-105"
                     disabled={submitting}
                   >
                     <Edit className="h-4 w-4" />
@@ -269,6 +322,7 @@ const MonthlyCosts = () => {
                     size="sm"
                     variant="outline"
                     onClick={() => handleDelete(cost.id)}
+                    className="transition-all duration-300 hover:scale-105"
                     disabled={submitting}
                   >
                     <Trash2 className="h-4 w-4" />

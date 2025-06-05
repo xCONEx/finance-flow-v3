@@ -1,4 +1,3 @@
-
 import { 
   doc, 
   getDoc, 
@@ -413,6 +412,46 @@ class FirestoreService {
       console.log('✅ Despesa removida da agência');
     } catch (error) {
       console.error('❌ Erro ao remover despesa da agência:', error);
+      throw error;
+    }
+  }
+
+  // Métodos específicos para jobs de agências
+  async addAgencyJob(agencyId: string, job: any): Promise<void> {
+    try {
+      console.log('💼 Adicionando job para agência:', agencyId);
+      await updateDoc(doc(db, 'agencias', agencyId), {
+        jobs: arrayUnion(job)
+      });
+      console.log('✅ Job adicionado à agência');
+    } catch (error) {
+      console.error('❌ Erro ao adicionar job à agência:', error);
+      throw error;
+    }
+  }
+
+  async removeAgencyJob(agencyId: string, job: any): Promise<void> {
+    try {
+      console.log('🗑️ Removendo job da agência:', agencyId);
+      await updateDoc(doc(db, 'agencias', agencyId), {
+        jobs: arrayRemove(job)
+      });
+      console.log('✅ Job removido da agência');
+    } catch (error) {
+      console.error('❌ Erro ao remover job da agência:', error);
+      throw error;
+    }
+  }
+
+  async updateAgencyJobs(agencyId: string, jobs: any[]): Promise<void> {
+    try {
+      console.log('🔄 Atualizando lista de jobs da agência:', agencyId);
+      await updateDoc(doc(db, 'agencias', agencyId), {
+        jobs: jobs
+      });
+      console.log('✅ Lista de jobs da agência atualizada');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar jobs da agência:', error);
       throw error;
     }
   }

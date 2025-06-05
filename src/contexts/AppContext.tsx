@@ -458,6 +458,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Jobs operations (mantendo a estrutura existente por enquanto)
   const addJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
     if (!user) return;
+    
+    const dataSource = getCurrentDataSource();
     const newJob: Job = {
       ...jobData,
       id: crypto.randomUUID(),
@@ -465,17 +467,129 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    setJobs(prev => [newJob, ...prev]);
+
+    // Converter para formato Firebase
+    const firestoreJob = {
+      assistance: typeof jobData.assistance === 'number' ? jobData.assistance : 0,
+      category: jobData.category,
+      client: jobData.client,
+      date: newJob.createdAt,
+      descriptions: jobData.description,
+      difficulty: jobData.difficultyLevel,
+      equipment: typeof jobData.equipment === 'number' ? jobData.equipment : 0,
+      eventDate: jobData.eventDate,
+      hours: jobData.estimatedHours,
+      logistics: typeof jobData.logistics === 'number' ? jobData.logistics : 0,
+      profit: jobData.profitMargin,
+      status: jobData.status,
+      value: jobData.serviceValue
+    };
+
+    try {
+      if (dataSource.isAgency) {
+        await firestoreService.addAgencyJob(dataSource.uid, firestoreJob);
+      } else {
+        await firestoreService.addJob(dataSource.uid, firestoreJob);
+      }
+      
+      setJobs(prev => [newJob, ...prev]);
+      console.log('✅ Job adicionado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao adicionar job:', error);
+      throw error;
+    }
   };
 
   const updateJob = async (id: string, jobData: Partial<Job>) => {
-    setJobs(prev => prev.map(job => 
-      job.id === id ? { ...job, ...jobData, updatedAt: new Date().toISOString() } : job
-    ));
+    if (!user) return;
+
+    const dataSource = getCurrentDataSource();
+
+    try {
+      const currentJob = jobs.find(job => job.id === id);
+      if (!currentJob) return;
+
+      // Atualizar estado local primeiro
+      setJobs(prev => prev.map(job => 
+        job.id === id ? { ...job, ...jobData, updatedAt: new Date().toISOString() } : job
+      ));
+
+      // Converter para formato Firebase
+      const updatedJob = { ...currentJob, ...jobData };
+      const firestoreJob = {
+        assistance: typeof updatedJob.assistance === 'number' ? updatedJob.assistance : 0,
+        category: updatedJob.category,
+        client: updatedJob.client,
+        date: updatedJob.createdAt,
+        descriptions: updatedJob.description,
+        difficulty: updatedJob.difficultyLevel,
+        equipment: typeof updatedJob.equipment === 'number' ? updatedJob.equipment : 0,
+        eventDate: updatedJob.eventDate,
+        hours: updatedJob.estimatedHours,
+        logistics: typeof updatedJob.logistics === 'number' ? updatedJob.logistics : 0,
+        profit: updatedJob.profitMargin,
+        status: updatedJob.status,
+        value: updatedJob.serviceValue
+      };
+
+      // Buscar jobs atuais
+      const currentData = dataSource.isAgency ? 
+        await firestoreService.getAgencyData(dataSource.uid) : 
+        await firestoreService.getUserData(dataSource.uid);
+      
+      if (currentData && currentData.jobs) {
+        // Atualizar array de jobs
+        const updatedJobs = currentData.jobs.map((job: any) => 
+          job.date === currentJob.createdAt ? firestoreJob : job
+        );
+
+        if (dataSource.isAgency) {
+          await firestoreService.updateAgencyJobs(dataSource.uid, updatedJobs);
+        } else {
+          await firestoreService.updateJobs(dataSource.uid, updatedJobs);
+        }
+      }
+
+      console.log('✅ Job atualizado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar job:', error);
+      throw error;
+    }
   };
 
   const deleteJob = async (id: string) => {
-    setJobs(prev => prev.filter(job => job.id !== id));
+    if (!user) return;
+
+    const dataSource = getCurrentDataSource();
+
+    try {
+      const jobToDelete = jobs.find(job => job.id === id);
+      if (!jobToDelete) return;
+
+      setJobs(prev => prev.filter(job => job.id !== id));
+
+      // Buscar jobs atuais e remover o job
+      const currentData = dataSource.isAgency ? 
+        await firestoreService.getAgencyData(dataSource.uid) : 
+        await firestoreService.getUserData(dataSource.uid);
+      
+      if (currentData && currentData.jobs) {
+        const updatedJobs = currentData.jobs.filter((job: any) => 
+          job.date !== jobToDelete.createdAt
+        );
+
+        if (dataSource.isAgency) {
+          await firestoreService.updateAgencyJobs(dataSource.uid, updatedJobs);
+        } else {
+          await firestoreService.updateJobs(dataSource.uid, updatedJobs);
+        }
+      }
+
+      console.log('✅ Job removido com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao deletar job:', error);
+      throw error;
+    }
   };
 
   // Tasks operations (mantendo a estrutura existente por enquanto)

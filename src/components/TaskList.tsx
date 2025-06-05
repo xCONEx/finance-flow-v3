@@ -3,14 +3,27 @@ import React from 'react';
 import { CheckCircle, Circle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '../contexts/AppContext';
+import { toast } from '@/hooks/use-toast';
 
 const TaskList = () => {
   const { tasks, updateTask } = useAppContext();
   
   const recentTasks = tasks.slice(0, 3);
 
-  const toggleTask = (taskId: string, completed: boolean) => {
-    updateTask(taskId, { completed });
+  const toggleTask = async (taskId: string, completed: boolean) => {
+    try {
+      await updateTask(taskId, { completed });
+      toast({
+        title: completed ? "Tarefa Concluída" : "Tarefa Reaberta",
+        description: completed ? "A tarefa foi marcada como concluída." : "A tarefa foi reaberta.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar tarefa.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (recentTasks.length === 0) {
@@ -31,7 +44,7 @@ const TaskList = () => {
         <div key={task.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
           <button
             onClick={() => toggleTask(task.id, !task.completed)}
-            className="text-purple-600 hover:text-purple-700"
+            className="text-purple-600 hover:text-purple-700 transition-colors"
           >
             {task.completed ? (
               <CheckCircle className="h-5 w-5" />
