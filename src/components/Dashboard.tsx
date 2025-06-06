@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus, Eye, EyeOff } from 'lucide-react';
+import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus, Trash2 } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
@@ -15,7 +15,7 @@ import AddTaskModal from './AddTaskModal';
 const Dashboard = () => {
   const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useAppContext();
   const { currentTheme } = useTheme();
-  const { valuesHidden, toggleValuesVisibility, formatValue } = usePrivacy();
+  const { formatValue } = usePrivacy();
   const [showTaskModal, setShowTaskModal] = useState(false);
 
   const approvedJobs = jobs.filter(job => job.status === 'aprovado');
@@ -100,22 +100,9 @@ const Dashboard = () => {
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400">Visão geral do seu negócio</p>
-        </div>
-        
-        {/* Privacy Toggle */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleValuesVisibility}
-          className="flex items-center gap-2"
-        >
-          {valuesHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          {valuesHidden ? 'Mostrar Valores' : 'Ocultar Valores'}
-        </Button>
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-gray-600 dark:text-gray-400">Visão geral do seu negócio</p>
       </div>
 
       {/* Metrics Cards with Hover Effects */}
@@ -155,7 +142,7 @@ const Dashboard = () => {
 
         {/* Recent Jobs */}
         <Card className="lg:col-span-2 transition-all duration-300 hover:shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle>Últimos Jobs Calculados</CardTitle>
           </CardHeader>
           <CardContent>

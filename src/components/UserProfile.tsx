@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { User, Save, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,11 +19,23 @@ const UserProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: userData?.phone || '',
-    company: userData?.company || ''
+    name: '',
+    email: '',
+    phone: '',
+    company: ''
   });
+
+  // Carregar dados quando userData mudar
+  useEffect(() => {
+    if (user && userData) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: userData.personalInfo?.phone || userData.phone || '',
+        company: userData.personalInfo?.company || userData.company || ''
+      });
+    }
+  }, [user, userData]);
 
   const handleSave = async () => {
     if (!user?.id) return;
@@ -33,11 +45,11 @@ const UserProfile = () => {
       // Salvar dados no Firebase
       const updateData: any = {};
       
-      if (formData.phone !== userData?.phone) {
+      if (formData.phone !== (userData?.personalInfo?.phone || userData?.phone)) {
         updateData.phone = formData.phone;
       }
       
-      if (formData.company !== userData?.company) {
+      if (formData.company !== (userData?.personalInfo?.company || userData?.company)) {
         updateData.company = formData.company;
       }
       
@@ -97,8 +109,8 @@ const UserProfile = () => {
         const base64 = e.target?.result as string;
         
         try {
-          // Salvar no Firebase
-          await firestoreService.updateUserField(user.id, 'logobase64', base64);
+          // Salvar no Firebase como imageuser
+          await firestoreService.updateUserField(user.id, 'imageuser', base64);
           
           toast({
             title: "Foto Atualizada",
@@ -134,6 +146,21 @@ const UserProfile = () => {
     }));
   };
 
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Cancelar edição - restaurar dados originais
+      if (user && userData) {
+        setFormData({
+          name: user.name || '',
+          email: user.email || '',
+          phone: userData.personalInfo?.phone || userData.phone || '',
+          company: userData.personalInfo?.company || userData.company || ''
+        });
+      }
+    }
+    setIsEditing(!isEditing);
+  };
+
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       <div className="text-center space-y-2">
@@ -151,7 +178,7 @@ const UserProfile = () => {
               <CardTitle>Conta</CardTitle>
               <Button
                 variant="outline"
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={handleEditToggle}
                 disabled={isLoading}
               >
                 {isEditing ? 'Cancelar' : 'Editar Perfil'}
@@ -163,7 +190,7 @@ const UserProfile = () => {
             {/* User Photo */}
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={userData?.logobase64 || user?.photoURL || ''} alt={user?.name || 'User'} />
+                <AvatarImage src={userData?.imageuser || user?.photoURL || ''} alt={user?.name || 'User'} />
                 <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white text-2xl`}>
                   {formData.name?.charAt(0) || 'U'}
                 </AvatarFallback>

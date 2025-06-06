@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Job, WorkItem, MonthlyCost } from '../types';
@@ -23,30 +24,32 @@ export const generateJobPDF = async (job: Job, userData: any) => {
   doc.text(`Orçamento - ${job.client || 'Cliente'}`, margin, contentStartY);
 
   // Logo ou nome da empresa no canto direito
-  if (userData?.logobase64) {
+  if (userData?.imageuser) {
     try {
       const maxWidth = 40;
       const maxHeight = 20;
       const x = pageWidth - maxWidth - margin;
       const y = contentStartY - 5;
-      doc.addImage(userData.logobase64, 'PNG', x, y, maxWidth, maxHeight);
+      doc.addImage(userData.imageuser, 'PNG', x, y, maxWidth, maxHeight);
       contentStartY += 10;
     } catch (error) {
       console.error('Erro ao adicionar logo:', error);
       // Fallback para nome da empresa
-      if (userData?.company) {
+      if (userData?.personalInfo?.company || userData?.company) {
         doc.setFontSize(12);
         doc.setTextColor(100);
-        const companyWidth = doc.getTextWidth(userData.company);
-        doc.text(userData.company, pageWidth - companyWidth - margin, contentStartY);
+        const companyName = userData?.personalInfo?.company || userData?.company;
+        const companyWidth = doc.getTextWidth(companyName);
+        doc.text(companyName, pageWidth - companyWidth - margin, contentStartY);
       }
       contentStartY += 10;
     }
-  } else if (userData?.company) {
+  } else if (userData?.personalInfo?.company || userData?.company) {
     doc.setFontSize(12);
     doc.setTextColor(100);
-    const companyWidth = doc.getTextWidth(userData.company);
-    doc.text(userData.company, pageWidth - companyWidth - margin, contentStartY);
+    const companyName = userData?.personalInfo?.company || userData?.company;
+    const companyWidth = doc.getTextWidth(companyName);
+    doc.text(companyName, pageWidth - companyWidth - margin, contentStartY);
     contentStartY += 10;
   }
 
@@ -119,14 +122,14 @@ export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any)
   let contentStartY = 20;
 
   // Logo se disponível
-  if (userData?.logobase64) {
+  if (userData?.imageuser) {
     try {
       const maxWidth = 40;
       const maxHeight = 20;
       const x = pageWidth - maxWidth - margin;
       const y = contentStartY;
 
-      doc.addImage(userData.logobase64, 'PNG', x, y, maxWidth, maxHeight);
+      doc.addImage(userData.imageuser, 'PNG', x, y, maxWidth, maxHeight);
       contentStartY = y + maxHeight + 10;
     } catch (error) {
       console.error('Erro ao adicionar logo:', error);
@@ -149,7 +152,7 @@ export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any)
     item.description,
     item.category,
     item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-    new Date().toLocaleDateString('pt-BR') // Data atual já que não temos data específica do item
+    new Date().toLocaleDateString('pt-BR')
   ]);
 
   const totalValue = workItems.reduce((sum, item) => sum + item.value, 0);
@@ -185,14 +188,14 @@ export const generateExpensesPDF = async (expenses: MonthlyCost[], userData: any
   let contentStartY = 20;
 
   // Logo se disponível
-  if (userData?.logobase64) {
+  if (userData?.imageuser) {
     try {
       const maxWidth = 40;
       const maxHeight = 20;
       const x = pageWidth - maxWidth - margin;
       const y = contentStartY;
 
-      doc.addImage(userData.logobase64, 'PNG', x, y, maxWidth, maxHeight);
+      doc.addImage(userData.imageuser, 'PNG', x, y, maxWidth, maxHeight);
       contentStartY = y + maxHeight + 10;
     } catch (error) {
       console.error('Erro ao adicionar logo:', error);

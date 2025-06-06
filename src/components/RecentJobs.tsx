@@ -1,185 +1,142 @@
 
 import React, { useState } from 'react';
-import { Edit, Trash2, FileText, Calendar, DollarSign, History } from 'lucide-react';
+import { Eye, Calendar, Clock, DollarSign, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAppContext } from '../contexts/AppContext';
-import { useAuth } from '../contexts/AuthContext';
-import JobEditor from './JobEditor';
-import { toast } from '@/hooks/use-toast';
-import { generateJobPDF } from '../utils/pdfGenerator';
+import { usePrivacy } from '../contexts/PrivacyContext';
 
 const RecentJobs = () => {
   const { jobs, deleteJob } = useAppContext();
-  const { userData } = useAuth();
-  const [editingJob, setEditingJob] = useState<string | null>(null);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const { formatValue } = usePrivacy();
+  const [historyOpen, setHistoryOpen] = useState(false);
 
-  const recentJobs = jobs.slice(0, 3);
+  const recentJobs = jobs
+    .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
+    .slice(0, 3);
 
-  const handleEdit = (jobId: string) => {
-    setEditingJob(jobId);
-  };
-
-  const handleDelete = async (jobId: string) => {
+  const handleDeleteJob = async (jobId: string) => {
     try {
       await deleteJob(jobId);
-      toast({
-        title: "Job Excluído",
-        description: "O job foi removido com sucesso.",
-      });
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir job.",
-        variant: "destructive"
-      });
+      console.error('Erro ao excluir job:', error);
     }
   };
 
-  const handlePrintPDF = async (jobId: string) => {
-    try {
-      const job = jobs.find(j => j.id === jobId);
-      if (!job) {
-        toast({
-          title: "Erro",
-          description: "Job não encontrado.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      await generateJobPDF(job, userData);
-      toast({
-        title: "PDF Gerado",
-        description: "O PDF do orçamento foi gerado com sucesso.",
-      });
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao gerar PDF do orçamento.",
-        variant: "destructive"
-      });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'aprovado':
+        return 'bg-green-100 text-green-800';
+      case 'pendente':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelado':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   if (recentJobs.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        <FileText className="mx-auto h-12 w-12 mb-4" />
         <p>Nenhum job calculado ainda</p>
-        <p className="text-sm">Use a calculadora para criar seu primeiro orçamento</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Últimos Jobs Calculados</h3>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setShowHistoryModal(true)}
-          className="flex items-center gap-1"
-        >
-          <History className="h-4 w-4" />
-          Ver Histórico
-        </Button>
-      </div>
-
       {recentJobs.map((job) => (
-        <div key={job.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-          <div className="flex justify-between items-start mb-3">
-            <div className="space-y-1">
-              <h3 className="font-semibold text-gray-900">{job.description}</h3>
-              <p className="text-sm text-gray-600">Cliente: {job.client}</p>
-              <div className="flex items-center gap-4 text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {new Date(job.eventDate).toLocaleDateString('pt-BR')}
-                </span>
-                <span className="flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
-                  R$ {job.serviceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
+        <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <h4 className="font-medium">{job.client || 'Cliente não informado'}</h4>
+              <Badge className={getStatusColor(job.status)}>
+                {job.status}
+              </Badge>
             </div>
-            <Badge variant={job.status === 'aprovado' ? 'default' : 'secondary'}>
-              {job.status}
-            </Badge>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => handleEdit(job.id)}>
-              <Edit className="h-3 w-3 mr-1" />
-              Editar
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => handleDelete(job.id)}>
-              <Trash2 className="h-3 w-3 mr-1" />
-              Excluir
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => handlePrintPDF(job.id)}>
-              <FileText className="h-3 w-3 mr-1" />
-              PDF
-            </Button>
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <span className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                {new Date(job.eventDate).toLocaleDateString('pt-BR')}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                {job.estimatedHours}h
+              </span>
+              <span className="flex items-center gap-1">
+                <DollarSign className="h-4 w-4" />
+                {formatValue(job.valueWithDiscount || job.serviceValue)}
+              </span>
+            </div>
           </div>
         </div>
       ))}
 
-      {/* Modal de Histórico */}
-      <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Histórico Completo de Jobs</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {jobs.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Nenhum job encontrado</p>
-            ) : (
-              jobs.map((job) => (
-                <div key={job.id} className="p-3 border rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium">{job.description}</h4>
-                      <p className="text-sm text-gray-600">Cliente: {job.client}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(job.eventDate).toLocaleDateString('pt-BR')} - 
-                        R$ {job.serviceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
+      <div className="flex justify-end">
+        <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Eye className="h-4 w-4 mr-2" />
+              Ver Histórico
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Histórico Completo de Jobs</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {jobs.map((job) => (
+                <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-medium">{job.client || 'Cliente não informado'}</h4>
+                      <Badge className={getStatusColor(job.status)}>
+                        {job.status}
+                      </Badge>
                     </div>
-                    <Badge variant={job.status === 'aprovado' ? 'default' : 'secondary'}>
-                      {job.status}
-                    </Badge>
+                    <p className="text-sm text-gray-600 mb-2">{job.description}</p>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {new Date(job.eventDate).toLocaleDateString('pt-BR')}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {job.estimatedHours}h
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="h-4 w-4" />
+                        {formatValue(job.valueWithDiscount || job.serviceValue)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="outline" onClick={() => {
-                      setShowHistoryModal(false);
-                      handleEdit(job.id);
-                    }}>
-                      <Edit className="h-3 w-3 mr-1" />
-                      Editar
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handlePrintPDF(job.id)}>
-                      <FileText className="h-3 w-3 mr-1" />
-                      PDF
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteJob(job.id)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {editingJob && (
-        <JobEditor
-          jobId={editingJob}
-          onClose={() => setEditingJob(null)}
-        />
-      )}
+              ))}
+              {jobs.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Nenhum job encontrado</p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 };
