@@ -23,12 +23,10 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { firestoreService } from '../services/firestore';
-import { useAuth } from '../contexts/AuthContext';
 
 const AdminPanel = () => {
   const [users, setUsers] = useState([]);
   const [companies, setCompanies] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCompanyOwnerEmail, setNewCompanyOwnerEmail] = useState('');
@@ -42,39 +40,17 @@ const AdminPanel = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      // Carregar dados do Firebase
       console.log('Carregando dados do painel admin...');
-      // Por enquanto, usar dados mock até implementarmos as queries do Firebase
-      setUsers([
-        {
-          id: '1',
-          email: 'user1@example.com',
-          name: 'João Silva',
-          userType: 'individual',
-          subscription: 'free',
-          banned: false,
-          companyId: null
-        },
-        {
-          id: '2',
-          email: 'user2@example.com',
-          name: 'Maria Santos',
-          userType: 'employee',
-          subscription: 'premium',
-          banned: false,
-          companyId: 'company1'
-        }
-      ]);
       
-      setCompanies([
-        {
-          id: 'company1',
-          name: 'Empresa Teste',
-          ownerId: 'user2',
-          plan: 'premium',
-          members: 5
-        }
-      ]);
+      // Carregar usuários reais do Firebase
+      const usersData = await firestoreService.getAllUsers();
+      setUsers(usersData);
+      
+      // Carregar empresas reais do Firebase
+      const companiesData = await firestoreService.getAllCompanies();
+      setCompanies(companiesData);
+      
+      console.log('Dados carregados:', { users: usersData.length, companies: companiesData.length });
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast({
@@ -90,7 +66,7 @@ const AdminPanel = () => {
   const handleBanUser = async (userId, banned) => {
     try {
       console.log(`${banned ? 'Banindo' : 'Desbanindo'} usuário:`, userId);
-      // Implementar lógica de ban no Firebase
+      await firestoreService.banUser(userId, banned);
       
       setUsers(users.map(user => 
         user.id === userId ? { ...user, banned } : user
@@ -113,7 +89,7 @@ const AdminPanel = () => {
   const handleUpdateSubscription = async (userId, newPlan) => {
     try {
       console.log('Atualizando plano do usuário:', userId, newPlan);
-      // Implementar lógica de atualização de plano no Firebase
+      await firestoreService.updateUserSubscription(userId, newPlan);
       
       setUsers(users.map(user => 
         user.id === userId ? { ...user, subscription: newPlan } : user
@@ -133,6 +109,29 @@ const AdminPanel = () => {
     }
   };
 
+  const handleMakeCompanyOwner = async (userId, userEmail) => {
+    try {
+      console.log('Tornando usuário company_owner:', userId);
+      await firestoreService.updateUserField(userId, 'userType', 'company_owner');
+      
+      setUsers(users.map(user => 
+        user.id === userId ? { ...user, userType: 'company_owner' } : user
+      ));
+      
+      toast({
+        title: "Sucesso",
+        description: "Usuário agora é proprietário de empresa"
+      });
+    } catch (error) {
+      console.error('Erro ao alterar tipo de usuário:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar tipo de usuário",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleCreateCompany = async () => {
     if (!newCompanyName || !newCompanyOwnerEmail) {
       toast({
@@ -145,19 +144,37 @@ const AdminPanel = () => {
 
     try {
       console.log('Criando empresa:', newCompanyName, newCompanyOwnerEmail);
-      // Implementar criação de empresa no Firebase
       
-      const newCompany = {
-        id: `company_${Date.now()}`,
+      // Encontrar o usuário pelo email
+      const owner = users.find(user => user.email === newCompanyOwnerEmail);
+      if (!owner) {
+        toast({
+          title: "Erro",
+          description: "Usuário não encontrado",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const companyData = {
         name: newCompanyName,
-        ownerId: newCompanyOwnerEmail,
-        plan: 'premium',
-        members: 1
+        ownerUID: owner.id,
+        colaboradores: [{ uid: owner.id, email: owner.email, role: 'owner' }],
+        equipments: [],
+        expenses: [],
+        jobs: [],
+        createdAt: new Date().toISOString()
       };
       
-      setCompanies([...companies, newCompany]);
+      const companyId = await firestoreService.createCompany(companyData);
+      
+      // Atualizar tipo do usuário para company_owner
+      await firestoreService.updateUserField(owner.id, 'userType', 'company_owner');
+      await firestoreService.updateUserField(owner.id, 'companyId', companyId);
+      
       setNewCompanyName('');
       setNewCompanyOwnerEmail('');
+      await loadData(); // Recarregar dados
       
       toast({
         title: "Sucesso",
@@ -185,7 +202,20 @@ const AdminPanel = () => {
 
     try {
       console.log('Adicionando administrador:', newAdminEmail);
-      // Implementar lógica de adicionar admin no Firebase
+      
+      // Encontrar usuário pelo email
+      const user = users.find(u => u.email === newAdminEmail);
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Usuário não encontrado",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Atualizar tipo do usuário para admin
+      await firestoreService.updateUserField(user.id, 'userType', 'admin');
       
       toast({
         title: "Sucesso",
@@ -193,6 +223,7 @@ const AdminPanel = () => {
       });
       
       setNewAdminEmail('');
+      await loadData(); // Recarregar dados
     } catch (error) {
       console.error('Erro ao adicionar admin:', error);
       toast({
@@ -277,18 +308,18 @@ const AdminPanel = () => {
                 {users.map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
-                      <h4 className="font-medium">{user.name}</h4>
-                      <p className="text-sm text-gray-600">{user.email}</p>
+                      <h4 className="font-medium">{user.email}</h4>
+                      <p className="text-sm text-gray-600">UID: {user.uid}</p>
                       <div className="flex gap-2 mt-2">
                         <Badge variant={user.banned ? "destructive" : "secondary"}>
                           {user.banned ? "Banido" : "Ativo"}
                         </Badge>
-                        <Badge variant="outline">{user.subscription}</Badge>
-                        <Badge variant="outline">{user.userType}</Badge>
+                        <Badge variant="outline">{user.subscription || 'free'}</Badge>
+                        <Badge variant="outline">{user.userType || 'individual'}</Badge>
                       </div>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Select onValueChange={(value) => handleUpdateSubscription(user.id, value)}>
                         <SelectTrigger className="w-32">
                           <SelectValue placeholder="Plano" />
@@ -299,6 +330,14 @@ const AdminPanel = () => {
                           <SelectItem value="enterprise">Empresarial</SelectItem>
                         </SelectContent>
                       </Select>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleMakeCompanyOwner(user.id, user.email)}
+                      >
+                        Fazer Owner
+                      </Button>
                       
                       <Button
                         variant={user.banned ? "outline" : "destructive"}
@@ -363,10 +402,10 @@ const AdminPanel = () => {
                   <div key={company.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <h4 className="font-medium">{company.name}</h4>
-                      <p className="text-sm text-gray-600">Owner: {company.ownerId}</p>
+                      <p className="text-sm text-gray-600">Owner UID: {company.ownerUID}</p>
                       <div className="flex gap-2 mt-2">
-                        <Badge variant="outline">{company.plan}</Badge>
-                        <Badge variant="secondary">{company.members} membros</Badge>
+                        <Badge variant="outline">{company.plan || 'premium'}</Badge>
+                        <Badge variant="secondary">{company.colaboradores?.length || 0} membros</Badge>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -406,10 +445,12 @@ const AdminPanel = () => {
                 <div className="border rounded-lg p-4">
                   <h4 className="font-medium mb-2">Administradores Atuais</h4>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span>adm.financeflow@gmail.com</span>
-                      <Badge>Admin Principal</Badge>
-                    </div>
+                    {users.filter(user => user.userType === 'admin').map(admin => (
+                      <div key={admin.id} className="flex items-center justify-between">
+                        <span>{admin.email}</span>
+                        <Badge>Admin</Badge>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

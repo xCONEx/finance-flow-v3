@@ -17,9 +17,11 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { firestoreService } from '../services/firestore';
 
 const CompanyDashboard = () => {
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('employee');
   const [pendingInvites, setPendingInvites] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const { user, agencyData } = useAuth();
@@ -27,46 +29,28 @@ const CompanyDashboard = () => {
 
   useEffect(() => {
     loadCompanyData();
-  }, []);
+  }, [agencyData]);
 
   const loadCompanyData = async () => {
+    if (!agencyData) return;
+    
     try {
-      // Carregar dados da empresa
       console.log('Carregando dados da empresa...');
       
-      // Mock data por enquanto
-      setTeamMembers([
-        {
-          id: '1',
-          name: 'João Silva',
-          email: 'joao@empresa.com',
-          role: 'editor',
-          joinedAt: '2024-01-15'
-        },
-        {
-          id: '2',
-          name: 'Maria Santos',
-          email: 'maria@empresa.com',
-          role: 'viewer',
-          joinedAt: '2024-02-01'
-        }
-      ]);
+      // Carregar membros da equipe
+      const members = agencyData.colaboradores || [];
+      setTeamMembers(members);
 
-      setPendingInvites([
-        {
-          id: '1',
-          email: 'novo@empresa.com',
-          sentAt: '2024-06-05',
-          status: 'pending'
-        }
-      ]);
+      // Carregar convites pendentes
+      const invites = await firestoreService.getCompanyInvites(agencyData.id);
+      setPendingInvites(invites);
     } catch (error) {
       console.error('Erro ao carregar dados da empresa:', error);
     }
   };
 
   const handleSendInvite = async () => {
-    if (!inviteEmail) {
+    if (!inviteEmail || !agencyData) {
       toast({
         title: "Erro",
         description: "Digite um email válido",
@@ -78,16 +62,19 @@ const CompanyDashboard = () => {
     try {
       console.log('Enviando convite para:', inviteEmail);
       
-      // Implementar lógica de envio de convite
-      const newInvite = {
-        id: `invite_${Date.now()}`,
+      const inviteData = {
         email: inviteEmail,
-        sentAt: new Date().toISOString().split('T')[0],
+        companyId: agencyData.id,
+        companyName: agencyData.name || 'Empresa',
+        invitedBy: user?.email,
+        role: inviteRole,
         status: 'pending'
       };
 
-      setPendingInvites([...pendingInvites, newInvite]);
+      await firestoreService.sendInvite(inviteData);
+      
       setInviteEmail('');
+      await loadCompanyData(); // Recarregar dados
 
       toast({
         title: "Sucesso",
@@ -107,7 +94,8 @@ const CompanyDashboard = () => {
     try {
       console.log('Removendo membro:', memberId);
       
-      setTeamMembers(teamMembers.filter(member => member.id !== memberId));
+      await firestoreService.removeCompanyMember(agencyData.id, memberId);
+      await loadCompanyData(); // Recarregar dados
       
       toast({
         title: "Sucesso",
@@ -130,11 +118,9 @@ const CompanyDashboard = () => {
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
           <Building2 className="text-purple-600" />
-          Dashboard da Empresa
+          {agencyData?.name || 'Sua Empresa'}
         </h2>
-        <p className="text-gray-600">
-          {agencyData?.name || 'Sua Empresa'} - Gestão de equipe e projetos
-        </p>
+        <p className="text-gray-600">Gestão de equipe e colaboradores</p>
       </div>
 
       {/* Estatísticas da Empresa */}
@@ -158,7 +144,7 @@ const CompanyDashboard = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <Crown className="h-8 w-8 mx-auto text-yellow-600 mb-2" />
-            <p className="text-sm font-medium">{isOwner ? 'Proprietário' : 'Membro'}</p>
+            <p className="text-sm font-medium">{isOwner ? 'Proprietário' : 'Colaborador'}</p>
             <p className="text-xs text-gray-600">Seu Papel</p>
           </CardContent>
         </Card>
@@ -204,20 +190,20 @@ const CompanyDashboard = () => {
             <CardContent>
               <div className="space-y-4">
                 {teamMembers.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={member.uid} className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
-                      <h4 className="font-medium">{member.name}</h4>
+                      <h4 className="font-medium">{member.name || member.email}</h4>
                       <p className="text-sm text-gray-600">{member.email}</p>
                       <div className="flex gap-2 mt-2">
-                        <Badge variant="outline">{member.role}</Badge>
-                        <Badge variant="secondary">Desde {member.joinedAt}</Badge>
+                        <Badge variant="outline">{member.role || 'Colaborador'}</Badge>
+                        <Badge variant="secondary">Ativo</Badge>
                       </div>
                     </div>
                     {isOwner && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleRemoveMember(member.id)}
+                        onClick={() => handleRemoveMember(member.uid)}
                       >
                         Remover
                       </Button>
@@ -246,7 +232,7 @@ const CompanyDashboard = () => {
                     <div key={invite.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <h4 className="font-medium">{invite.email}</h4>
-                        <p className="text-sm text-gray-600">Enviado em {invite.sentAt}</p>
+                        <p className="text-sm text-gray-600">Enviado em {new Date(invite.sentAt).toLocaleDateString()}</p>
                         <Badge variant="outline" className="mt-2">
                           {invite.status === 'pending' ? 'Aguardando' : invite.status}
                         </Badge>

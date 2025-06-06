@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Mail, Building2, UserCheck, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { firestoreService } from '../services/firestore';
 
 const InviteAcceptance = () => {
   const [pendingInvites, setPendingInvites] = useState([]);
@@ -24,20 +25,9 @@ const InviteAcceptance = () => {
       console.log('Carregando convites para:', user.email);
       setLoading(true);
       
-      // Mock data - implementar busca no Firebase depois
-      const mockInvites = [
-        {
-          id: 'invite_1',
-          companyName: 'Empresa Teste LTDA',
-          companyId: 'company_1',
-          invitedBy: 'admin@empresa.com',
-          role: 'editor',
-          sentAt: '2024-06-05',
-          status: 'pending'
-        }
-      ];
-      
-      setPendingInvites(mockInvites);
+      // Buscar convites no Firebase
+      const invites = await firestoreService.getUserInvites(user.email);
+      setPendingInvites(invites);
     } catch (error) {
       console.error('Erro ao carregar convites:', error);
     } finally {
@@ -49,10 +39,8 @@ const InviteAcceptance = () => {
     try {
       console.log('Aceitando convite:', inviteId, companyId);
       
-      // Implementar lógica de aceite no Firebase
-      // 1. Adicionar usuário à empresa
-      // 2. Atualizar tipo de usuário para 'employee'
-      // 3. Remover convite
+      // Aceitar convite no Firebase
+      await firestoreService.acceptInvite(inviteId, user.uid, companyId);
       
       setPendingInvites(pendingInvites.filter(invite => invite.id !== inviteId));
       
@@ -77,7 +65,8 @@ const InviteAcceptance = () => {
     try {
       console.log('Recusando convite:', inviteId);
       
-      // Implementar lógica de recusa no Firebase
+      // Atualizar status do convite para recusado
+      await firestoreService.updateInviteStatus(inviteId, 'declined');
       setPendingInvites(pendingInvites.filter(invite => invite.id !== inviteId));
       
       toast({
@@ -131,7 +120,7 @@ const InviteAcceptance = () => {
                 <Badge variant="outline" className="ml-2">{invite.role}</Badge>
               </p>
               <p className="text-sm">
-                <strong>Data do convite:</strong> {invite.sentAt}
+                <strong>Data do convite:</strong> {new Date(invite.sentAt).toLocaleDateString()}
               </p>
             </div>
             

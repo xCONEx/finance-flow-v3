@@ -647,10 +647,34 @@ class FirestoreService {
     }
   }
 
+  async getCompanyInvites(companyId: string): Promise<any[]> {
+    try {
+      console.log('📬 Buscando convites da empresa:', companyId);
+      const invitesQuery = query(
+        collection(db, 'invites'),
+        where('companyId', '==', companyId)
+      );
+      const querySnapshot = await getDocs(invitesQuery);
+      const invites = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Convites da empresa encontrados:', invites.length);
+      return invites;
+    } catch (error) {
+      console.error('❌ Erro ao buscar convites da empresa:', error);
+      return [];
+    }
+  }
+
   async acceptInvite(inviteId: string, userId: string, companyId: string): Promise<void> {
     try {
       console.log('✅ Aceitando convite:', inviteId);
       
+      // Buscar dados do usuário
+      const userData = await this.getUserData(userId);
+      if (!userData) throw new Error('Usuário não encontrado');
+
       // Atualizar usuário para employee
       await updateDoc(doc(db, 'usuarios', userId), {
         userType: 'employee',
@@ -660,7 +684,12 @@ class FirestoreService {
       // Adicionar usuário à empresa
       const companyRef = doc(db, 'agencias', companyId);
       await updateDoc(companyRef, {
-        colaboradores: arrayUnion({ uid: userId })
+        colaboradores: arrayUnion({ 
+          uid: userId, 
+          email: userData.email, 
+          role: 'employee',
+          joinedAt: new Date().toISOString()
+        })
       });
 
       // Remover convite
@@ -673,13 +702,59 @@ class FirestoreService {
     }
   }
 
-  // Kanban methods
-  async saveKanbanBoard(boardId: string, boardData: any): Promise<void> {
+  async updateInviteStatus(inviteId: string, status: string): Promise<void> {
     try {
-      console.log('💾 Salvando board do Kanban:', boardId);
-      await setDoc(doc(db, 'kanban_boards', boardId), {
-        ...boardData,
+      console.log('🔄 Atualizando status do convite:', inviteId, status);
+      await updateDoc(doc(db, 'invites', inviteId), {
+        status: status,
         updatedAt: new Date().toISOString()
+      });
+      console.log('✅ Status do convite atualizado');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar status do convite:', error);
+      throw error;
+    }
+  }
+
+  async removeCompanyMember(companyId: string, memberId: string): Promise<void> {
+    try {
+      console.log('🗑️ Removendo membro da empresa:', companyId, memberId);
+      
+      // Buscar dados da empresa
+      const companyData = await this.getAgencyData(companyId);
+      if (!companyData) throw new Error('Empresa não encontrada');
+
+      // Filtrar colaboradores removendo o membro
+      const updatedColaboradores = companyData.colaboradores.filter(
+        (colaborador: any) => colaborador.uid !== memberId
+      );
+
+      // Atualizar empresa
+      await updateDoc(doc(db, 'agencias', companyId), {
+        colaboradores: updatedColaboradores
+      });
+
+      // Atualizar usuário removido
+      await updateDoc(doc(db, 'usuarios', memberId), {
+        userType: 'individual',
+        companyId: deleteField()
+      });
+
+      console.log('✅ Membro removido da empresa');
+    } catch (error) {
+      console.error('❌ Erro ao remover membro da empresa:', error);
+      throw error;
+    }
+  }
+
+  // Melhorar o método saveKanbanBoard
+  async saveKanbanBoard(companyId: string, boardData: any): Promise<void> {
+    try {
+      console.log('💾 Salvando board do Kanban para empresa:', companyId);
+      await setDoc(doc(db, 'kanban_boards', companyId), {
+        ...boardData,
+        updatedAt: new Date().toISOString(),
+        companyId: companyId
       });
       console.log('✅ Board salvo');
     } catch (error) {
@@ -688,10 +763,10 @@ class FirestoreService {
     }
   }
 
-  async getKanbanBoard(boardId: string): Promise<any> {
+  async getKanbanBoard(companyId: string): Promise<any> {
     try {
-      console.log('📋 Carregando board do Kanban:', boardId);
-      const boardDoc = await getDoc(doc(db, 'kanban_boards', boardId));
+      console.log('📋 Carregando board do Kanban para empresa:', companyId);
+      const boardDoc = await getDoc(doc(db, 'kanban_boards', companyId));
       if (boardDoc.exists()) {
         return boardDoc.data();
       }

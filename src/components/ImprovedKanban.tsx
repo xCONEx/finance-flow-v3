@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,92 +66,52 @@ const ImprovedKanban = () => {
 
   useEffect(() => {
     loadKanbanData();
-  }, []);
+  }, [agencyData]);
 
   const loadKanbanData = async () => {
-    try {
-      console.log('Carregando dados do Kanban...');
-      
-      // Estrutura inicial do Kanban
-      const initialBoard: KanbanBoard = {
-        'todo': {
-          title: 'A Fazer',
-          color: 'bg-red-50 border-red-200',
-          items: [
-            {
-              id: '1',
-              title: 'Vídeo Institucional - Tech Corp',
-              description: 'Criar vídeo institucional para empresa de tecnologia',
-              value: 'R$ 4.500',
-              deadline: '15/06/2025',
-              responsible: 'João Silva',
-              type: 'Filmagem',
-              comments: 2,
-              attachments: 1,
-              priority: 'alta',
-              createdAt: new Date().toISOString()
-            },
-            {
-              id: '2',
-              title: 'Reels para Instagram - Loja ABC',
-              description: 'Produção de 5 reels para Instagram da loja',
-              value: 'R$ 800',
-              deadline: '10/06/2025',
-              responsible: 'Maria Santos',
-              type: 'Edição',
-              comments: 0,
-              attachments: 0,
-              priority: 'média',
-              createdAt: new Date().toISOString()
-            }
-          ]
-        },
-        'inProgress': {
-          title: 'Em Produção',
-          color: 'bg-yellow-50 border-yellow-200',
-          items: [
-            {
-              id: '3',
-              title: 'Casamento - Ana & Pedro',
-              description: 'Filmagem e edição completa de casamento',
-              value: 'R$ 3.200',
-              deadline: '20/06/2025',
-              responsible: 'Carlos Lima',
-              type: 'Filmagem',
-              comments: 5,
-              attachments: 3,
-              priority: 'alta',
-              createdAt: new Date().toISOString()
-            }
-          ]
-        },
-        'review': {
-          title: 'Em Revisão',
-          color: 'bg-blue-50 border-blue-200',
-          items: []
-        },
-        'done': {
-          title: 'Finalizado',
-          color: 'bg-green-50 border-green-200',
-          items: [
-            {
-              id: '4',
-              title: 'Clipe Musical - Banda XYZ',
-              description: 'Clipe musical finalizado e entregue',
-              value: 'R$ 2.800',
-              deadline: '05/06/2025',
-              responsible: 'Ana Costa',
-              type: 'Edição',
-              comments: 8,
-              attachments: 2,
-              priority: 'alta',
-              createdAt: new Date().toISOString()
-            }
-          ]
-        }
-      };
+    if (!agencyData) {
+      console.log('❌ Usuário não faz parte de uma empresa');
+      return;
+    }
 
-      setBoards({ main: initialBoard });
+    try {
+      console.log('Carregando dados do Kanban para empresa:', agencyData.id);
+      
+      // Tentar carregar board existente do Firebase
+      const existingBoard = await firestoreService.getKanbanBoard(agencyData.id);
+      
+      if (existingBoard) {
+        console.log('✅ Board existente carregado do Firebase');
+        setBoards({ main: existingBoard });
+      } else {
+        console.log('📝 Criando board inicial para empresa');
+        // Estrutura inicial do Kanban para a empresa
+        const initialBoard: KanbanBoard = {
+          'todo': {
+            title: 'A Fazer',
+            color: 'bg-red-50 border-red-200',
+            items: []
+          },
+          'inProgress': {
+            title: 'Em Produção',
+            color: 'bg-yellow-50 border-yellow-200',
+            items: []
+          },
+          'review': {
+            title: 'Em Revisão',
+            color: 'bg-blue-50 border-blue-200',
+            items: []
+          },
+          'done': {
+            title: 'Finalizado',
+            color: 'bg-green-50 border-green-200',
+            items: []
+          }
+        };
+
+        setBoards({ main: initialBoard });
+        await saveKanbanState(initialBoard);
+      }
     } catch (error) {
       console.error('Erro ao carregar Kanban:', error);
     }
@@ -222,9 +181,11 @@ const ImprovedKanban = () => {
   };
 
   const saveKanbanState = async (boardData: KanbanBoard) => {
+    if (!agencyData) return;
+
     try {
       console.log('Salvando estado do Kanban no Firebase...');
-      // Implementar salvamento no Firebase
+      await firestoreService.saveKanbanBoard(agencyData.id, boardData);
     } catch (error) {
       console.error('Erro ao salvar Kanban:', error);
     }
@@ -314,6 +275,24 @@ const ImprovedKanban = () => {
 
   const currentBoard = boards[activeBoard] || {};
 
+  // Verificar se o usuário faz parte de uma empresa
+  if (!agencyData) {
+    return (
+      <div className="text-center py-16">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 max-w-md mx-auto">
+          <Briefcase className="h-16 w-16 mx-auto text-yellow-600 mb-4" />
+          <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+            Acesso Restrito
+          </h3>
+          <p className="text-yellow-700">
+            O Kanban de Projetos é exclusivo para membros de empresas. 
+            Entre em contato com um administrador para ser adicionado a uma empresa.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -322,7 +301,9 @@ const ImprovedKanban = () => {
             <Briefcase className="text-purple-600" />
             Kanban de Projetos
           </h2>
-          <p className="text-gray-600">Gerencie o fluxo dos seus projetos</p>
+          <p className="text-gray-600">
+            {agencyData.name} - Gerencie o fluxo dos seus projetos
+          </p>
         </div>
 
         <Dialog>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, Rocket, ShoppingCart, Users } from 'lucide-react';
@@ -15,6 +16,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
+      {/* Convites pendentes só para usuários individuais */}
       {user?.userType === 'individual' && <InviteAcceptance />}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
