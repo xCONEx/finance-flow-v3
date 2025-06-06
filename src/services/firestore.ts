@@ -1,3 +1,4 @@
+
 import { 
   doc, 
   getDoc, 
@@ -20,6 +21,7 @@ export interface FirestoreUser {
   email: string;
   uid: string;
   logobase64: string;
+  imageuser?: string; // Nova propriedade para a foto do usuário
   phone?: string;
   company?: string;
   personalInfo?: {
