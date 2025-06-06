@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   signInWithEmailAndPassword,
@@ -82,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // CORRIGIDO: Verificar se o usuário pertence a uma agência pelo UID
           console.log('🏢 Verificando se usuário pertence a uma agência pelo UID...');
           let userAgency = null;
-          let userType = 'individual';
+          let userType: 'individual' | 'company_owner' | 'employee' | 'admin' = 'individual';
           
           try {
             // Buscar por agências onde o usuário é colaborador
@@ -90,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             for (const agency of allAgencies) {
               // Verificar se é o dono da agência
-              if (agency.ownerId === firebaseUser.uid) {
+              if (agency.ownerId === firebaseUser.uid || agency.ownerUID === firebaseUser.uid) {
                 userAgency = agency;
                 userType = 'company_owner';
                 console.log('👑 Usuário é dono da agência:', agency.id);
@@ -133,13 +132,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           // Verificar se é admin
           const isAdmin = firebaseUser.email === 'adm.financeflow@gmail.com';
+          if (isAdmin) {
+            userType = 'admin';
+          }
           
           // Converter para o formato do contexto
           const appUser: User = {
             id: firebaseUser.uid,
             email: userData.email,
             name: firebaseUser.displayName || userData.email.split('@')[0],
-            userType: isAdmin ? 'admin' : userType,
+            userType: userType,
             createdAt: new Date().toISOString(),
             photoURL: firebaseUser.photoURL || undefined
           };

@@ -22,6 +22,7 @@ interface AppContextType {
   deleteTask: (id: string) => void;
   workRoutine: WorkRoutine | null;
   updateWorkRoutine: (routine: Omit<WorkRoutine, 'userId'>) => void;
+  loading: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -41,6 +42,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [workRoutine, setWorkRoutine] = useState<WorkRoutine | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Carregar dados quando usuário ou dados mudarem
   useEffect(() => {
@@ -50,6 +52,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user, userData, agencyData]);
 
   const loadUserData = () => {
+    setLoading(true);
+    
     // Priorizar dados da agência se disponível
     const currentData = agencyData || userData;
     
@@ -61,13 +65,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         equipments: currentData.equipments?.length || 0
       });
 
-      // Carregar jobs
-      const jobsData = currentData.jobs || [];
-      setJobs(jobsData.map(job => ({
-        ...job,
-        userId: user!.id,
-        companyId: agencyData?.id
-      })));
+      // Carregar jobs se existirem
+      if (currentData.jobs) {
+        const jobsData = currentData.jobs || [];
+        setJobs(jobsData.map(job => ({
+          ...job,
+          userId: user!.id,
+          companyId: agencyData?.id
+        })));
+      }
 
       // Carregar custos mensais (expenses)
       const costsData = currentData.expenses || [];
@@ -120,6 +126,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
     }
+    
+    setLoading(false);
   };
 
   // CORRIGIDO: Função para salvar job no Firebase
@@ -271,7 +279,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateTask,
       deleteTask,
       workRoutine,
-      updateWorkRoutine
+      updateWorkRoutine,
+      loading
     }}>
       {children}
     </AppContext.Provider>
