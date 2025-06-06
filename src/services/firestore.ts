@@ -776,6 +776,173 @@ class FirestoreService {
       return null;
     }
   }
+
+  // Novos métodos para analytics
+  async getAnalyticsData(): Promise<any> {
+    try {
+      console.log('📊 Carregando dados de analytics...');
+      
+      // Buscar todos os dados necessários
+      const [users, companies, tasks, jobs] = await Promise.all([
+        this.getAllUsers(),
+        this.getAllCompanies(),
+        this.getAllTasks(),
+        this.getAllJobs()
+      ]);
+
+      // Calcular estatísticas
+      const totalUsers = users.length;
+      const totalCompanies = companies.length;
+      const activeUsers = users.filter(u => !u.banned).length;
+      const premiumUsers = users.filter(u => u.subscription === 'premium').length;
+      const bannedUsers = users.filter(u => u.banned).length;
+      
+      // Estatísticas por tipo de usuário
+      const userTypes = {
+        individual: users.filter(u => u.userType === 'individual').length,
+        company_owner: users.filter(u => u.userType === 'company_owner').length,
+        employee: users.filter(u => u.userType === 'employee').length,
+        admin: users.filter(u => u.userType === 'admin').length
+      };
+
+      // Estatísticas de jobs
+      const totalJobs = jobs.length;
+      const approvedJobs = jobs.filter(j => j.status === 'aprovado').length;
+      const pendingJobs = jobs.filter(j => j.status === 'pendente').length;
+      
+      // Receita total dos jobs aprovados
+      const totalRevenue = jobs
+        .filter(j => j.status === 'aprovado')
+        .reduce((sum, job) => sum + (job.valueWithDiscount || job.serviceValue || 0), 0);
+
+      // Estatísticas de tarefas
+      const totalTasks = tasks.length;
+      const completedTasks = tasks.filter(t => t.completed).length;
+      const taskCompletionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+      // Crescimento mensal (simulado para demonstração)
+      const monthlyGrowth = this.calculateMonthlyGrowth(users);
+
+      const analyticsData = {
+        overview: {
+          totalUsers,
+          totalCompanies,
+          activeUsers,
+          premiumUsers,
+          bannedUsers,
+          totalRevenue,
+          totalJobs,
+          totalTasks
+        },
+        userStats: {
+          userTypes,
+          activeUsers,
+          premiumUsers,
+          bannedUsers,
+          conversionRate: totalUsers > 0 ? (premiumUsers / totalUsers) * 100 : 0
+        },
+        businessStats: {
+          totalJobs,
+          approvedJobs,
+          pendingJobs,
+          totalRevenue,
+          averageJobValue: approvedJobs > 0 ? totalRevenue / approvedJobs : 0,
+          jobApprovalRate: totalJobs > 0 ? (approvedJobs / totalJobs) * 100 : 0
+        },
+        productivity: {
+          totalTasks,
+          completedTasks,
+          taskCompletionRate,
+          averageTasksPerUser: totalUsers > 0 ? totalTasks / totalUsers : 0
+        },
+        growth: monthlyGrowth,
+        recentActivity: {
+          newUsersThisMonth: users.filter(u => this.isFromThisMonth(u.createdAt)).length,
+          newCompaniesThisMonth: companies.filter(c => this.isFromThisMonth(c.createdAt)).length,
+          newJobsThisMonth: jobs.filter(j => this.isFromThisMonth(j.date)).length
+        }
+      };
+
+      console.log('✅ Dados de analytics carregados:', analyticsData);
+      return analyticsData;
+    } catch (error) {
+      console.error('❌ Erro ao carregar analytics:', error);
+      return null;
+    }
+  }
+
+  private calculateMonthlyGrowth(users: any[]): any[] {
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const currentYear = new Date().getFullYear();
+    
+    return months.map((month, index) => {
+      const monthUsers = users.filter(user => {
+        if (!user.createdAt) return false;
+        const userDate = new Date(user.createdAt);
+        return userDate.getFullYear() === currentYear && userDate.getMonth() === index;
+      }).length;
+      
+      return {
+        month,
+        users: monthUsers,
+        revenue: monthUsers * 50 // Simulado
+      };
+    });
+  }
+
+  private isFromThisMonth(dateString: string): boolean {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    const now = new Date();
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  }
+
+  async getAllTasks(): Promise<any[]> {
+    try {
+      console.log('📋 Buscando todas as tarefas...');
+      const tasksQuery = query(collection(db, 'tasks'));
+      const querySnapshot = await getDocs(tasksQuery);
+      const tasks = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Tarefas encontradas:', tasks.length);
+      return tasks;
+    } catch (error) {
+      console.error('❌ Erro ao buscar tarefas:', error);
+      return [];
+    }
+  }
+
+  async getAllJobs(): Promise<any[]> {
+    try {
+      console.log('💼 Buscando todos os jobs...');
+      
+      // Buscar jobs de usuários individuais
+      const users = await this.getAllUsers();
+      const allJobs = [];
+      
+      for (const user of users) {
+        if (user.jobs && Array.isArray(user.jobs)) {
+          allJobs.push(...user.jobs.map(job => ({ ...job, userId: user.id })));
+        }
+      }
+      
+      // Buscar jobs de empresas
+      const companies = await this.getAllCompanies();
+      for (const company of companies) {
+        if (company.jobs && Array.isArray(company.jobs)) {
+          allJobs.push(...company.jobs.map(job => ({ ...job, companyId: company.id })));
+        }
+      }
+      
+      console.log('✅ Jobs encontrados:', allJobs.length);
+      return allJobs;
+    } catch (error) {
+      console.error('❌ Erro ao buscar jobs:', error);
+      return [];
+    }
+  }
 }
 
 export const firestoreService = new FirestoreService();

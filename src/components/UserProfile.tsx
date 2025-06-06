@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { firestoreService } from '../services/firestore';
 
 const UserProfile = () => {
-  const { user, logout, userData } = useAuth();
+  const { user, logout, userData, agencyData } = useAuth();
   const { currentTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -176,6 +176,10 @@ const UserProfile = () => {
     setIsEditing(!isEditing);
   };
 
+  // Determinar se o usuário está em uma empresa
+  const isInCompany = user?.userType === 'company_owner' || user?.userType === 'employee';
+  const companyName = agencyData?.name || 'Empresa não encontrada';
+
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       <div className="text-center space-y-2">
@@ -274,15 +278,24 @@ const UserProfile = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="company">Empresa</Label>
-                  {isEditing ? (
-                    <Input
-                      id="company"
-                      value={formData.company}
-                      onChange={(e) => handleInputChange('company', e.target.value)}
-                      placeholder="Nome da empresa"
-                    />
+                  {isInCompany ? (
+                    <div className="space-y-1">
+                      <p className="text-sm py-2 px-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded font-medium text-blue-700 dark:text-blue-300">
+                        {companyName}
+                      </p>
+                      <p className="text-xs text-gray-500">Você faz parte desta empresa</p>
+                    </div>
                   ) : (
-                    <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">{formData.company || 'Não informado'}</p>
+                    isEditing ? (
+                      <Input
+                        id="company"
+                        value={formData.company}
+                        onChange={(e) => handleInputChange('company', e.target.value)}
+                        placeholder="Nome da empresa"
+                      />
+                    ) : (
+                      <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">{formData.company || 'Não informado'}</p>
+                    )
                   )}
                 </div>
               </div>
@@ -299,7 +312,7 @@ const UserProfile = () => {
             </div>
 
             {/* Save Button */}
-            {isEditing && (
+            {isEditing && !isInCompany && (
               <div className="flex gap-2">
                 <Button 
                   onClick={handleSave}
