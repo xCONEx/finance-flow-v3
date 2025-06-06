@@ -11,6 +11,9 @@ interface AppContextType {
   workRoutine: WorkRoutine | null;
   company: Company | null;
   loading: boolean;
+  editingJob: Job | null;
+  setEditingJob: (job: Job | null) => void;
+  userData: any;
   addJob: (job: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => Promise<void>;
   updateJob: (id: string, job: Partial<Job>) => Promise<void>;
   deleteJob: (id: string) => Promise<void>;
@@ -52,6 +55,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [workRoutine, setWorkRoutine] = useState<WorkRoutine | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(false);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
 
   // Importar dados do Firebase quando userData ou agencyData estiverem disponíveis
   useEffect(() => {
@@ -699,6 +703,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       workRoutine,
       company,
       loading,
+      editingJob,
+      setEditingJob,
+      userData,
       addJob,
       updateJob,
       deleteJob,
