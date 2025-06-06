@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Job, WorkItem, MonthlyCost } from '../types';
@@ -14,96 +13,100 @@ declare module 'jspdf' {
 
 export const generateJobPDF = async (job: Job, userData: any) => {
   const doc = new jsPDF();
-  const title = `Orçamento: ${job.description}`;
-  const date = new Date().toLocaleDateString('pt-BR');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  let contentStartY = 20;
 
-  const gerarPDF = (logoBase64: string | null = null) => {
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 14;
-    let contentStartY = 20;
+  // Header
+  doc.setFontSize(16);
+  doc.setTextColor(33, 37, 41);
+  doc.text(`Orçamento - ${job.client || 'Cliente'}`, margin, contentStartY);
 
-    // Se tiver logo, renderiza na mesma linha do título, à direita
-    if (logoBase64) {
-      try {
-        const maxWidth = 40;
-        const maxHeight = 20;
-        const x = pageWidth - maxWidth - margin;
-        const y = contentStartY;
-
-        doc.addImage(logoBase64, 'PNG', x, y, maxWidth, maxHeight);
-        contentStartY = y + maxHeight + 10;
-      } catch (error) {
-        console.error('Erro ao adicionar logo:', error);
-        contentStartY = 20;
+  // Logo ou nome da empresa no canto direito
+  if (userData?.logobase64) {
+    try {
+      const maxWidth = 40;
+      const maxHeight = 20;
+      const x = pageWidth - maxWidth - margin;
+      const y = contentStartY - 5;
+      doc.addImage(userData.logobase64, 'PNG', x, y, maxWidth, maxHeight);
+      contentStartY += 10;
+    } catch (error) {
+      console.error('Erro ao adicionar logo:', error);
+      // Fallback para nome da empresa
+      if (userData?.company) {
+        doc.setFontSize(12);
+        doc.setTextColor(100);
+        const companyWidth = doc.getTextWidth(userData.company);
+        doc.text(userData.company, pageWidth - companyWidth - margin, contentStartY);
       }
+      contentStartY += 10;
     }
+  } else if (userData?.company) {
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    const companyWidth = doc.getTextWidth(userData.company);
+    doc.text(userData.company, pageWidth - companyWidth - margin, contentStartY);
+    contentStartY += 10;
+  }
 
-    renderTexto(contentStartY);
+  // Informações do job
+  doc.setFontSize(12);
+  doc.setTextColor(55, 65, 81);
+  doc.text(`Descrição: ${job.description || 'Não informado'}`, margin, contentStartY + 10);
+  doc.text(`Data do Evento: ${new Date(job.eventDate).toLocaleDateString('pt-BR')}`, margin, contentStartY + 18);
+  doc.text(`Categoria: ${job.category || 'Não informado'}`, margin, contentStartY + 26);
+  doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, margin, contentStartY + 34);
 
-    function renderTexto(startY: number) {
-      // Título
-      doc.setFontSize(18);
-      doc.setTextColor(33, 37, 41);
-      doc.text(title, margin, startY);
+  // Calcular valores
+  const logistics = typeof job.logistics === 'number' ? job.logistics : 0;
+  const equipment = typeof job.equipment === 'number' ? job.equipment : 0;
+  const assistance = typeof job.assistance === 'number' ? job.assistance : 0;
+  const custoTotal = logistics + equipment + assistance;
+  const desconto = (job.serviceValue * (job.discountValue || 0)) / 100;
+  const valorComDesconto = job.serviceValue - desconto;
 
-      const infoStartY = startY + 10;
+  // Tabela de valores
+  const tableData = [
+    ['Horas estimadas', `${job.estimatedHours || 0}h`],
+    ['Logística', logistics.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
+    ['Equipamentos', equipment.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
+    ['Assistência', assistance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
+    ['Custo total', custoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
+    ['Valor do serviço', job.serviceValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]
+  ];
 
-      // Info
-      doc.setFontSize(12);
-      doc.setTextColor(55, 65, 81);
-      doc.text(`Cliente: ${job.client || 'Não informado'}`, margin, infoStartY + 0);
-      doc.text(`Evento: ${new Date(job.eventDate).toLocaleDateString('pt-BR') || 'Não definida'}`, margin, infoStartY + 8);
-      doc.text(`Gerado em: ${date}`, margin, infoStartY + 16);
-      doc.text(`Categoria: ${job.category || 'Outro'}`, margin, infoStartY + 24);
+  // Adicionar desconto se existir
+  if (job.discountValue && job.discountValue > 0) {
+    tableData.push(['Desconto (%)', `${job.discountValue}%`]);
+    tableData.push(['Valor com desconto', valorComDesconto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
+  }
 
-      // Calcular valores
-      const logistics = typeof job.logistics === 'number' ? job.logistics : 0;
-      const equipment = typeof job.equipment === 'number' ? job.equipment : 0;
-      const assistance = typeof job.assistance === 'number' ? job.assistance : 0;
-      const custoTotal = logistics + equipment + assistance;
-      const desconto = (job.serviceValue * job.discountValue) / 100;
-      const valorFinal = job.serviceValue - desconto;
+  doc.autoTable({
+    startY: contentStartY + 45,
+    head: [['Item', 'Valor']],
+    body: tableData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [99, 102, 241],
+      textColor: 255,
+      fontSize: 12,
+    },
+    bodyStyles: {
+      fontSize: 11,
+    },
+  });
 
-      // Tabela
-      doc.autoTable({
-        startY: infoStartY + 35,
-        head: [['Item', 'Valor (R$)']],
-        body: [
-          ['Horas estimadas', `${job.estimatedHours || 0}h`],
-          ['Logística', logistics.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
-          ['Equipamentos', equipment.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
-          ['Assistência', assistance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
-          ['Custo total', custoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
-          ['Valor do serviço', job.serviceValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
-          ['Desconto (%)', `${job.discountValue}%`],
-          ['Valor total', valorFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]
-        ],
-        theme: 'grid',
-        headStyles: {
-          fillColor: [99, 102, 241],
-          textColor: 255,
-          fontSize: 12,
-        },
-        bodyStyles: {
-          fontSize: 11,
-        },
-      });
+  // Rodapé
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(
+    'Este orçamento é uma estimativa com base nas informações fornecidas.',
+    margin,
+    doc.lastAutoTable.finalY + 15
+  );
 
-      // Rodapé
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(
-        'Este orçamento é uma estimativa com base nas informações fornecidas.',
-        margin,
-        doc.lastAutoTable.finalY + 12
-      );
-
-      doc.save(`${job.description.replace(/\s+/g, '_')}_orcamento.pdf`);
-    }
-  };
-
-  const logoBase64 = userData?.logobase64 || null;
-  gerarPDF(logoBase64);
+  doc.save(`Orcamento_${job.client?.replace(/\s+/g, '_') || 'Cliente'}_${job.description?.replace(/\s+/g, '_') || 'Job'}.pdf`);
 };
 
 export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any) => {
@@ -146,14 +149,14 @@ export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any)
     item.description,
     item.category,
     item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-    `${item.depreciationYears} anos`
+    new Date().toLocaleDateString('pt-BR') // Data atual já que não temos data específica do item
   ]);
 
   const totalValue = workItems.reduce((sum, item) => sum + item.value, 0);
 
   doc.autoTable({
     startY: contentStartY + 30,
-    head: [['Descrição', 'Categoria', 'Valor', 'Depreciação']],
+    head: [['Descrição', 'Categoria', 'Valor', 'Data']],
     body: [
       ...tableData,
       ['TOTAL', '', totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), '']

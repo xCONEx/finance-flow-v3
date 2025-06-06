@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User, Save, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,23 +9,44 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from '@/hooks/use-toast';
+import { firestoreService } from '../services/firestore';
 
 const UserProfile = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, userData } = useAuth();
   const { currentTheme } = useTheme();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    phone: '',
-    company: ''
+    phone: userData?.phone || '',
+    company: userData?.company || ''
   });
 
   const handleSave = async () => {
+    if (!user?.id) return;
+    
+    setIsLoading(true);
     try {
-      // Aqui você implementaria a lógica para salvar no Firebase
-      console.log('Salvando dados do usuário:', formData);
+      // Salvar dados no Firebase
+      const updateData: any = {};
+      
+      if (formData.phone !== userData?.phone) {
+        updateData.phone = formData.phone;
+      }
+      
+      if (formData.company !== userData?.company) {
+        updateData.company = formData.company;
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        await firestoreService.updateUserField(user.id, 'personalInfo', {
+          phone: formData.phone,
+          company: formData.company
+        });
+      }
       
       toast({
         title: "Perfil Atualizado",
@@ -40,6 +61,69 @@ const UserProfile = () => {
         description: "Erro ao atualizar perfil.",
         variant: "destructive"
       });
+    }
+    setIsLoading(false);
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    // Verificar tamanho do arquivo (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Erro",
+        description: "A imagem deve ter no máximo 2MB.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verificar tipo do arquivo
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione uma imagem válida.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Converter para base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string;
+        
+        try {
+          // Salvar no Firebase
+          await firestoreService.updateUserField(user.id, 'logobase64', base64);
+          
+          toast({
+            title: "Foto Atualizada",
+            description: "Sua foto de perfil foi atualizada com sucesso.",
+          });
+        } catch (error) {
+          console.error('Erro ao salvar foto:', error);
+          toast({
+            title: "Erro",
+            description: "Erro ao salvar foto.",
+            variant: "destructive"
+          });
+        }
+        setIsLoading(false);
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Erro ao processar imagem:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao processar imagem.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
     }
   };
 
@@ -68,6 +152,7 @@ const UserProfile = () => {
               <Button
                 variant="outline"
                 onClick={() => setIsEditing(!isEditing)}
+                disabled={isLoading}
               >
                 {isEditing ? 'Cancelar' : 'Editar Perfil'}
               </Button>
@@ -78,16 +163,28 @@ const UserProfile = () => {
             {/* User Photo */}
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={user?.photoURL || ''} alt={user?.name || 'User'} />
+                <AvatarImage src={userData?.logobase64 || user?.photoURL || ''} alt={user?.name || 'User'} />
                 <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white text-2xl`}>
                   {formData.name?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
               {isEditing && (
                 <div className="space-y-2">
-                  <Button variant="outline" size="sm">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading}
+                  >
                     <Upload className="h-4 w-4 mr-2" />
-                    Alterar Foto
+                    {isLoading ? 'Salvando...' : 'Alterar Foto'}
                   </Button>
                   <p className="text-xs text-gray-500">JPG, PNG até 2MB</p>
                 </div>
@@ -113,17 +210,7 @@ const UserProfile = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  {isEditing ? (
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      placeholder="seu@email.com"
-                    />
-                  ) : (
-                    <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">{formData.email}</p>
-                  )}
+                  <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">{formData.email}</p>
                 </div>
 
                 <div className="space-y-2">
@@ -172,9 +259,10 @@ const UserProfile = () => {
                 <Button 
                   onClick={handleSave}
                   className={`bg-gradient-to-r ${currentTheme.primary}`}
+                  disabled={isLoading}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Salvar Alterações
+                  {isLoading ? 'Salvando...' : 'Salvar Alterações'}
                 </Button>
               </div>
             )}

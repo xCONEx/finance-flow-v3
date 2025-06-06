@@ -20,6 +20,12 @@ export interface FirestoreUser {
   email: string;
   uid: string;
   logobase64: string;
+  phone?: string;
+  company?: string;
+  personalInfo?: {
+    phone: string;
+    company: string;
+  };
   equipments: Array<{
     id: string;
     description: string;
@@ -110,6 +116,7 @@ class FirestoreService {
 
   async updateUserField(uid: string, field: string, value: any): Promise<void> {
     try {
+      console.log('🔄 Atualizando campo do usuário:', field, value);
       await updateDoc(doc(db, 'usuarios', uid), {
         [field]: value
       });
