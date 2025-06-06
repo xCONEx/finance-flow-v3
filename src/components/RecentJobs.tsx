@@ -88,56 +88,39 @@ const RecentJobs = () => {
 
   if (recentJobs.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        <FileText className="mx-auto h-12 w-12 mb-4" />
-        <p>Nenhum job calculado ainda</p>
-        <p className="text-sm">Use a calculadora para criar seu primeiro orçamento</p>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Últimos Jobs Calculados</h3>
+          <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Eye className="h-4 w-4 mr-2" />
+                Ver Histórico
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Histórico Completo de Jobs</DialogTitle>
+              </DialogHeader>
+              <div className="text-center py-8 text-gray-500">
+                <p>Nenhum job encontrado</p>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+        <div className="text-center py-8 text-gray-500">
+          <FileText className="mx-auto h-12 w-12 mb-4" />
+          <p>Nenhum job calculado ainda</p>
+          <p className="text-sm">Use a calculadora para criar seu primeiro orçamento</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {recentJobs.map((job) => (
-        <div key={job.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-          <div className="flex justify-between items-start mb-3">
-            <div className="space-y-1">
-              <h3 className="font-semibold text-gray-900">{job.description}</h3>
-              <p className="text-sm text-gray-600">Cliente: {job.client}</p>
-              <div className="flex items-center gap-4 text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {new Date(job.eventDate).toLocaleDateString('pt-BR')}
-                </span>
-                <span className="flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
-                  R$ {job.serviceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-            </div>
-            <Badge variant={job.status === 'aprovado' ? 'default' : 'secondary'}>
-              {job.status}
-            </Badge>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => handleEdit(job.id)}>
-              <Edit className="h-3 w-3 mr-1" />
-              Editar
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => handleDelete(job.id)}>
-              <Trash2 className="h-3 w-3 mr-1" />
-              Excluir
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => handlePrintPDF(job.id)}>
-              <FileText className="h-3 w-3 mr-1" />
-              PDF
-            </Button>
-          </div>
-        </div>
-      ))}
-
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Últimos Jobs Calculados</h3>
         <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
@@ -153,13 +136,13 @@ const RecentJobs = () => {
               {jobs.map((job) => (
                 <div key={job.id} className="p-4 border rounded-lg space-y-3">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-medium">{job.client || 'Cliente não informado'}</h4>
+                    <h4 className="font-medium">{job.description}</h4>
                     <Badge className={getStatusColor(job.status)}>
                       {job.status}
                     </Badge>
                   </div>
                   
-                  <p className="text-sm text-gray-600">{job.description}</p>
+                  <p className="text-sm text-gray-600">{job.client || 'Cliente não informado'}</p>
                   
                   <div className="flex items-center gap-4 text-sm text-gray-600">
                     <span className="flex items-center gap-1">
@@ -216,6 +199,45 @@ const RecentJobs = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {recentJobs.map((job) => (
+        <div key={job.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-start mb-3">
+            <div className="space-y-1">
+              <h3 className="font-semibold text-gray-900">{job.description}</h3>
+              <p className="text-sm text-gray-600">{job.client || 'Cliente não informado'}</p>
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {new Date(job.eventDate).toLocaleDateString('pt-BR')}
+                </span>
+                <span className="flex items-center gap-1">
+                  <DollarSign className="h-3 w-3" />
+                  R$ {job.serviceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+            <Badge variant={job.status === 'aprovado' ? 'default' : 'secondary'}>
+              {job.status}
+            </Badge>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => handleEdit(job.id)}>
+              <Edit className="h-3 w-3 mr-1" />
+              Editar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleDelete(job.id)}>
+              <Trash2 className="h-3 w-3 mr-1" />
+              Excluir
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handlePrintPDF(job.id)}>
+              <FileText className="h-3 w-3 mr-1" />
+              PDF
+            </Button>
+          </div>
+        </div>
+      ))}
 
       {editingJob && (
         <JobEditor

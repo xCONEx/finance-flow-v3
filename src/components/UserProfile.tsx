@@ -37,6 +37,21 @@ const UserProfile = () => {
     }
   }, [user, userData]);
 
+  // Buscar foto do Google se disponível
+  const getProfileImageUrl = () => {
+    // Prioridade: 1. Foto customizada 2. Foto do Google 3. Avatar padrão
+    if (userData?.imageuser) {
+      return userData.imageuser;
+    }
+    
+    // Verificar se o usuário tem photoURL do Google
+    if (user?.photoURL) {
+      return user.photoURL;
+    }
+    
+    return '';
+  };
+
   const handleSave = async () => {
     if (!user?.id) return;
     
@@ -81,11 +96,11 @@ const UserProfile = () => {
     const file = event.target.files?.[0];
     if (!file || !user?.id) return;
 
-    // Verificar tamanho do arquivo (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
+    // Verificar tamanho do arquivo (max 3MB)
+    if (file.size > 3 * 1024 * 1024) {
       toast({
         title: "Erro",
-        description: "A imagem deve ter no máximo 2MB.",
+        description: "A imagem deve ter no máximo 3MB.",
         variant: "destructive"
       });
       return;
@@ -190,7 +205,7 @@ const UserProfile = () => {
             {/* User Photo */}
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={userData?.imageuser || user?.photoURL || ''} alt={user?.name || 'User'} />
+                <AvatarImage src={getProfileImageUrl()} alt={user?.name || 'User'} />
                 <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white text-2xl`}>
                   {formData.name?.charAt(0) || 'U'}
                 </AvatarFallback>
@@ -213,7 +228,10 @@ const UserProfile = () => {
                     <Upload className="h-4 w-4 mr-2" />
                     {isLoading ? 'Salvando...' : 'Alterar Foto'}
                   </Button>
-                  <p className="text-xs text-gray-500">JPG, PNG até 2MB</p>
+                  <p className="text-xs text-gray-500">JPG, PNG até 3MB</p>
+                  {user?.photoURL && !userData?.imageuser && (
+                    <p className="text-xs text-blue-600">Foto atual: Google Account</p>
+                  )}
                 </div>
               )}
             </div>

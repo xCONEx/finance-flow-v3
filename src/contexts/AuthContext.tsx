@@ -97,19 +97,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setAgencyData(null);
           }
 
+          // Verificar se é admin
+          const isAdmin = firebaseUser.email === 'adm.financeflow@gmail.com';
+          
           // Converter para o formato do contexto
           const appUser: User = {
             id: firebaseUser.uid,
             email: userData.email,
             name: firebaseUser.displayName || userData.email.split('@')[0],
-            userType: userAgency ? 'employee' : 'individual',
-            createdAt: new Date().toISOString()
+            userType: isAdmin ? 'admin' : (userAgency ? 'employee' : 'individual'),
+            createdAt: new Date().toISOString(),
+            photoURL: firebaseUser.photoURL || undefined
           };
 
           setUser(appUser);
           setUserData(userData);
 
           console.log('✅ Dados do usuário carregados com sucesso!');
+          if (isAdmin) {
+            console.log('👑 Usuário administrador identificado');
+          }
 
         } catch (error) {
           console.error('❌ Erro ao carregar dados do usuário:', error);
