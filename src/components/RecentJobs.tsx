@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Eye, Calendar, Clock, DollarSign, Trash2 } from 'lucide-react';
+import { Eye, Calendar, Clock, DollarSign, Trash2, Edit, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,9 +12,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useAppContext } from '../contexts/AppContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
+import { generateJobPDF } from '../utils/pdfGenerator';
 
 const RecentJobs = () => {
-  const { jobs, deleteJob } = useAppContext();
+  const { jobs, deleteJob, setEditingJob, userData } = useAppContext();
   const { formatValue } = usePrivacy();
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -27,6 +28,19 @@ const RecentJobs = () => {
       await deleteJob(jobId);
     } catch (error) {
       console.error('Erro ao excluir job:', error);
+    }
+  };
+
+  const handleEditJob = (job: any) => {
+    setEditingJob(job);
+    window.location.hash = '#calculadora';
+  };
+
+  const handleGeneratePDF = async (job: any) => {
+    try {
+      await generateJobPDF(job, userData);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
     }
   };
 
@@ -77,6 +91,32 @@ const RecentJobs = () => {
               </span>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEditJob(job)}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleGeneratePDF(job)}
+              className="text-green-600 hover:text-green-700"
+            >
+              <FileText className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDeleteJob(job.id)}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       ))}
 
@@ -118,14 +158,32 @@ const RecentJobs = () => {
                       </span>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteJob(job.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditJob(job)}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleGeneratePDF(job)}
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteJob(job.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
               {jobs.length === 0 && (
