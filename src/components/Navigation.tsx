@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Home, Calculator, Kanban, Users, Settings as SettingsIcon, DollarSign, Briefcase, Clock, Menu, User, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,12 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
     { id: 'team', label: 'Equipe', icon: Users }
   ];
 
+  const adminTabs = [
+    { id: 'admin', label: 'Admin', icon: SettingsIcon }
+  ];
+
   const isCompanyUser = user?.userType === 'company_owner' || user?.userType === 'employee';
+  const isAdmin = user?.userType === 'admin';
 
   const handleTabChange = (tab: string) => {
     onTabChange(tab);
@@ -79,6 +83,23 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
                     </div>
                   </SheetContent>
                 </Sheet>
+              )}
+
+              {/* Admin Menu */}
+              {isAdmin && (
+                <Button
+                  variant={activeTab === 'admin' ? "default" : "ghost"}
+                  onClick={() => handleTabChange('admin')}
+                  size="sm"
+                  className={`flex items-center space-x-2 ${
+                    activeTab === 'admin' 
+                      ? `bg-gradient-to-r ${currentTheme.primary} text-white` 
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  <SettingsIcon className="h-4 w-4" />
+                  <span className="hidden lg:inline">Admin</span>
+                </Button>
               )}
             </div>
 
@@ -137,7 +158,7 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
       <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 md:hidden">
         <div className="flex justify-between items-center h-16 px-4">
           <div className="flex items-center space-x-3">
-            {isCompanyUser && (
+            {(isCompanyUser || isAdmin) && (
               <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="sm">
@@ -146,18 +167,36 @@ const Navigation = ({ activeTab, onTabChange }: NavigationProps) => {
                 </SheetTrigger>
                 <SheetContent side="left" className="w-64">
                   <div className="space-y-4 py-4">
-                    <h3 className="font-semibold text-lg">Menu Empresa</h3>
-                    {companyTabs.map((tab) => (
-                      <Button
-                        key={tab.id}
-                        variant={activeTab === tab.id ? "default" : "ghost"}
-                        onClick={() => handleTabChange(tab.id)}
-                        className="w-full justify-start"
-                      >
-                        <tab.icon className="h-4 w-4 mr-2" />
-                        {tab.label}
-                      </Button>
-                    ))}
+                    {isCompanyUser && (
+                      <>
+                        <h3 className="font-semibold text-lg">Menu Empresa</h3>
+                        {companyTabs.map((tab) => (
+                          <Button
+                            key={tab.id}
+                            variant={activeTab === tab.id ? "default" : "ghost"}
+                            onClick={() => handleTabChange(tab.id)}
+                            className="w-full justify-start"
+                          >
+                            <tab.icon className="h-4 w-4 mr-2" />
+                            {tab.label}
+                          </Button>
+                        ))}
+                      </>
+                    )}
+                    
+                    {isAdmin && (
+                      <>
+                        <h3 className="font-semibold text-lg">Admin</h3>
+                        <Button
+                          variant={activeTab === 'admin' ? "default" : "ghost"}
+                          onClick={() => handleTabChange('admin')}
+                          className="w-full justify-start"
+                        >
+                          <SettingsIcon className="h-4 w-4 mr-2" />
+                          Painel Admin
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </SheetContent>
               </Sheet>

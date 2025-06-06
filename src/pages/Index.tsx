@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import Navigation from '../components/Navigation';
 import Dashboard from '../components/Dashboard';
 import PricingCalculator from '../components/PricingCalculator';
-import ProjectKanban from '../components/ProjectKanban';
-import TeamManagement from '../components/TeamManagement';
+import ImprovedKanban from '../components/ImprovedKanban';
+import CompanyDashboard from '../components/CompanyDashboard';
+import AdminPanel from '../components/AdminPanel';
 import Settings from '../components/Settings';
 import MonthlyCosts from '../components/MonthlyCosts';
 import WorkItems from '../components/WorkItems';
@@ -17,6 +17,7 @@ const Index = () => {
   const { user } = useAuth();
 
   const isCompanyUser = user?.userType === 'company_owner' || user?.userType === 'employee';
+  const isAdmin = user?.userType === 'admin';
 
   const renderContent = () => {
     switch (activeTab) {
@@ -25,7 +26,7 @@ const Index = () => {
       case 'calculator':
         return <PricingCalculator />;
       case 'kanban':
-        return isCompanyUser ? <ProjectKanban /> : <Dashboard />;
+        return isCompanyUser ? <ImprovedKanban /> : <Dashboard />;
       case 'costs':
         return <MonthlyCosts />;
       case 'items':
@@ -33,7 +34,9 @@ const Index = () => {
       case 'routine':
         return <WorkRoutine />;
       case 'team':
-        return isCompanyUser ? <TeamManagement /> : <Dashboard />;
+        return isCompanyUser ? <CompanyDashboard /> : <Dashboard />;
+      case 'admin':
+        return isAdmin ? <AdminPanel /> : <Dashboard />;
       case 'settings':
         return <Settings />;
       case 'profile':

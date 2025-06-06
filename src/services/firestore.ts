@@ -1,4 +1,3 @@
-
 import { 
   doc, 
   getDoc, 
@@ -534,6 +533,172 @@ class FirestoreService {
     } catch (error) {
       console.error('❌ Erro ao importar dados JSON:', error);
       throw error;
+    }
+  }
+
+  // Novos métodos para sistema administrativo e empresas
+  async getAllUsers(): Promise<any[]> {
+    try {
+      console.log('🔍 Buscando todos os usuários...');
+      const usersQuery = query(collection(db, 'usuarios'));
+      const querySnapshot = await getDocs(usersQuery);
+      const users = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Usuários encontrados:', users.length);
+      return users;
+    } catch (error) {
+      console.error('❌ Erro ao buscar usuários:', error);
+      return [];
+    }
+  }
+
+  async getAllCompanies(): Promise<any[]> {
+    try {
+      console.log('🔍 Buscando todas as empresas...');
+      const companiesQuery = query(collection(db, 'agencias'));
+      const querySnapshot = await getDocs(companiesQuery);
+      const companies = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Empresas encontradas:', companies.length);
+      return companies;
+    } catch (error) {
+      console.error('❌ Erro ao buscar empresas:', error);
+      return [];
+    }
+  }
+
+  async createCompany(companyData: any): Promise<string> {
+    try {
+      console.log('🏢 Criando nova empresa:', companyData.name);
+      const docRef = await addDoc(collection(db, 'agencias'), companyData);
+      console.log('✅ Empresa criada com ID:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Erro ao criar empresa:', error);
+      throw error;
+    }
+  }
+
+  async updateUserSubscription(uid: string, subscription: string): Promise<void> {
+    try {
+      console.log('💳 Atualizando assinatura do usuário:', uid, subscription);
+      await updateDoc(doc(db, 'usuarios', uid), {
+        subscription: subscription
+      });
+      console.log('✅ Assinatura atualizada');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar assinatura:', error);
+      throw error;
+    }
+  }
+
+  async banUser(uid: string, banned: boolean): Promise<void> {
+    try {
+      console.log(`🚫 ${banned ? 'Banindo' : 'Desbanindo'} usuário:`, uid);
+      await updateDoc(doc(db, 'usuarios', uid), {
+        banned: banned
+      });
+      console.log('✅ Status de ban atualizado');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar status de ban:', error);
+      throw error;
+    }
+  }
+
+  // Sistema de convites
+  async sendInvite(inviteData: any): Promise<string> {
+    try {
+      console.log('📧 Enviando convite:', inviteData.email);
+      const docRef = await addDoc(collection(db, 'invites'), {
+        ...inviteData,
+        sentAt: new Date().toISOString(),
+        status: 'pending'
+      });
+      console.log('✅ Convite enviado com ID:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Erro ao enviar convite:', error);
+      throw error;
+    }
+  }
+
+  async getUserInvites(email: string): Promise<any[]> {
+    try {
+      console.log('📬 Buscando convites para:', email);
+      const invitesQuery = query(
+        collection(db, 'invites'),
+        where('email', '==', email),
+        where('status', '==', 'pending')
+      );
+      const querySnapshot = await getDocs(invitesQuery);
+      const invites = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('✅ Convites encontrados:', invites.length);
+      return invites;
+    } catch (error) {
+      console.error('❌ Erro ao buscar convites:', error);
+      return [];
+    }
+  }
+
+  async acceptInvite(inviteId: string, userId: string, companyId: string): Promise<void> {
+    try {
+      console.log('✅ Aceitando convite:', inviteId);
+      
+      // Atualizar usuário para employee
+      await updateDoc(doc(db, 'usuarios', userId), {
+        userType: 'employee',
+        companyId: companyId
+      });
+
+      // Adicionar usuário à empresa
+      const companyRef = doc(db, 'agencias', companyId);
+      await updateDoc(companyRef, {
+        colaboradores: arrayUnion({ uid: userId })
+      });
+
+      // Remover convite
+      await deleteDoc(doc(db, 'invites', inviteId));
+      
+      console.log('✅ Convite aceito com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao aceitar convite:', error);
+      throw error;
+    }
+  }
+
+  // Kanban methods
+  async saveKanbanBoard(boardId: string, boardData: any): Promise<void> {
+    try {
+      console.log('💾 Salvando board do Kanban:', boardId);
+      await setDoc(doc(db, 'kanban_boards', boardId), {
+        ...boardData,
+        updatedAt: new Date().toISOString()
+      });
+      console.log('✅ Board salvo');
+    } catch (error) {
+      console.error('❌ Erro ao salvar board:', error);
+      throw error;
+    }
+  }
+
+  async getKanbanBoard(boardId: string): Promise<any> {
+    try {
+      console.log('📋 Carregando board do Kanban:', boardId);
+      const boardDoc = await getDoc(doc(db, 'kanban_boards', boardId));
+      if (boardDoc.exists()) {
+        return boardDoc.data();
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Erro ao carregar board:', error);
+      return null;
     }
   }
 }

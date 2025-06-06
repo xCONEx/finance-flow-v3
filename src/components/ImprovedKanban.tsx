@@ -1,0 +1,478 @@
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { 
+  Briefcase, 
+  Clock, 
+  DollarSign, 
+  User, 
+  Plus, 
+  Edit, 
+  Trash2,
+  MessageCircle,
+  Paperclip,
+  Calendar
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '../contexts/AuthContext';
+
+const ImprovedKanban = () => {
+  const [boards, setBoards] = useState({});
+  const [activeBoard, setActiveBoard] = useState('main');
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [newTaskValue, setNewTaskValue] = useState('');
+  const [newTaskDeadline, setNewTaskDeadline] = useState('');
+  const [newTaskResponsible, setNewTaskResponsible] = useState('');
+  const [newTaskType, setNewTaskType] = useState('');
+  const [selectedColumn, setSelectedColumn] = useState('todo');
+  const { user, agencyData } = useAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadKanbanData();
+  }, []);
+
+  const loadKanbanData = async () => {
+    try {
+      console.log('Carregando dados do Kanban...');
+      
+      // Estrutura inicial do Kanban
+      const initialBoard = {
+        'todo': {
+          title: 'A Fazer',
+          color: 'bg-red-50 border-red-200',
+          items: [
+            {
+              id: '1',
+              title: 'Vídeo Institucional - Tech Corp',
+              description: 'Criar vídeo institucional para empresa de tecnologia',
+              value: 'R$ 4.500',
+              deadline: '15/06/2025',
+              responsible: 'João Silva',
+              type: 'Filmagem',
+              comments: 2,
+              attachments: 1,
+              priority: 'alta',
+              createdAt: new Date().toISOString()
+            },
+            {
+              id: '2',
+              title: 'Reels para Instagram - Loja ABC',
+              description: 'Produção de 5 reels para Instagram da loja',
+              value: 'R$ 800',
+              deadline: '10/06/2025',
+              responsible: 'Maria Santos',
+              type: 'Edição',
+              comments: 0,
+              attachments: 0,
+              priority: 'média',
+              createdAt: new Date().toISOString()
+            }
+          ]
+        },
+        'inProgress': {
+          title: 'Em Produção',
+          color: 'bg-yellow-50 border-yellow-200',
+          items: [
+            {
+              id: '3',
+              title: 'Casamento - Ana & Pedro',
+              description: 'Filmagem e edição completa de casamento',
+              value: 'R$ 3.200',
+              deadline: '20/06/2025',
+              responsible: 'Carlos Lima',
+              type: 'Filmagem',
+              comments: 5,
+              attachments: 3,
+              priority: 'alta',
+              createdAt: new Date().toISOString()
+            }
+          ]
+        },
+        'review': {
+          title: 'Em Revisão',
+          color: 'bg-blue-50 border-blue-200',
+          items: []
+        },
+        'done': {
+          title: 'Finalizado',
+          color: 'bg-green-50 border-green-200',
+          items: [
+            {
+              id: '4',
+              title: 'Clipe Musical - Banda XYZ',
+              description: 'Clipe musical finalizado e entregue',
+              value: 'R$ 2.800',
+              deadline: '05/06/2025',
+              responsible: 'Ana Costa',
+              type: 'Edição',
+              comments: 8,
+              attachments: 2,
+              priority: 'alta',
+              createdAt: new Date().toISOString()
+            }
+          ]
+        }
+      };
+
+      setBoards({ main: initialBoard });
+    } catch (error) {
+      console.error('Erro ao carregar Kanban:', error);
+    }
+  };
+
+  const handleDragEnd = async (result) => {
+    if (!result.destination) return;
+
+    const { source, destination } = result;
+    const board = boards[activeBoard];
+    
+    if (source.droppableId !== destination.droppableId) {
+      // Mover entre colunas
+      const sourceColumn = board[source.droppableId];
+      const destColumn = board[destination.droppableId];
+      const sourceItems = [...sourceColumn.items];
+      const destItems = [...destColumn.items];
+      const [removed] = sourceItems.splice(source.index, 1);
+      destItems.splice(destination.index, 0, removed);
+      
+      const newBoard = {
+        ...board,
+        [source.droppableId]: {
+          ...sourceColumn,
+          items: sourceItems
+        },
+        [destination.droppableId]: {
+          ...destColumn,
+          items: destItems
+        }
+      };
+
+      setBoards({
+        ...boards,
+        [activeBoard]: newBoard
+      });
+
+      // Salvar no Firebase
+      await saveKanbanState(newBoard);
+      
+      toast({
+        title: "Sucesso",
+        description: "Tarefa movida com sucesso"
+      });
+    } else {
+      // Reordenar na mesma coluna
+      const column = board[source.droppableId];
+      const copiedItems = [...column.items];
+      const [removed] = copiedItems.splice(source.index, 1);
+      copiedItems.splice(destination.index, 0, removed);
+      
+      const newBoard = {
+        ...board,
+        [source.droppableId]: {
+          ...column,
+          items: copiedItems
+        }
+      };
+
+      setBoards({
+        ...boards,
+        [activeBoard]: newBoard
+      });
+
+      await saveKanbanState(newBoard);
+    }
+  };
+
+  const saveKanbanState = async (boardData) => {
+    try {
+      console.log('Salvando estado do Kanban no Firebase...');
+      // Implementar salvamento no Firebase
+    } catch (error) {
+      console.error('Erro ao salvar Kanban:', error);
+    }
+  };
+
+  const handleAddTask = async () => {
+    if (!newTaskTitle || !newTaskDescription) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const newTask = {
+        id: `task_${Date.now()}`,
+        title: newTaskTitle,
+        description: newTaskDescription,
+        value: newTaskValue || 'Não informado',
+        deadline: newTaskDeadline || 'Não definido',
+        responsible: newTaskResponsible || user?.name || 'Não atribuído',
+        type: newTaskType || 'Geral',
+        comments: 0,
+        attachments: 0,
+        priority: 'média',
+        createdAt: new Date().toISOString()
+      };
+
+      const board = boards[activeBoard];
+      const updatedBoard = {
+        ...board,
+        [selectedColumn]: {
+          ...board[selectedColumn],
+          items: [...board[selectedColumn].items, newTask]
+        }
+      };
+
+      setBoards({
+        ...boards,
+        [activeBoard]: updatedBoard
+      });
+
+      await saveKanbanState(updatedBoard);
+
+      // Limpar formulário
+      setNewTaskTitle('');
+      setNewTaskDescription('');
+      setNewTaskValue('');
+      setNewTaskDeadline('');
+      setNewTaskResponsible('');
+      setNewTaskType('');
+
+      toast({
+        title: "Sucesso",
+        description: "Tarefa adicionada com sucesso"
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar tarefa:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar tarefa",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getTypeColor = (type) => {
+    switch (type) {
+      case 'Filmagem': return 'bg-blue-100 text-blue-800';
+      case 'Edição': return 'bg-purple-100 text-purple-800';
+      case 'Motion Graphics': return 'bg-orange-100 text-orange-800';
+      case 'Geral': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'alta': return 'bg-red-100 text-red-800';
+      case 'média': return 'bg-yellow-100 text-yellow-800';
+      case 'baixa': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const currentBoard = boards[activeBoard] || {};
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-bold flex items-center gap-2">
+            <Briefcase className="text-purple-600" />
+            Kanban de Projetos
+          </h2>
+          <p className="text-gray-600">Gerencie o fluxo dos seus projetos</p>
+        </div>
+
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Tarefa
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Adicionar Nova Tarefa</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Input
+                  placeholder="Título da tarefa"
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                />
+              </div>
+              
+              <div>
+                <Textarea
+                  placeholder="Descrição detalhada"
+                  value={newTaskDescription}
+                  onChange={(e) => setNewTaskDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Valor (R$)"
+                  value={newTaskValue}
+                  onChange={(e) => setNewTaskValue(e.target.value)}
+                />
+                <Input
+                  type="date"
+                  value={newTaskDeadline}
+                  onChange={(e) => setNewTaskDeadline(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Responsável"
+                  value={newTaskResponsible}
+                  onChange={(e) => setNewTaskResponsible(e.target.value)}
+                />
+                <Select value={newTaskType} onValueChange={setNewTaskType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Filmagem">Filmagem</SelectItem>
+                    <SelectItem value="Edição">Edição</SelectItem>
+                    <SelectItem value="Motion Graphics">Motion Graphics</SelectItem>
+                    <SelectItem value="Geral">Geral</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Select value={selectedColumn} onValueChange={setSelectedColumn}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Coluna" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">A Fazer</SelectItem>
+                  <SelectItem value="inProgress">Em Produção</SelectItem>
+                  <SelectItem value="review">Em Revisão</SelectItem>
+                  <SelectItem value="done">Finalizado</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button onClick={handleAddTask} className="w-full">
+                Adicionar Tarefa
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="grid lg:grid-cols-4 gap-6">
+          {Object.entries(currentBoard).map(([columnId, column]) => (
+            <Card key={columnId} className={`${column.color} h-fit`}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-center font-semibold">
+                  {column.title}
+                  <Badge variant="secondary" className="ml-2">
+                    {column.items?.length || 0}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Droppable droppableId={columnId}>
+                  {(provided, snapshot) => (
+                    <div
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className={`space-y-3 min-h-[300px] p-2 rounded-lg transition-colors ${
+                        snapshot.isDraggingOver ? 'bg-white/50' : ''
+                      }`}
+                    >
+                      {(column.items || []).map((item, index) => (
+                        <Draggable key={item.id} draggableId={item.id} index={index}>
+                          {(provided, snapshot) => (
+                            <Card
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`bg-white shadow-sm hover:shadow-md transition-all cursor-move ${
+                                snapshot.isDragging ? 'rotate-2 shadow-lg' : ''
+                              }`}
+                            >
+                              <CardContent className="p-4 space-y-3">
+                                <div className="flex justify-between items-start">
+                                  <h4 className="font-medium text-sm leading-tight">{item.title}</h4>
+                                  <div className="flex gap-1">
+                                    <Badge className={getTypeColor(item.type)} variant="secondary">
+                                      {item.type}
+                                    </Badge>
+                                  </div>
+                                </div>
+
+                                <p className="text-xs text-gray-600 line-clamp-2">{item.description}</p>
+                                
+                                <div className="space-y-2 text-xs text-gray-600">
+                                  <div className="flex items-center gap-2">
+                                    <DollarSign className="h-3 w-3" />
+                                    <span className="font-semibold text-green-600">{item.value}</span>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-3 w-3" />
+                                    <span>{item.deadline}</span>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-3 w-3" />
+                                    <span>{item.responsible}</span>
+                                  </div>
+
+                                  <div className="flex items-center justify-between pt-2">
+                                    <div className="flex gap-2">
+                                      {item.comments > 0 && (
+                                        <span className="flex items-center gap-1">
+                                          <MessageCircle className="h-3 w-3" />
+                                          {item.comments}
+                                        </span>
+                                      )}
+                                      {item.attachments > 0 && (
+                                        <span className="flex items-center gap-1">
+                                          <Paperclip className="h-3 w-3" />
+                                          {item.attachments}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <Badge className={getPriorityColor(item.priority)} variant="secondary">
+                                      {item.priority}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </DragDropContext>
+    </div>
+  );
+};
+
+export default ImprovedKanban;
