@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -205,10 +204,12 @@ const AdminPanel = () => {
     }
   };
 
+  // CORRIGIDO: Função para editar empresa agora usa o método correto
   const handleEditCompany = async (companyId, newData) => {
     try {
       console.log('Editando empresa:', companyId, newData);
-      await firestoreService.updateUserField(companyId, 'name', newData.name);
+      // Usar o método correto para atualizar empresa, não usuário
+      await firestoreService.updateCompanyField(companyId, 'name', newData.name);
       
       setCompanies(companies.map(company => 
         company.id === companyId ? { ...company, ...newData } : company
@@ -290,6 +291,11 @@ const AdminPanel = () => {
     );
   }
 
+  // Calcular métricas de usuários por plano
+  const freeUsers = users.filter(u => !u.subscription || u.subscription === 'free').length;
+  const premiumUsers = users.filter(u => u.subscription === 'premium').length;
+  const enterpriseUsers = users.filter(u => u.subscription === 'enterprise').length;
+
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
@@ -300,7 +306,7 @@ const AdminPanel = () => {
         <p className="text-gray-600">Gestão completa da plataforma FinanceFlow</p>
       </div>
 
-      {/* Estatísticas Gerais */}
+      {/* Estatísticas Gerais - ADICIONADAS métricas por plano */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
@@ -331,6 +337,33 @@ const AdminPanel = () => {
             <Activity className="h-8 w-8 mx-auto text-orange-600 mb-2" />
             <p className="text-2xl font-bold">{analytics?.overview?.activeUsers || 0}</p>
             <p className="text-sm text-gray-600">Usuários Ativos</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* NOVA seção: Métricas por Plano */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Users className="h-8 w-8 mx-auto text-gray-600 mb-2" />
+            <p className="text-2xl font-bold text-gray-700">{freeUsers}</p>
+            <p className="text-sm text-gray-600">Usuários Free</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4 text-center">
+            <CheckCircle className="h-8 w-8 mx-auto text-blue-600 mb-2" />
+            <p className="text-2xl font-bold text-blue-700">{premiumUsers}</p>
+            <p className="text-sm text-gray-600">Usuários Premium</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4 text-center">
+            <TrendingUp className="h-8 w-8 mx-auto text-gold-600 mb-2" />
+            <p className="text-2xl font-bold text-gold-700">{enterpriseUsers}</p>
+            <p className="text-sm text-gray-600">Usuários Enterprise</p>
           </CardContent>
         </Card>
       </div>

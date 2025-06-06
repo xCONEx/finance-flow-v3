@@ -782,6 +782,20 @@ class FirestoreService {
     }
   }
 
+  // Novo método para atualizar campos de empresa
+  async updateCompanyField(companyId: string, field: string, value: any): Promise<void> {
+    try {
+      console.log('🔄 Atualizando campo da empresa:', field, value);
+      await updateDoc(doc(db, 'agencias', companyId), {
+        [field]: value
+      });
+      console.log('✅ Campo da empresa atualizado:', field);
+    } catch (error) {
+      console.error('❌ Erro ao atualizar campo da empresa:', error);
+      throw error;
+    }
+  }
+
   // Melhorar o método saveKanbanBoard
   async saveKanbanBoard(companyId: string, boardData: any): Promise<void> {
     try {
