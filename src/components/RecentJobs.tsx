@@ -68,37 +68,40 @@ const RecentJobs = () => {
   return (
     <div className="space-y-4">
       {recentJobs.map((job) => (
-        <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-medium">{job.client || 'Cliente não informado'}</h4>
-              <Badge className={getStatusColor(job.status)}>
-                {job.status}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                {new Date(job.eventDate).toLocaleDateString('pt-BR')}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                {job.estimatedHours}h
-              </span>
-              <span className="flex items-center gap-1">
-                <DollarSign className="h-4 w-4" />
-                {formatValue(job.valueWithDiscount || job.serviceValue)}
-              </span>
-            </div>
-          </div>
+        <div key={job.id} className="p-4 border rounded-lg space-y-3">
           <div className="flex items-center gap-2">
+            <h4 className="font-medium">{job.client || 'Cliente não informado'}</h4>
+            <Badge className={getStatusColor(job.status)}>
+              {job.status}
+            </Badge>
+          </div>
+          
+          <p className="text-sm text-gray-600">{job.description}</p>
+          
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <span className="flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              {new Date(job.eventDate).toLocaleDateString('pt-BR')}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              {job.estimatedHours}h
+            </span>
+            <span className="flex items-center gap-1">
+              <DollarSign className="h-4 w-4" />
+              {formatValue(job.valueWithDiscount || job.serviceValue)}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-2 pt-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleEditJob(job)}
               className="text-blue-600 hover:text-blue-700"
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-4 w-4 mr-1" />
+              Editar
             </Button>
             <Button
               variant="outline"
@@ -106,7 +109,8 @@ const RecentJobs = () => {
               onClick={() => handleGeneratePDF(job)}
               className="text-green-600 hover:text-green-700"
             >
-              <FileText className="h-4 w-4" />
+              <FileText className="h-4 w-4 mr-1" />
+              PDF
             </Button>
             <Button
               variant="outline"
@@ -114,7 +118,8 @@ const RecentJobs = () => {
               onClick={() => handleDeleteJob(job.id)}
               className="text-red-600 hover:text-red-700"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4 mr-1" />
+              Excluir
             </Button>
           </div>
         </div>
@@ -134,38 +139,40 @@ const RecentJobs = () => {
             </DialogHeader>
             <div className="space-y-4">
               {jobs.map((job) => (
-                <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-medium">{job.client || 'Cliente não informado'}</h4>
-                      <Badge className={getStatusColor(job.status)}>
-                        {job.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">{job.description}</p>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {new Date(job.eventDate).toLocaleDateString('pt-BR')}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {job.estimatedHours}h
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="h-4 w-4" />
-                        {formatValue(job.valueWithDiscount || job.serviceValue)}
-                      </span>
-                    </div>
-                  </div>
+                <div key={job.id} className="p-4 border rounded-lg space-y-3">
                   <div className="flex items-center gap-2">
+                    <h4 className="font-medium">{job.client || 'Cliente não informado'}</h4>
+                    <Badge className={getStatusColor(job.status)}>
+                      {job.status}
+                    </Badge>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600">{job.description}</p>
+                  
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {new Date(job.eventDate).toLocaleDateString('pt-BR')}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      {job.estimatedHours}h
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <DollarSign className="h-4 w-4" />
+                      {formatValue(job.valueWithDiscount || job.serviceValue)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 pt-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEditJob(job)}
                       className="text-blue-600 hover:text-blue-700"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-4 w-4 mr-1" />
+                      Editar
                     </Button>
                     <Button
                       variant="outline"
@@ -173,7 +180,8 @@ const RecentJobs = () => {
                       onClick={() => handleGeneratePDF(job)}
                       className="text-green-600 hover:text-green-700"
                     >
-                      <FileText className="h-4 w-4" />
+                      <FileText className="h-4 w-4 mr-1" />
+                      PDF
                     </Button>
                     <Button
                       variant="outline"
@@ -181,7 +189,8 @@ const RecentJobs = () => {
                       onClick={() => handleDeleteJob(job.id)}
                       className="text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Excluir
                     </Button>
                   </div>
                 </div>
