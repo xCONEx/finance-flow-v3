@@ -23,8 +23,37 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
 
+// Definições de tipos
+interface KanbanTask {
+  id: string;
+  title: string;
+  description: string;
+  value: string;
+  deadline: string;
+  responsible: string;
+  type: string;
+  comments: number;
+  attachments: number;
+  priority: 'alta' | 'média' | 'baixa';
+  createdAt: string;
+}
+
+interface KanbanColumn {
+  title: string;
+  color: string;
+  items: KanbanTask[];
+}
+
+interface KanbanBoard {
+  [key: string]: KanbanColumn;
+}
+
+interface KanbanBoards {
+  [boardId: string]: KanbanBoard;
+}
+
 const ImprovedKanban = () => {
-  const [boards, setBoards] = useState({});
+  const [boards, setBoards] = useState<KanbanBoards>({});
   const [activeBoard, setActiveBoard] = useState('main');
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
@@ -45,7 +74,7 @@ const ImprovedKanban = () => {
       console.log('Carregando dados do Kanban...');
       
       // Estrutura inicial do Kanban
-      const initialBoard = {
+      const initialBoard: KanbanBoard = {
         'todo': {
           title: 'A Fazer',
           color: 'bg-red-50 border-red-200',
@@ -129,7 +158,7 @@ const ImprovedKanban = () => {
     }
   };
 
-  const handleDragEnd = async (result) => {
+  const handleDragEnd = async (result: any) => {
     if (!result.destination) return;
 
     const { source, destination } = result;
@@ -192,7 +221,7 @@ const ImprovedKanban = () => {
     }
   };
 
-  const saveKanbanState = async (boardData) => {
+  const saveKanbanState = async (boardData: KanbanBoard) => {
     try {
       console.log('Salvando estado do Kanban no Firebase...');
       // Implementar salvamento no Firebase
@@ -212,7 +241,7 @@ const ImprovedKanban = () => {
     }
 
     try {
-      const newTask = {
+      const newTask: KanbanTask = {
         id: `task_${Date.now()}`,
         title: newTaskTitle,
         description: newTaskDescription,
@@ -264,7 +293,7 @@ const ImprovedKanban = () => {
     }
   };
 
-  const getTypeColor = (type) => {
+  const getTypeColor = (type: string) => {
     switch (type) {
       case 'Filmagem': return 'bg-blue-100 text-blue-800';
       case 'Edição': return 'bg-purple-100 text-purple-800';
@@ -274,7 +303,7 @@ const ImprovedKanban = () => {
     }
   };
 
-  const getPriorityColor = (priority) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'alta': return 'bg-red-100 text-red-800';
       case 'média': return 'bg-yellow-100 text-yellow-800';
@@ -378,7 +407,7 @@ const ImprovedKanban = () => {
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="grid lg:grid-cols-4 gap-6">
-          {Object.entries(currentBoard).map(([columnId, column]) => (
+          {Object.entries(currentBoard).map(([columnId, column]: [string, KanbanColumn]) => (
             <Card key={columnId} className={`${column.color} h-fit`}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-center font-semibold">
