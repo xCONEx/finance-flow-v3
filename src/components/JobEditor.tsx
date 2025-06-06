@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,26 +63,26 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
     }
   }, [jobId, jobs]);
 
-  // Auto-save quando status for alterado
+  // Função para salvar status imediatamente no Firebase
   const handleStatusChange = async (newStatus: Job['status']) => {
-    if (!jobId) {
-      setFormData(prev => ({ ...prev, status: newStatus }));
-      return;
-    }
-
-    try {
-      await updateJob(jobId, { status: newStatus });
-      setFormData(prev => ({ ...prev, status: newStatus }));
-      toast({
-        title: "Status Atualizado",
-        description: `Job marcado como ${newStatus}.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar status.",
-        variant: "destructive"
-      });
+    setFormData(prev => ({ ...prev, status: newStatus }));
+    
+    if (jobId) {
+      try {
+        console.log('🔄 Atualizando status do job:', jobId, 'para:', newStatus);
+        await updateJob(jobId, { status: newStatus });
+        toast({
+          title: "Status Atualizado",
+          description: `Job marcado como ${newStatus}.`,
+        });
+      } catch (error) {
+        console.error('❌ Erro ao atualizar status:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao atualizar status.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -114,6 +115,7 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
     };
 
     try {
+      console.log('💾 Salvando job:', jobData);
       if (jobId) {
         await updateJob(jobId, jobData);
         toast({
@@ -129,6 +131,7 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
       }
       onClose();
     } catch (error) {
+      console.error('❌ Erro ao salvar job:', error);
       toast({
         title: "Erro",
         description: "Erro ao salvar job.",
