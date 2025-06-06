@@ -89,17 +89,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             for (const agency of allAgencies) {
               // Verificar se é o dono da agência - com verificação de tipo
-              if ((agency.ownerId && agency.ownerId === firebaseUser.uid) || 
-                  (agency.ownerUID && agency.ownerUID === firebaseUser.uid)) {
-                userAgency = agency;
-                userType = 'company_owner';
-                console.log('👑 Usuário é dono da agência:', agency.id);
-                break;
+              if (agency && typeof agency === 'object' && 'ownerId' in agency && 'ownerUID' in agency) {
+                if ((agency.ownerId && agency.ownerId === firebaseUser.uid) || 
+                    (agency.ownerUID && agency.ownerUID === firebaseUser.uid)) {
+                  userAgency = agency;
+                  userType = 'company_owner';
+                  console.log('👑 Usuário é dono da agência:', agency.id);
+                  break;
+                }
               }
               
               // Verificar se é colaborador pela lista de colaboradores - com verificação de tipo
-              if (agency.colaboradores && Array.isArray(agency.colaboradores)) {
-                const isCollaborator = agency.colaboradores.some(colab => 
+              if (agency && typeof agency === 'object' && 'colaboradores' in agency && agency.colaboradores && Array.isArray(agency.colaboradores)) {
+                const isCollaborator = agency.colaboradores.some((colab: any) => 
                   colab.uid === firebaseUser.uid || colab.email === firebaseUser.email
                 );
                 
