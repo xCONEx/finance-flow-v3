@@ -40,7 +40,7 @@ const InviteAcceptance = () => {
       console.log('Aceitando convite:', inviteId, companyId);
       
       // Aceitar convite no Firebase
-      await firestoreService.acceptInvite(inviteId, user.uid, companyId);
+      await firestoreService.acceptInvite(inviteId, user.id, companyId);
       
       setPendingInvites(pendingInvites.filter(invite => invite.id !== inviteId));
       

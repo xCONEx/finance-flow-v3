@@ -504,7 +504,7 @@ const AdminPanel = () => {
                         {company.colaboradores?.map((member, index) => (
                           <div key={index} className="flex justify-between items-center py-1">
                             <span className="text-sm">{member.email}</span>
-                            <Badge variant="outline" size="sm">{member.role}</Badge>
+                            <Badge variant="outline">{member.role}</Badge>
                           </div>
                         )) || <p className="text-sm text-gray-500">Nenhum membro encontrado</p>}
                       </div>
