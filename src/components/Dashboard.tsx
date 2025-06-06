@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus, Trash2 } from 'lucide-react';
+import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus, Trash2, Building2, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
@@ -19,27 +19,45 @@ const Dashboard = () => {
   const { formatValue } = usePrivacy();
   const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useAppContext();
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'personal' | 'company'>('company'); // Default para empresa se tiver
 
-  // Usar dados da agência se disponível, senão usar dados do usuário
-  const currentData = agencyData || userData;
+  // Verificar se o usuário tem acesso a empresa
+  const isCompanyUser = (user?.userType === 'company_owner' || user?.userType === 'employee') && !!agencyData;
+  
+  // Determinar qual dados usar baseado no modo de visualização
+  const shouldUsePersonalData = viewMode === 'personal' || !isCompanyUser;
+  const currentData = shouldUsePersonalData ? userData : agencyData;
+
+  // Filtrar dados baseado no modo de visualização
+  const filteredJobs = shouldUsePersonalData 
+    ? jobs.filter(job => !job.companyId) 
+    : jobs.filter(job => job.companyId === agencyData?.id);
+    
+  const filteredMonthlyCosts = shouldUsePersonalData 
+    ? monthlyCosts.filter(cost => !cost.companyId) 
+    : monthlyCosts.filter(cost => cost.companyId === agencyData?.id);
+    
+  const filteredWorkItems = shouldUsePersonalData 
+    ? workItems.filter(item => !item.companyId) 
+    : workItems.filter(item => item.companyId === agencyData?.id);
 
   // CORRIGIDO: Calcular apenas jobs aprovados para o total
-  const approvedJobs = jobs.filter(job => job.status === 'aprovado');
+  const approvedJobs = filteredJobs.filter(job => job.status === 'aprovado');
   const totalJobs = approvedJobs.length;
   const totalJobsValue = approvedJobs.reduce((sum, job) => {
     const jobValue = job.valueWithDiscount || job.serviceValue || 0;
     return sum + jobValue;
   }, 0);
   
-  const totalMonthlyCosts = monthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
-  const totalEquipmentValue = workItems.reduce((sum, item) => sum + item.value, 0);
+  const totalMonthlyCosts = filteredMonthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
+  const totalEquipmentValue = filteredWorkItems.reduce((sum, item) => sum + item.value, 0);
   const hourlyRate = workRoutine?.valuePerHour || 0;
 
   const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;
 
   // Log para debug
-  console.log('📊 Dashboard - Jobs aprovados:', approvedJobs.length, 'Total value:', totalJobsValue);
+  console.log('📊 Dashboard - Modo:', viewMode, 'Jobs aprovados:', approvedJobs.length, 'Total value:', totalJobsValue);
 
   const metrics = [
     {
@@ -86,6 +104,7 @@ const Dashboard = () => {
     // Generate a simple report
     const report = {
       data: new Date().toISOString(),
+      viewMode,
       totalJobs,
       totalJobsValue,
       totalMonthlyCosts,
@@ -98,7 +117,7 @@ const Dashboard = () => {
     const dataStr = JSON.stringify(report, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     
-    const exportFileDefaultName = `financeflow-report-${new Date().toISOString().slice(0, 10)}.json`;
+    const exportFileDefaultName = `financeflow-report-${viewMode}-${new Date().toISOString().slice(0, 10)}.json`;
     
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
@@ -111,11 +130,36 @@ const Dashboard = () => {
       {/* Convites pendentes só para usuários individuais */}
       {user?.userType === 'individual' && <InviteAcceptance />}
 
-      {/* Header */}
-      <div className="text-center space-y-2">
+      {/* Header com botão de alternância */}
+      <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold">Dashboard</h1>
+        
+        {/* Botão de alternância para usuários da empresa */}
+        {isCompanyUser && (
+          <div className="flex justify-center gap-2">
+            <Button
+              variant={viewMode === 'personal' ? 'default' : 'outline'}
+              onClick={() => setViewMode('personal')}
+              className="flex items-center gap-2"
+            >
+              <User className="h-4 w-4" />
+              Dashboard Pessoal
+            </Button>
+            <Button
+              variant={viewMode === 'company' ? 'default' : 'outline'}
+              onClick={() => setViewMode('company')}
+              className="flex items-center gap-2"
+            >
+              <Building2 className="h-4 w-4" />
+              Dashboard Empresa
+            </Button>
+          </div>
+        )}
+        
         <p className="text-gray-600 dark:text-gray-400">
-          {agencyData ? `${agencyData.name} - Painel da Empresa` : 'Visão geral do seu negócio'}
+          {viewMode === 'company' && agencyData 
+            ? `${agencyData.name} - Painel da Empresa` 
+            : 'Visão geral do seu negócio pessoal'}
         </p>
       </div>
 
@@ -227,7 +271,7 @@ const Dashboard = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Jobs Pendentes:</span>
-                  <span className="font-semibold">{jobs.filter(j => j.status === 'pendente').length}</span>
+                  <span className="font-semibold">{filteredJobs.filter(j => j.status === 'pendente').length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Taxa de Conclusão:</span>
