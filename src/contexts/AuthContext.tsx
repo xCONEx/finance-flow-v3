@@ -79,21 +79,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
           }
 
-          // Verificar se o usuário pertence a uma agência
-          console.log('🏢 Verificando se usuário pertence a uma agência...');
-          const userAgency = await firestoreService.getUserAgency(firebaseUser.uid);
+          // CORRIGIDO: Verificar se o usuário pertence a uma agência pelo UID
+          console.log('🏢 Verificando se usuário pertence a uma agência pelo UID...');
+          let userAgency = null;
+          let userType = 'individual';
           
-          if (userAgency) {
-            console.log('🏢 Usuário encontrado em agência:', userAgency.id);
-            console.log('📦 Dados da agência carregados:', {
-              equipments: userAgency.equipments?.length || 0,
-              expenses: userAgency.expenses?.length || 0,
-              jobs: userAgency.jobs?.length || 0,
-              colaboradores: userAgency.colaboradores?.length || 0
-            });
-            setAgencyData(userAgency);
-          } else {
-            console.log('👤 Usuário individual (não pertence a agência)');
+          try {
+            // Buscar por agências onde o usuário é colaborador
+            const allAgencies = await firestoreService.getAllAgencies();
+            
+            for (const agency of allAgencies) {
+              // Verificar se é o dono da agência
+              if (agency.ownerId === firebaseUser.uid) {
+                userAgency = agency;
+                userType = 'company_owner';
+                console.log('👑 Usuário é dono da agência:', agency.id);
+                break;
+              }
+              
+              // Verificar se é colaborador pela lista de colaboradores
+              if (agency.colaboradores && Array.isArray(agency.colaboradores)) {
+                const isCollaborator = agency.colaboradores.some(colab => 
+                  colab.uid === firebaseUser.uid || colab.email === firebaseUser.email
+                );
+                
+                if (isCollaborator) {
+                  userAgency = agency;
+                  userType = 'employee';
+                  console.log('👥 Usuário é colaborador da agência:', agency.id);
+                  break;
+                }
+              }
+            }
+            
+            if (userAgency) {
+              console.log('🏢 Usuário encontrado em agência:', userAgency.id);
+              console.log('📦 Dados da agência carregados:', {
+                equipments: userAgency.equipments?.length || 0,
+                expenses: userAgency.expenses?.length || 0,
+                jobs: userAgency.jobs?.length || 0,
+                colaboradores: userAgency.colaboradores?.length || 0
+              });
+              setAgencyData(userAgency);
+            } else {
+              console.log('👤 Usuário individual (não pertence a agência)');
+              setAgencyData(null);
+            }
+            
+          } catch (error) {
+            console.error('❌ Erro ao buscar agências:', error);
             setAgencyData(null);
           }
 
@@ -105,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: firebaseUser.uid,
             email: userData.email,
             name: firebaseUser.displayName || userData.email.split('@')[0],
-            userType: isAdmin ? 'admin' : (userAgency ? 'employee' : 'individual'),
+            userType: isAdmin ? 'admin' : userType,
             createdAt: new Date().toISOString(),
             photoURL: firebaseUser.photoURL || undefined
           };
@@ -114,6 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUserData(userData);
 
           console.log('✅ Dados do usuário carregados com sucesso!');
+          console.log('👤 Tipo de usuário:', userType);
           if (isAdmin) {
             console.log('👑 Usuário administrador identificado');
           }

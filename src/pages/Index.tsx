@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Navigation from '../components/Navigation';
 import Dashboard from '../components/Dashboard';
@@ -10,6 +11,7 @@ import MonthlyCosts from '../components/MonthlyCosts';
 import WorkItems from '../components/WorkItems';
 import WorkRoutine from '../components/WorkRoutine';
 import UserProfile from '../components/UserProfile';
+import SubscriptionPlans from '../components/SubscriptionPlans';
 import { useAuth } from '../contexts/AuthContext';
 
 const Index = () => {
@@ -41,6 +43,8 @@ const Index = () => {
         return <Settings />;
       case 'profile':
         return <UserProfile />;
+      case 'subscription':
+        return <SubscriptionPlans />;
       default:
         return <Dashboard />;
     }
