@@ -119,7 +119,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log('💰 Nenhuma despesa encontrada');
       }
 
-      // Importar jobs - CORRIGIDO
+      // Importar jobs - CORRIGIDO para manter estado sincronizado
       if (dataSource.jobs && dataSource.jobs.length > 0) {
         console.log(`💼 Importando ${dataSource.jobs.length} jobs...`);
         const convertedJobs: Job[] = dataSource.jobs.map(job => ({
@@ -267,6 +267,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // CORRIGIDO: updateJob com melhor sincronização
   const updateJob = async (id: string, jobData: Partial<Job>) => {
     if (!user) {
       console.error('❌ Usuário não autenticado para atualizar job');
@@ -278,18 +279,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       console.log('🔄 Atualizando job:', id, jobData);
       
-      // Encontrar job atual
+      // Encontrar job atual no estado local
       const currentJob = jobs.find(job => job.id === id);
       if (!currentJob) {
-        console.error('❌ Job não encontrado:', id);
+        console.error('❌ Job não encontrado no estado local:', id);
         return;
       }
 
-      // Atualizar estado local primeiro
+      // Criar o job atualizado
       const updatedJob = { ...currentJob, ...jobData, updatedAt: new Date().toISOString() };
-      setJobs(prev => prev.map(job => 
-        job.id === id ? updatedJob : job
-      ));
 
       // Converter para formato Firebase
       const firestoreJob = {
@@ -309,22 +307,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: updatedJob.serviceValue
       };
 
-      // Salvar no Firebase
+      // Salvar no Firebase PRIMEIRO
       if (dataSource.isAgency) {
         await firestoreService.updateAgencyJob(dataSource.uid, id, firestoreJob);
       } else {
         await firestoreService.updateJob(dataSource.uid, id, firestoreJob);
       }
 
-      console.log('✅ Job atualizado com sucesso');
+      // Só então atualizar estado local
+      setJobs(prev => prev.map(job => 
+        job.id === id ? updatedJob : job
+      ));
+
+      console.log('✅ Job atualizado com sucesso no Firebase e estado local');
     } catch (error) {
       console.error('❌ Erro ao atualizar job:', error);
-      // Reverter estado local em caso de erro
-      await importFirebaseData();
       throw error;
     }
   };
 
+  // CORRIGIDO: deleteJob com melhor sincronização
   const deleteJob = async (id: string) => {
     if (!user) {
       console.error('❌ Usuário não autenticado para deletar job');
@@ -336,24 +338,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       console.log('🗑️ Deletando job:', id);
       
-      // Encontrar job para backup
+      // Salvar backup para reverter em caso de erro
       const jobToDelete = jobs.find(job => job.id === id);
       
-      // Atualizar estado local primeiro
-      setJobs(prev => prev.filter(job => job.id !== id));
-      
-      // Remover do Firebase
+      // Remover do Firebase PRIMEIRO
       if (dataSource.isAgency) {
         await firestoreService.removeAgencyJob(dataSource.uid, id);
       } else {
         await firestoreService.removeJob(dataSource.uid, id);
       }
       
-      console.log('✅ Job removido com sucesso');
+      // Só então remover do estado local
+      setJobs(prev => prev.filter(job => job.id !== id));
+      
+      console.log('✅ Job removido com sucesso do Firebase e estado local');
     } catch (error) {
       console.error('❌ Erro ao deletar job:', error);
-      // Reverter estado local em caso de erro
-      await importFirebaseData();
       throw error;
     }
   };

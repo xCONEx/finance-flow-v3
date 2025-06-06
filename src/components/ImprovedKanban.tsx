@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +18,8 @@ import {
   Trash2,
   MessageCircle,
   Paperclip,
-  Calendar
+  Calendar,
+  Save
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -62,12 +64,29 @@ const ImprovedKanban = () => {
   const [newTaskResponsible, setNewTaskResponsible] = useState('');
   const [newTaskType, setNewTaskType] = useState('');
   const [selectedColumn, setSelectedColumn] = useState('todo');
+  const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
+  const [isEditingTask, setIsEditingTask] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const { user, agencyData } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     loadKanbanData();
+    loadTeamMembers();
   }, [agencyData]);
+
+  const loadTeamMembers = async () => {
+    if (!agencyData) return;
+    
+    try {
+      console.log('👥 Carregando membros da equipe...');
+      const members = agencyData.colaboradores || [];
+      setTeamMembers(members);
+      console.log('✅ Membros carregados:', members.length);
+    } catch (error) {
+      console.error('❌ Erro ao carregar membros da equipe:', error);
+    }
+  };
 
   const loadKanbanData = async () => {
     if (!agencyData) {
@@ -255,6 +274,77 @@ const ImprovedKanban = () => {
     }
   };
 
+  // NOVA FUNÇÃO: Salvar edições do card
+  const handleSaveTaskEdit = async () => {
+    if (!selectedTask) return;
+
+    try {
+      const board = boards[activeBoard];
+      let updatedBoard = { ...board };
+
+      // Encontrar e atualizar a tarefa em todas as colunas
+      Object.keys(updatedBoard).forEach(columnId => {
+        const taskIndex = updatedBoard[columnId].items.findIndex(item => item.id === selectedTask.id);
+        if (taskIndex !== -1) {
+          updatedBoard[columnId].items[taskIndex] = selectedTask;
+        }
+      });
+
+      setBoards({
+        ...boards,
+        [activeBoard]: updatedBoard
+      });
+
+      await saveKanbanState(updatedBoard);
+      setIsEditingTask(false);
+
+      toast({
+        title: "Sucesso",
+        description: "Tarefa atualizada com sucesso"
+      });
+    } catch (error) {
+      console.error('Erro ao salvar tarefa:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar tarefa",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // NOVA FUNÇÃO: Deletar tarefa
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const board = boards[activeBoard];
+      let updatedBoard = { ...board };
+
+      // Remover a tarefa de todas as colunas
+      Object.keys(updatedBoard).forEach(columnId => {
+        updatedBoard[columnId].items = updatedBoard[columnId].items.filter(item => item.id !== taskId);
+      });
+
+      setBoards({
+        ...boards,
+        [activeBoard]: updatedBoard
+      });
+
+      await saveKanbanState(updatedBoard);
+      setSelectedTask(null);
+
+      toast({
+        title: "Sucesso",
+        description: "Tarefa removida com sucesso"
+      });
+    } catch (error) {
+      console.error('Erro ao deletar tarefa:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao deletar tarefa",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'Filmagem': return 'bg-blue-100 text-blue-800';
@@ -349,11 +439,22 @@ const ImprovedKanban = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <Input
-                  placeholder="Responsável"
-                  value={newTaskResponsible}
-                  onChange={(e) => setNewTaskResponsible(e.target.value)}
-                />
+                {/* CORRIGIDO: Select com membros da equipe */}
+                <Select value={newTaskResponsible} onValueChange={setNewTaskResponsible}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map((member, index) => (
+                      <SelectItem key={index} value={member.email}>
+                        {member.email}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={user?.name || 'Eu'}>
+                      {user?.name || 'Eu'}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
                 <Select value={newTaskType} onValueChange={setNewTaskType}>
                   <SelectTrigger>
                     <SelectValue placeholder="Tipo" />
@@ -419,6 +520,7 @@ const ImprovedKanban = () => {
                               className={`bg-white shadow-sm hover:shadow-md transition-all cursor-move ${
                                 snapshot.isDragging ? 'rotate-2 shadow-lg' : ''
                               }`}
+                              onClick={() => setSelectedTask(item)}
                             >
                               <CardContent className="p-4 space-y-3">
                                 <div className="flex justify-between items-start">
@@ -482,6 +584,120 @@ const ImprovedKanban = () => {
           ))}
         </div>
       </DragDropContext>
+
+      {/* NOVO: Modal de visualização/edição de tarefa */}
+      <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Detalhes da Tarefa
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsEditingTask(!isEditingTask)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDeleteTask(selectedTask?.id || '')}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedTask && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Título</label>
+                {isEditingTask ? (
+                  <Input
+                    value={selectedTask.title}
+                    onChange={(e) => setSelectedTask({...selectedTask, title: e.target.value})}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-600">{selectedTask.title}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Descrição</label>
+                {isEditingTask ? (
+                  <Textarea
+                    value={selectedTask.description}
+                    onChange={(e) => setSelectedTask({...selectedTask, description: e.target.value})}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-600">{selectedTask.description}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-sm font-medium">Valor</label>
+                  {isEditingTask ? (
+                    <Input
+                      value={selectedTask.value}
+                      onChange={(e) => setSelectedTask({...selectedTask, value: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-600">{selectedTask.value}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Prazo</label>
+                  {isEditingTask ? (
+                    <Input
+                      type="date"
+                      value={selectedTask.deadline}
+                      onChange={(e) => setSelectedTask({...selectedTask, deadline: e.target.value})}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-600">{selectedTask.deadline}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Responsável</label>
+                {isEditingTask ? (
+                  <Select
+                    value={selectedTask.responsible}
+                    onValueChange={(value) => setSelectedTask({...selectedTask, responsible: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teamMembers.map((member, index) => (
+                        <SelectItem key={index} value={member.email}>
+                          {member.email}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={user?.name || 'Eu'}>
+                        {user?.name || 'Eu'}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-gray-600">{selectedTask.responsible}</p>
+                )}
+              </div>
+
+              {isEditingTask && (
+                <Button onClick={handleSaveTaskEdit} className="w-full">
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Alterações
+                </Button>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -23,6 +23,7 @@ const Dashboard = () => {
   // Usar dados da agência se disponível, senão usar dados do usuário
   const currentData = agencyData || userData;
 
+  // CORRIGIDO: Calcular apenas jobs aprovados para o total
   const approvedJobs = jobs.filter(job => job.status === 'aprovado');
   const totalJobs = approvedJobs.length;
   const totalJobsValue = approvedJobs.reduce((sum, job) => {
@@ -36,6 +37,9 @@ const Dashboard = () => {
 
   const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;
+
+  // Log para debug
+  console.log('📊 Dashboard - Jobs aprovados:', approvedJobs.length, 'Total value:', totalJobsValue);
 
   const metrics = [
     {
@@ -60,7 +64,7 @@ const Dashboard = () => {
       bgColor: 'bg-green-50 dark:bg-green-900/20'
     },
     {
-      title: 'Total de Jobs',
+      title: 'Jobs Aprovados',
       value: totalJobs.toString(),
       subtitle: formatValue(totalJobsValue),
       icon: TrendingUp,
@@ -110,7 +114,9 @@ const Dashboard = () => {
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-gray-600 dark:text-gray-400">Visão geral do seu negócio</p>
+        <p className="text-gray-600 dark:text-gray-400">
+          {agencyData ? `${agencyData.name} - Painel da Empresa` : 'Visão geral do seu negócio'}
+        </p>
       </div>
 
       {/* Metrics Cards with Hover Effects */}
