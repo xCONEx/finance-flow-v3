@@ -88,15 +88,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const allAgencies = await firestoreService.getAllAgencies();
             
             for (const agency of allAgencies) {
-              // Verificar se é o dono da agência
-              if (agency.ownerId === firebaseUser.uid || agency.ownerUID === firebaseUser.uid) {
+              // Verificar se é o dono da agência - com verificação de tipo
+              if ((agency.ownerId && agency.ownerId === firebaseUser.uid) || 
+                  (agency.ownerUID && agency.ownerUID === firebaseUser.uid)) {
                 userAgency = agency;
                 userType = 'company_owner';
                 console.log('👑 Usuário é dono da agência:', agency.id);
                 break;
               }
               
-              // Verificar se é colaborador pela lista de colaboradores
+              // Verificar se é colaborador pela lista de colaboradores - com verificação de tipo
               if (agency.colaboradores && Array.isArray(agency.colaboradores)) {
                 const isCollaborator = agency.colaboradores.some(colab => 
                   colab.uid === firebaseUser.uid || colab.email === firebaseUser.email

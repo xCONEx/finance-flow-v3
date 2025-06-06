@@ -65,8 +65,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         equipments: currentData.equipments?.length || 0
       });
 
-      // Carregar jobs se existirem
-      if (currentData.jobs) {
+      // Carregar jobs se existirem - com verificação de tipo
+      if (currentData && 'jobs' in currentData && currentData.jobs) {
         const jobsData = currentData.jobs || [];
         setJobs(jobsData.map(job => ({
           ...job,
@@ -75,35 +75,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })));
       }
 
-      // Carregar custos mensais (expenses)
-      const costsData = currentData.expenses || [];
-      setMonthlyCosts(costsData.map(cost => ({
-        id: cost.id || `temp_${Date.now()}_${Math.random()}`,
-        description: cost.description || cost.name || 'Custo',
-        category: cost.category || 'Geral',
-        value: cost.value || 0,
-        month: cost.month || new Date().toISOString().slice(0, 7),
-        createdAt: cost.createdAt || new Date().toISOString(),
-        userId: user!.id,
-        companyId: agencyData?.id
-      })));
+      // Carregar custos mensais (expenses) - com verificação de tipo
+      if (currentData && 'expenses' in currentData) {
+        const costsData = currentData.expenses || [];
+        setMonthlyCosts(costsData.map(cost => ({
+          id: cost.id || `temp_${Date.now()}_${Math.random()}`,
+          description: cost.description || cost.name || 'Custo',
+          category: cost.category || 'Geral',
+          value: cost.value || 0,
+          month: cost.month || new Date().toISOString().slice(0, 7),
+          createdAt: cost.createdAt || new Date().toISOString(),
+          userId: user!.id,
+          companyId: agencyData?.id
+        })));
+      }
 
-      // Carregar equipamentos (equipments)
-      const itemsData = currentData.equipments || [];
-      setWorkItems(itemsData.map(item => ({
-        id: item.id || `temp_${Date.now()}_${Math.random()}`,
-        description: item.description || item.name || 'Item',
-        category: item.category || 'Equipamento',
-        value: item.value || 0,
-        depreciationYears: item.depreciationYears || 5,
-        createdAt: item.createdAt || new Date().toISOString(),
-        userId: user!.id,
-        companyId: agencyData?.id
-      })));
+      // Carregar equipamentos (equipments) - com verificação de tipo
+      if (currentData && 'equipments' in currentData) {
+        const itemsData = currentData.equipments || [];
+        setWorkItems(itemsData.map(item => ({
+          id: item.id || `temp_${Date.now()}_${Math.random()}`,
+          description: item.description || item.name || 'Item',
+          category: item.category || 'Equipamento',
+          value: item.value || 0,
+          depreciationYears: item.depreciationYears || 5,
+          createdAt: item.createdAt || new Date().toISOString(),
+          userId: user!.id,
+          companyId: agencyData?.id
+        })));
+      }
 
-      // Carregar rotina de trabalho
-      const routineData = currentData.routine;
-      if (routineData) {
+      // Carregar rotina de trabalho - com verificação de tipo
+      if (currentData && 'routine' in currentData && currentData.routine) {
+        const routineData = currentData.routine;
         setWorkRoutine({
           desiredSalary: routineData.desiredSalary || 0,
           workDaysPerMonth: routineData.workDays || 22,
@@ -156,7 +160,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ? await firestoreService.getAgencyData(targetId)
         : await firestoreService.getUserData(targetId);
 
-      if (currentData && currentData.jobs) {
+      if (currentData && 'jobs' in currentData && currentData.jobs) {
         // Atualizar job no array
         const updatedJobs = currentData.jobs.map(job => 
           job.id === id 
