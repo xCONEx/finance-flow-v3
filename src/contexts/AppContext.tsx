@@ -211,9 +211,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  // Jobs operations - CORRIGIDO com salvamento automático
+  // Jobs operations - CORRIGIDO com melhor tratamento de erros
   const addJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
-    if (!user) return;
+    if (!user) {
+      console.error('❌ Usuário não autenticado para adicionar job');
+      return;
+    }
     
     const dataSource = getCurrentDataSource();
     const newJob: Job = {
@@ -243,20 +246,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     try {
-      // Salvar no Firebase primeiro
-      await firestoreService.addJob(dataSource.uid, firestoreJob);
+      console.log('💼 Adicionando job para:', dataSource.isAgency ? 'agência' : 'usuário', dataSource.uid);
       
-      // Atualizar estado local após sucesso
+      // Atualizar estado local primeiro para feedback imediato
       setJobs(prev => [newJob, ...prev]);
+      
+      // Salvar no Firebase
+      if (dataSource.isAgency) {
+        await firestoreService.addAgencyJob(dataSource.uid, firestoreJob);
+      } else {
+        await firestoreService.addJob(dataSource.uid, firestoreJob);
+      }
+      
       console.log('✅ Job adicionado com sucesso');
     } catch (error) {
       console.error('❌ Erro ao adicionar job:', error);
+      // Reverter estado local em caso de erro
+      setJobs(prev => prev.filter(job => job.id !== newJob.id));
       throw error;
     }
   };
 
   const updateJob = async (id: string, jobData: Partial<Job>) => {
-    if (!user) return;
+    if (!user) {
+      console.error('❌ Usuário não autenticado para atualizar job');
+      return;
+    }
 
     const dataSource = getCurrentDataSource();
 
@@ -266,12 +281,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Encontrar job atual
       const currentJob = jobs.find(job => job.id === id);
       if (!currentJob) {
-        console.error('Job não encontrado:', id);
+        console.error('❌ Job não encontrado:', id);
         return;
       }
 
+      // Atualizar estado local primeiro
+      const updatedJob = { ...currentJob, ...jobData, updatedAt: new Date().toISOString() };
+      setJobs(prev => prev.map(job => 
+        job.id === id ? updatedJob : job
+      ));
+
       // Converter para formato Firebase
-      const updatedJob = { ...currentJob, ...jobData };
       const firestoreJob = {
         id: id,
         assistance: typeof updatedJob.assistance === 'number' ? updatedJob.assistance : 0,
@@ -289,35 +309,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: updatedJob.serviceValue
       };
 
-      // Salvar no Firebase primeiro
-      await firestoreService.updateJob(dataSource.uid, id, firestoreJob);
-
-      // Atualizar estado local após sucesso
-      setJobs(prev => prev.map(job => 
-        job.id === id ? { ...job, ...jobData, updatedAt: new Date().toISOString() } : job
-      ));
+      // Salvar no Firebase
+      if (dataSource.isAgency) {
+        await firestoreService.updateAgencyJob(dataSource.uid, id, firestoreJob);
+      } else {
+        await firestoreService.updateJob(dataSource.uid, id, firestoreJob);
+      }
 
       console.log('✅ Job atualizado com sucesso');
     } catch (error) {
       console.error('❌ Erro ao atualizar job:', error);
+      // Reverter estado local em caso de erro
+      await importFirebaseData();
       throw error;
     }
   };
 
   const deleteJob = async (id: string) => {
-    if (!user) return;
+    if (!user) {
+      console.error('❌ Usuário não autenticado para deletar job');
+      return;
+    }
 
     const dataSource = getCurrentDataSource();
 
     try {
-      // Remover do Firebase primeiro
-      await firestoreService.removeJob(dataSource.uid, id);
+      console.log('🗑️ Deletando job:', id);
       
-      // Atualizar estado local após sucesso
+      // Encontrar job para backup
+      const jobToDelete = jobs.find(job => job.id === id);
+      
+      // Atualizar estado local primeiro
       setJobs(prev => prev.filter(job => job.id !== id));
+      
+      // Remover do Firebase
+      if (dataSource.isAgency) {
+        await firestoreService.removeAgencyJob(dataSource.uid, id);
+      } else {
+        await firestoreService.removeJob(dataSource.uid, id);
+      }
+      
       console.log('✅ Job removido com sucesso');
     } catch (error) {
       console.error('❌ Erro ao deletar job:', error);
+      // Reverter estado local em caso de erro
+      await importFirebaseData();
       throw error;
     }
   };

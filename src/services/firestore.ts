@@ -465,12 +465,22 @@ class FirestoreService {
     }
   }
 
-  // Métodos específicos para jobs de agências
+  // Métodos específicos para jobs de agências - CORRIGIDOS
   async addAgencyJob(agencyId: string, job: any): Promise<void> {
     try {
       console.log('💼 Adicionando job para agência:', agencyId);
+      const currentData = await this.getAgencyData(agencyId);
+      const jobs = currentData?.jobs || [];
+      
+      const newJob = {
+        ...job,
+        id: job.id || crypto.randomUUID()
+      };
+      
+      jobs.push(newJob);
+      
       await updateDoc(doc(db, 'agencias', agencyId), {
-        jobs: arrayUnion(job)
+        jobs: jobs
       });
       console.log('✅ Job adicionado à agência');
     } catch (error) {
@@ -479,11 +489,36 @@ class FirestoreService {
     }
   }
 
-  async removeAgencyJob(agencyId: string, job: any): Promise<void> {
+  async updateAgencyJob(agencyId: string, jobId: string, updatedJob: any): Promise<void> {
     try {
-      console.log('🗑️ Removendo job da agência:', agencyId);
+      console.log('🔄 Atualizando job da agência:', jobId);
+      const currentData = await this.getAgencyData(agencyId);
+      if (!currentData || !currentData.jobs) return;
+      
+      const jobs = currentData.jobs.map(job => 
+        job.id === jobId ? { ...job, ...updatedJob, id: jobId } : job
+      );
+      
       await updateDoc(doc(db, 'agencias', agencyId), {
-        jobs: arrayRemove(job)
+        jobs: jobs
+      });
+      console.log('✅ Job da agência atualizado');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar job da agência:', error);
+      throw error;
+    }
+  }
+
+  async removeAgencyJob(agencyId: string, jobId: string): Promise<void> {
+    try {
+      console.log('🗑️ Removendo job da agência:', jobId);
+      const currentData = await this.getAgencyData(agencyId);
+      if (!currentData || !currentData.jobs) return;
+      
+      const jobs = currentData.jobs.filter(job => job.id !== jobId);
+      
+      await updateDoc(doc(db, 'agencias', agencyId), {
+        jobs: jobs
       });
       console.log('✅ Job removido da agência');
     } catch (error) {
