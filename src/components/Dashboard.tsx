@@ -6,7 +6,7 @@ import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus, Tr
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
-import { formatCurrency } from '../utils/formatters';
+import { useAppContext } from '../contexts/AppContext';
 import CostDistributionChart from './CostDistributionChart';
 import RecentJobs from './RecentJobs';
 import TaskList from './TaskList';
@@ -16,20 +16,12 @@ import InviteAcceptance from './InviteAcceptance';
 const Dashboard = () => {
   const { user, userData, agencyData } = useAuth();
   const { currentTheme } = useTheme();
-  const { valuesHidden } = usePrivacy();
+  const { formatValue } = usePrivacy();
+  const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useAppContext();
   const [showTaskModal, setShowTaskModal] = useState(false);
 
   // Usar dados da agência se disponível, senão usar dados do usuário
   const currentData = agencyData || userData;
-  const jobs = currentData?.jobs || [];
-  const monthlyCosts = currentData?.expenses || [];
-  const workItems = currentData?.equipments || [];
-  const workRoutine = currentData?.routine || {};
-
-  const formatValue = (value) => {
-    if (valuesHidden) return 'R$ ****';
-    return formatCurrency(value);
-  };
 
   const approvedJobs = jobs.filter(job => job.status === 'aprovado');
   const totalJobs = approvedJobs.length;
@@ -41,6 +33,9 @@ const Dashboard = () => {
   const totalMonthlyCosts = monthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
   const totalEquipmentValue = workItems.reduce((sum, item) => sum + item.value, 0);
   const hourlyRate = workRoutine?.valuePerHour || 0;
+
+  const completedTasks = tasks.filter(task => task.completed).length;
+  const totalTasks = tasks.length;
 
   const metrics = [
     {
@@ -73,6 +68,39 @@ const Dashboard = () => {
       bgColor: `${currentTheme.secondary}`
     }
   ];
+
+  const handleQuickAddCost = () => {
+    addMonthlyCost({
+      description: 'Novo Custo',
+      category: 'Geral',
+      value: 0,
+      month: new Date().toISOString().slice(0, 7)
+    });
+  };
+
+  const handleExportReport = () => {
+    // Generate a simple report
+    const report = {
+      data: new Date().toISOString(),
+      totalJobs,
+      totalJobsValue,
+      totalMonthlyCosts,
+      totalEquipmentValue,
+      hourlyRate,
+      completedTasks,
+      totalTasks
+    };
+
+    const dataStr = JSON.stringify(report, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `financeflow-report-${new Date().toISOString().slice(0, 10)}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -138,7 +166,7 @@ const Dashboard = () => {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5" />
-              Tarefas
+              Tarefas ({completedTasks}/{totalTasks})
             </CardTitle>
             <Button 
               size="sm" 
@@ -162,6 +190,7 @@ const Dashboard = () => {
           <CardContent className="space-y-3">
             <Button 
               className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
+              onClick={() => window.location.hash = '#calculadora'}
             >
               <Calculator className="mr-2 h-4 w-4" />
               Nova Calculadora
@@ -169,6 +198,7 @@ const Dashboard = () => {
             <Button 
               variant="outline" 
               className="w-full transition-all duration-300 hover:scale-105"
+              onClick={handleQuickAddCost}
             >
               <DollarSign className="mr-2 h-4 w-4" />
               Adicionar Custo
@@ -176,6 +206,7 @@ const Dashboard = () => {
             <Button 
               variant="outline" 
               className="w-full transition-all duration-300 hover:scale-105"
+              onClick={handleExportReport}
             >
               <TrendingUp className="mr-2 h-4 w-4" />
               Exportar Relatório
@@ -191,6 +222,12 @@ const Dashboard = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Jobs Pendentes:</span>
                   <span className="font-semibold">{jobs.filter(j => j.status === 'pendente').length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Taxa de Conclusão:</span>
+                  <span className="font-semibold">
+                    {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+                  </span>
                 </div>
               </div>
             </div>

@@ -213,7 +213,7 @@ const RecentJobs = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <DollarSign className="h-3 w-3" />
-                  R$ {job.serviceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {formatValue(job.serviceValue)}
                 </span>
               </div>
             </div>
