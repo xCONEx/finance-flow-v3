@@ -86,6 +86,11 @@ const RecentJobs = () => {
     }
   };
 
+  // CORRIGIDO: Função helper para garantir valores seguros
+  const getSafeJobValue = (job: any) => {
+    return job.valueWithDiscount || job.serviceValue || 0;
+  };
+
   if (recentJobs.length === 0) {
     return (
       <div className="space-y-4">
@@ -151,11 +156,11 @@ const RecentJobs = () => {
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      {job.estimatedHours}h
+                      {job.estimatedHours || 0}h
                     </span>
                     <span className="flex items-center gap-1">
                       <DollarSign className="h-4 w-4" />
-                      {formatValue(job.valueWithDiscount || job.serviceValue)}
+                      {formatValue(getSafeJobValue(job))}
                     </span>
                   </div>
                   
@@ -213,7 +218,7 @@ const RecentJobs = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <DollarSign className="h-3 w-3" />
-                  {formatValue(job.serviceValue)}
+                  {formatValue(getSafeJobValue(job))}
                 </span>
               </div>
             </div>

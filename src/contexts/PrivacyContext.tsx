@@ -34,7 +34,18 @@ export const PrivacyProvider = ({ children }: PrivacyProviderProps) => {
       return '••••••';
     }
     
+    // CORRIGIDO: Verificação mais robusta para valores undefined/null/NaN
+    if (value === undefined || value === null || value === '') {
+      return 'R$ 0,00';
+    }
+    
     const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
+    
+    // Verificação adicional se o numValue é um número válido
+    if (isNaN(numValue)) {
+      return 'R$ 0,00';
+    }
+    
     return numValue.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL'
