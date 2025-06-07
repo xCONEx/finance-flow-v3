@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useAppContext } from '../contexts/AppContext';
@@ -88,7 +89,10 @@ const RecentJobs = () => {
 
   // CORRIGIDO: Função helper para garantir valores seguros
   const getSafeJobValue = (job: any) => {
-    return job.valueWithDiscount || job.serviceValue || 0;
+    console.log('🔍 getSafeJobValue - job:', job);
+    const value = job?.valueWithDiscount || job?.serviceValue || 0;
+    console.log('💰 Value calculado:', value);
+    return value;
   };
 
   if (recentJobs.length === 0) {
@@ -106,6 +110,9 @@ const RecentJobs = () => {
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Histórico Completo de Jobs</DialogTitle>
+                <DialogDescription>
+                  Visualize todos os jobs calculados anteriormente
+                </DialogDescription>
               </DialogHeader>
               <div className="text-center py-8 text-gray-500">
                 <p>Nenhum job encontrado</p>
@@ -136,10 +143,13 @@ const RecentJobs = () => {
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Histórico Completo de Jobs</DialogTitle>
+              <DialogDescription>
+                Visualize e gerencie todos os jobs calculados anteriormente
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               {jobs.map((job) => (
-                <div key={job.id} className="p-4 border rounded-lg space-y-3">
+                <div key={`history-${job.id}`} className="p-4 border rounded-lg space-y-3">
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium">{job.description}</h4>
                     <Badge className={getStatusColor(job.status)}>
@@ -206,7 +216,7 @@ const RecentJobs = () => {
       </div>
 
       {recentJobs.map((job) => (
-        <div key={job.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+        <div key={`recent-${job.id}`} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-3">
             <div className="space-y-1">
               <h3 className="font-semibold text-gray-900">{job.description}</h3>

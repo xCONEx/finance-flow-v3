@@ -69,6 +69,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Carregar jobs pessoais
       if (currentData && 'jobs' in currentData && currentData.jobs) {
         const jobsData = currentData.jobs || [];
+        console.log('📋 Jobs carregados:', jobsData);
         setJobs(jobsData.map(job => ({
           ...job,
           userId: user!.id,
@@ -122,12 +123,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
 
-      // Tasks do localStorage (por enquanto)
+      // CORRIGIDO: Tasks do localStorage filtradas SEMPRE por userId
       const storedTasks = localStorage.getItem('financeflow_tasks');
       if (storedTasks) {
         try {
           const tasksData = JSON.parse(storedTasks);
-          setTasks(tasksData.filter((task: Task) => task.userId === user!.id));
+          console.log('📝 Tasks do localStorage:', tasksData);
+          // CORRIGIDO: Filtrar por userId do usuário atual
+          const userTasks = tasksData.filter((task: Task) => task.userId === user!.id);
+          console.log('📝 Tasks filtradas para o usuário:', userTasks);
+          setTasks(userTasks);
         } catch (error) {
           console.error('Erro ao carregar tasks:', error);
           setTasks([]);
@@ -230,30 +235,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteWorkItem = (id: string) => setWorkItems(prev => prev.filter(item => item.id !== id));
 
+  // CORRIGIDO: Tasks sempre filtram por userId do usuário atual
   const addTask = (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
     const newTask: Task = {
       ...task,
       id: `task_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      userId: user!.id
+      userId: user!.id // SEMPRE userId do usuário atual
     };
-    const updatedTasks = [...tasks, newTask];
-    setTasks(updatedTasks);
-    localStorage.setItem('financeflow_tasks', JSON.stringify(updatedTasks));
+    const allTasks = [...tasks, newTask];
+    setTasks(allTasks);
+    
+    // Salvar todas as tasks no localStorage (não apenas as do usuário)
+    const storedTasks = localStorage.getItem('financeflow_tasks');
+    let existingTasks = [];
+    if (storedTasks) {
+      try {
+        existingTasks = JSON.parse(storedTasks);
+      } catch (error) {
+        console.error('Erro ao carregar tasks existentes:', error);
+      }
+    }
+    
+    // Adicionar a nova task às existentes
+    const updatedAllTasks = [...existingTasks, newTask];
+    localStorage.setItem('financeflow_tasks', JSON.stringify(updatedAllTasks));
+    console.log('📝 Task adicionada e salva no localStorage');
   };
 
   const updateTask = (id: string, updates: Partial<Task>) => {
+    // Atualizar no estado local
     const updatedTasks = tasks.map(task => 
       task.id === id ? { ...task, ...updates } : task
     );
     setTasks(updatedTasks);
-    localStorage.setItem('financeflow_tasks', JSON.stringify(updatedTasks));
+    
+    // Atualizar no localStorage (todas as tasks)
+    const storedTasks = localStorage.getItem('financeflow_tasks');
+    if (storedTasks) {
+      try {
+        const allTasks = JSON.parse(storedTasks);
+        const updatedAllTasks = allTasks.map((task: Task) => 
+          task.id === id ? { ...task, ...updates } : task
+        );
+        localStorage.setItem('financeflow_tasks', JSON.stringify(updatedAllTasks));
+        console.log('📝 Task atualizada no localStorage');
+      } catch (error) {
+        console.error('Erro ao atualizar task no localStorage:', error);
+      }
+    }
   };
 
   const deleteTask = (id: string) => {
+    // Remover do estado local
     const updatedTasks = tasks.filter(task => task.id !== id);
     setTasks(updatedTasks);
-    localStorage.setItem('financeflow_tasks', JSON.stringify(updatedTasks));
+    
+    // Remover do localStorage (todas as tasks)
+    const storedTasks = localStorage.getItem('financeflow_tasks');
+    if (storedTasks) {
+      try {
+        const allTasks = JSON.parse(storedTasks);
+        const updatedAllTasks = allTasks.filter((task: Task) => task.id !== id);
+        localStorage.setItem('financeflow_tasks', JSON.stringify(updatedAllTasks));
+        console.log('📝 Task removida do localStorage');
+      } catch (error) {
+        console.error('Erro ao remover task do localStorage:', error);
+      }
+    }
   };
 
   const updateWorkRoutine = (routine: Omit<WorkRoutine, 'userId'>) => {
