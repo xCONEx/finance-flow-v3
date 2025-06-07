@@ -89,41 +89,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('🔍 Verificando agências:', allAgencies.length);
             
             for (const agency of allAgencies) {
-              console.log('🔍 Verificando agência:', agency.id, {
-                ownerId: agency.ownerId,
-                ownerUID: agency.ownerUID,
-                owner: agency.owner,
+              const agencyData = agency as any; // Type assertion to avoid TypeScript errors
+              
+              console.log('🔍 Verificando agência:', agencyData.id, {
+                ownerId: agencyData.ownerId,
+                ownerUID: agencyData.ownerUID,
+                owner: agencyData.owner,
                 userUID: firebaseUser.uid,
                 userEmail: firebaseUser.email
               });
               
               // CORRIGIDO: Verificar múltiplos campos possíveis para proprietário
               const isOwner = (
-                (agency.ownerId && agency.ownerId === firebaseUser.uid) ||
-                (agency.ownerUID && agency.ownerUID === firebaseUser.uid) ||
-                (agency.owner && agency.owner === firebaseUser.uid) ||
-                (agency.owner && agency.owner === firebaseUser.email) ||
-                (agency.ownerId && agency.ownerId === firebaseUser.email)
+                (agencyData.ownerId && agencyData.ownerId === firebaseUser.uid) ||
+                (agencyData.ownerUID && agencyData.ownerUID === firebaseUser.uid) ||
+                (agencyData.owner && agencyData.owner === firebaseUser.uid) ||
+                (agencyData.owner && agencyData.owner === firebaseUser.email) ||
+                (agencyData.ownerId && agencyData.ownerId === firebaseUser.email)
               );
               
               if (isOwner) {
-                userAgency = agency;
+                userAgency = agencyData;
                 userType = 'company_owner';
-                console.log('👑 Usuário é DONO da agência:', agency.id);
+                console.log('👑 Usuário é DONO da agência:', agencyData.id);
                 console.log('✅ Tipo identificado: PROPRIETÁRIO');
                 break;
               }
               
               // Verificar se é colaborador
-              if (agency.colaboradores && Array.isArray(agency.colaboradores)) {
-                const isCollaborator = agency.colaboradores.some((colab: any) => 
+              if (agencyData.colaboradores && Array.isArray(agencyData.colaboradores)) {
+                const isCollaborator = agencyData.colaboradores.some((colab: any) => 
                   colab.uid === firebaseUser.uid || colab.email === firebaseUser.email
                 );
                 
                 if (isCollaborator) {
-                  userAgency = agency;
+                  userAgency = agencyData;
                   userType = 'employee';
-                  console.log('👥 Usuário é colaborador da agência:', agency.id);
+                  console.log('👥 Usuário é colaborador da agência:', agencyData.id);
                   break;
                 }
               }
