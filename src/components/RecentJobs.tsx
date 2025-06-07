@@ -19,11 +19,22 @@ import { toast } from '@/hooks/use-toast';
 import { generateJobPDF } from '../utils/pdfGenerator';
 
 const RecentJobs = () => {
-  const { jobs, deleteJob } = useAppContext();
-  const { userData } = useAuth();
+  const { jobs, deleteJob, tasks } = useAppContext();
+  const { userData, user } = useAuth();
   const { formatValue } = usePrivacy();
   const [editingJob, setEditingJob] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  console.log('🔍 RecentJobs - Debug inicial:', {
+    jobsCount: jobs.length,
+    tasksCount: tasks.length,
+    userId: user?.id,
+    userData: userData ? 'presente' : 'ausente'
+  });
+
+  // CORRIGIDO: Filtrar tasks por userId do usuário atual
+  const userTasks = tasks.filter(task => task.userId === user?.id);
+  console.log('📝 Tasks filtradas para o usuário:', userTasks.length);
 
   const recentJobs = jobs.slice(0, 3);
 
@@ -41,17 +52,20 @@ const RecentJobs = () => {
   };
 
   const handleEdit = (jobId: string) => {
+    console.log('🔧 Editando job:', jobId);
     setEditingJob(jobId);
   };
 
   const handleDelete = async (jobId: string) => {
     try {
+      console.log('🗑️ Deletando job:', jobId);
       await deleteJob(jobId);
       toast({
         title: "Job Excluído",
         description: "O job foi removido com sucesso.",
       });
     } catch (error) {
+      console.error('❌ Erro ao excluir job:', error);
       toast({
         title: "Erro",
         description: "Erro ao excluir job.",
@@ -78,7 +92,7 @@ const RecentJobs = () => {
         description: "O PDF do orçamento foi gerado com sucesso.",
       });
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
+      console.error('❌ Erro ao gerar PDF:', error);
       toast({
         title: "Erro",
         description: "Erro ao gerar PDF do orçamento.",
@@ -87,12 +101,11 @@ const RecentJobs = () => {
     }
   };
 
-  // CORRIGIDO: Função helper para garantir valores seguros
+  // CORRIGIDO: Função para obter valor seguro do job
   const getSafeJobValue = (job: any) => {
-    console.log('🔍 getSafeJobValue - job:', job);
     const value = job?.valueWithDiscount || job?.serviceValue || 0;
-    console.log('💰 Value calculado:', value);
-    return value;
+    console.log('💰 getSafeJobValue para job:', job.id, 'valor:', value);
+    return Number(value) || 0;
   };
 
   if (recentJobs.length === 0) {
@@ -125,6 +138,28 @@ const RecentJobs = () => {
           <p>Nenhum job calculado ainda</p>
           <p className="text-sm">Use a calculadora para criar seu primeiro orçamento</p>
         </div>
+        
+        {/* ADICIONADO: Seção de tasks mesmo sem jobs */}
+        {userTasks.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-md font-medium mb-3">Suas Tarefas Recentes</h4>
+            <div className="space-y-2">
+              {userTasks.slice(0, 3).map((task) => (
+                <div key={task.id} className="p-3 border rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{task.title}</span>
+                    <Badge variant={task.completed ? "default" : "secondary"}>
+                      {task.status}
+                    </Badge>
+                  </div>
+                  {task.description && (
+                    <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -254,10 +289,40 @@ const RecentJobs = () => {
         </div>
       ))}
 
+      {/* ADICIONADO: Seção de tasks quando há jobs */}
+      {userTasks.length > 0 && (
+        <div className="mt-6 pt-4 border-t">
+          <h4 className="text-md font-medium mb-3">Suas Tarefas Recentes</h4>
+          <div className="space-y-2">
+            {userTasks.slice(0, 3).map((task) => (
+              <div key={task.id} className="p-3 border rounded-lg bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{task.title}</span>
+                  <Badge variant={task.completed ? "default" : "secondary"}>
+                    {task.status}
+                  </Badge>
+                </div>
+                {task.description && (
+                  <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                )}
+                {task.dueDate && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Vencimento: {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {editingJob && (
         <JobEditor
           jobId={editingJob}
-          onClose={() => setEditingJob(null)}
+          onClose={() => {
+            console.log('🔄 Fechando editor de job');
+            setEditingJob(null);
+          }}
         />
       )}
     </div>

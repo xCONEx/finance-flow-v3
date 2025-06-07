@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Job, MonthlyCost, WorkItem, Task, WorkRoutine } from '../types';
 import { useAuth } from './AuthContext';
@@ -56,7 +55,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLoading(true);
     
     // CORRIGIDO: Sempre usar dados pessoais do usuário (userData)
-    // Não misturar com dados da empresa
     const currentData = userData;
     
     if (currentData) {
@@ -73,7 +71,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setJobs(jobsData.map(job => ({
           ...job,
           userId: user!.id,
-          // CORRIGIDO: Jobs pessoais não têm companyId
           companyId: undefined
         })));
       }
@@ -89,7 +86,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           month: cost.month || new Date().toISOString().slice(0, 7),
           createdAt: cost.createdAt || new Date().toISOString(),
           userId: user!.id,
-          // CORRIGIDO: Custos pessoais não têm companyId
           companyId: undefined
         })));
       }
@@ -105,7 +101,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           depreciationYears: item.depreciationYears || 5,
           createdAt: item.createdAt || new Date().toISOString(),
           userId: user!.id,
-          // CORRIGIDO: Equipamentos pessoais não têm companyId
           companyId: undefined
         })));
       }
@@ -123,18 +118,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
 
-      // CORRIGIDO: Tasks do localStorage filtradas SEMPRE por userId
+      // CORRIGIDO: Tasks do localStorage filtradas por userId
       const storedTasks = localStorage.getItem('financeflow_tasks');
       if (storedTasks) {
         try {
           const tasksData = JSON.parse(storedTasks);
-          console.log('📝 Tasks do localStorage:', tasksData);
-          // CORRIGIDO: Filtrar por userId do usuário atual
+          console.log('📝 Tasks do localStorage:', tasksData.length);
           const userTasks = tasksData.filter((task: Task) => task.userId === user!.id);
-          console.log('📝 Tasks filtradas para o usuário:', userTasks);
+          console.log('📝 Tasks filtradas para o usuário:', userTasks.length);
           setTasks(userTasks);
         } catch (error) {
-          console.error('Erro ao carregar tasks:', error);
+          console.error('❌ Erro ao carregar tasks:', error);
           setTasks([]);
         }
       }
@@ -145,12 +139,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // CORRIGIDO: Função para salvar job pessoal no Firebase
   const updateJob = async (id: string, updates: Partial<Job>) => {
-    if (!user) return;
+    if (!user) {
+      console.error('❌ Usuário não encontrado para salvar job');
+      return;
+    }
 
     try {
       console.log('💾 Salvando job pessoal editado:', id, updates);
       
-      // Atualizar no estado local
+      // Atualizar no estado local primeiro
       setJobs(prevJobs => 
         prevJobs.map(job => 
           job.id === id 
@@ -159,7 +156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         )
       );
 
-      // CORRIGIDO: Sempre salvar nos dados pessoais do usuário
+      // Buscar dados atuais do usuário
       const currentData = await firestoreService.getUserData(user.id);
 
       if (currentData && 'jobs' in currentData && currentData.jobs) {
@@ -177,6 +174,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     } catch (error) {
       console.error('❌ Erro ao salvar job pessoal:', error);
+      throw error; // Re-throw para mostrar erro na UI
     }
   };
 
@@ -187,13 +185,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       userId: user!.id,
-      // CORRIGIDO: Jobs pessoais não têm companyId
       companyId: undefined
     };
     setJobs(prev => [...prev, newJob]);
+    console.log('📋 Job adicionado ao estado local:', newJob.id);
   };
 
-  const deleteJob = (id: string) => setJobs(prev => prev.filter(job => job.id !== id));
+  const deleteJob = async (id: string) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para deletar job');
+      return;
+    }
+
+    try {
+      console.log('🗑️ Deletando job:', id);
+      
+      // Remover do estado local
+      setJobs(prev => prev.filter(job => job.id !== id));
+
+      // Buscar dados atuais do usuário
+      const currentData = await firestoreService.getUserData(user.id);
+
+      if (currentData && 'jobs' in currentData && currentData.jobs) {
+        // Remover job do array pessoal
+        const updatedJobs = currentData.jobs.filter(job => job.id !== id);
+
+        // Salvar no Firebase
+        await firestoreService.updateField('usuarios', user.id, 'jobs', updatedJobs);
+        console.log('✅ Job removido do Firebase com sucesso');
+      }
+
+    } catch (error) {
+      console.error('❌ Erro ao deletar job:', error);
+      throw error;
+    }
+  };
 
   const addMonthlyCost = (cost: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId' | 'companyId'>) => {
     const newCost: MonthlyCost = {
@@ -201,7 +227,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `cost_${Date.now()}`,
       createdAt: new Date().toISOString(),
       userId: user!.id,
-      // CORRIGIDO: Custos pessoais não têm companyId
       companyId: undefined
     };
     setMonthlyCosts(prev => [...prev, newCost]);
@@ -221,7 +246,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `item_${Date.now()}`,
       createdAt: new Date().toISOString(),
       userId: user!.id,
-      // CORRIGIDO: Itens pessoais não têm companyId
       companyId: undefined
     };
     setWorkItems(prev => [...prev, newItem]);
