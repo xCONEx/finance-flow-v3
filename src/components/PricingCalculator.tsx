@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Calculator, Save, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,18 +12,21 @@ import { PercentageInput } from '@/components/ui/percentage-input';
 import { toast } from '@/hooks/use-toast';
 import { useAppContext } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { formatCurrency, calculateDepreciation, getDifficultyMultiplier } from '../utils/formatters';
+import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../utils/formatters';
+import { firestoreService } from '../services/firestore';
 
 const PricingCalculator = () => {
-  const { addJob, workRoutine, monthlyCosts, workItems } = useAppContext();
+  const { addJob, workRoutine } = useAppContext();
   const { currentTheme } = useTheme();
+  const { user } = useAuth();
   
   const [formData, setFormData] = useState({
     description: '',
     client: '',
     eventDate: '',
     estimatedHours: 0,
-    difficultyLevel: 'médio' as 'fácil' | 'médio' | 'difícil' | 'muito difícil',
+    difficultyLevel: 'médio' as 'fácil' | 'médio' | 'complicado' | 'difícil',
     logisticsValue: 0,
     equipmentValue: 0,
     assistanceValue: 0,
@@ -35,9 +39,6 @@ const PricingCalculator = () => {
     serviceValue: 0,
     valueWithDiscount: 0,
     hourlyRate: 0,
-    baseHourlyRate: 0,
-    monthlyCostsPortion: 0,
-    depreciationCosts: 0,
     additionalCosts: 0
   });
 
@@ -71,32 +72,39 @@ const PricingCalculator = () => {
       return;
     }
 
-    // Calcular valor base por hora da rotina
+    // Valor base por hora (E36 na planilha)
     const baseHourlyRate = workRoutine.valuePerHour;
+    
+    // Horas estimadas (C11 na planilha)
+    const estimatedHours = formData.estimatedHours;
 
-    // Calcular custos mensais proporcionais às horas
-    const totalMonthlyCosts = monthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
-    const monthlyCostsPortion = (totalMonthlyCosts / (workRoutine.workDaysPerMonth * workRoutine.workHoursPerDay)) * formData.estimatedHours;
+    // Cálculo conforme a planilha Excel
+    let serviceValue = 0;
+    
+    switch (formData.difficultyLevel) {
+      case 'fácil':
+        serviceValue = baseHourlyRate * estimatedHours; // Sem multiplicador
+        break;
+      case 'médio':
+        serviceValue = baseHourlyRate * estimatedHours; // Sem multiplicador
+        break;
+      case 'complicado':
+        serviceValue = baseHourlyRate * estimatedHours * 1.5; // 50% a mais
+        break;
+      case 'difícil':
+        serviceValue = baseHourlyRate * estimatedHours * 2.0; // 100% a mais
+        break;
+      default:
+        serviceValue = baseHourlyRate * estimatedHours;
+    }
 
-    // Calcular depreciação de equipamentos
-    const totalDepreciation = workItems.reduce((sum, item) => {
-      return sum + calculateDepreciation(item.value, item.depreciationYears);
-    }, 0) * formData.estimatedHours;
-
-    // Custos adicionais do projeto
+    // Custos adicionais
     const additionalCosts = formData.logisticsValue + formData.equipmentValue + formData.assistanceValue;
 
-    // Aplicar multiplicador de dificuldade
-    const difficultyMultiplier = getDifficultyMultiplier(formData.difficultyLevel);
-    const adjustedHourlyRate = baseHourlyRate * difficultyMultiplier;
+    // Valor total = valor do serviço + custos adicionais
+    const totalCosts = serviceValue + additionalCosts;
 
-    // Calcular valor total do serviço
-    const serviceValue = adjustedHourlyRate * formData.estimatedHours;
-    
-    // Somar todos os custos
-    const totalCosts = serviceValue + monthlyCostsPortion + totalDepreciation + additionalCosts;
-
-    // Aplicar desconto
+    // Aplicar desconto se houver
     const discountAmount = (totalCosts * formData.discountPercentage) / 100;
     const valueWithDiscount = totalCosts - discountAmount;
     
@@ -104,20 +112,17 @@ const PricingCalculator = () => {
       totalCosts,
       serviceValue,
       valueWithDiscount,
-      hourlyRate: adjustedHourlyRate,
-      baseHourlyRate,
-      monthlyCostsPortion,
-      depreciationCosts: totalDepreciation,
+      hourlyRate: baseHourlyRate,
       additionalCosts
     });
 
     toast({
       title: "Preço Calculado!",
-      description: "O orçamento foi calculado com base nos seus dados.",
+      description: "O orçamento foi calculado conforme sua planilha.",
     });
   };
 
-  const saveJob = () => {
+  const saveJob = async () => {
     if (!formData.description || !formData.client || calculatedPrice.totalCosts === 0) {
       toast({
         title: "Erro",
@@ -127,7 +132,16 @@ const PricingCalculator = () => {
       return;
     }
 
-    addJob({
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Usuário não encontrado.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newJob = {
       description: formData.description,
       client: formData.client,
       eventDate: formData.eventDate,
@@ -136,43 +150,64 @@ const PricingCalculator = () => {
       logistics: formData.logisticsValue,
       equipment: formData.equipmentValue,
       assistance: formData.assistanceValue,
-      status: 'pendente',
+      status: 'pendente' as const,
       category: formData.category,
       discountValue: (calculatedPrice.totalCosts * formData.discountPercentage) / 100,
       totalCosts: calculatedPrice.totalCosts,
       serviceValue: calculatedPrice.serviceValue,
       valueWithDiscount: calculatedPrice.valueWithDiscount,
-      profitMargin: ((calculatedPrice.valueWithDiscount - calculatedPrice.totalCosts) / calculatedPrice.totalCosts) * 100
-    });
+      profitMargin: 0,
+      id: `job_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      userId: user.id
+    };
 
-    toast({
-      title: "Job Salvo!",
-      description: `Orçamento de ${formData.description} salvo com sucesso.`,
-    });
+    try {
+      // Adicionar ao estado local
+      addJob(newJob);
 
-    // Reset form
-    setFormData({
-      description: '',
-      client: '',
-      eventDate: '',
-      estimatedHours: 0,
-      difficultyLevel: 'médio',
-      logisticsValue: 0,
-      equipmentValue: 0,
-      assistanceValue: 0,
-      category: '',
-      discountPercentage: 0
-    });
-    setCalculatedPrice({
-      totalCosts: 0,
-      serviceValue: 0,
-      valueWithDiscount: 0,
-      hourlyRate: 0,
-      baseHourlyRate: 0,
-      monthlyCostsPortion: 0,
-      depreciationCosts: 0,
-      additionalCosts: 0
-    });
+      // Salvar no Firebase
+      const currentData = await firestoreService.getUserData(user.id);
+      const existingJobs = (currentData && 'jobs' in currentData && currentData.jobs) ? currentData.jobs : [];
+      const updatedJobs = [...existingJobs, newJob];
+      
+      await firestoreService.updateField('usuarios', user.id, 'jobs', updatedJobs);
+
+      toast({
+        title: "Job Salvo!",
+        description: `Orçamento de ${formData.description} salvo com sucesso.`,
+      });
+
+      // Reset form
+      setFormData({
+        description: '',
+        client: '',
+        eventDate: '',
+        estimatedHours: 0,
+        difficultyLevel: 'médio',
+        logisticsValue: 0,
+        equipmentValue: 0,
+        assistanceValue: 0,
+        category: '',
+        discountPercentage: 0
+      });
+      setCalculatedPrice({
+        totalCosts: 0,
+        serviceValue: 0,
+        valueWithDiscount: 0,
+        hourlyRate: 0,
+        additionalCosts: 0
+      });
+
+    } catch (error) {
+      console.error('❌ Erro ao salvar job:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar job no Firebase.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -244,8 +279,8 @@ const PricingCalculator = () => {
                   <SelectContent>
                     <SelectItem value="fácil">Fácil</SelectItem>
                     <SelectItem value="médio">Médio</SelectItem>
-                    <SelectItem value="difícil">Difícil</SelectItem>
-                    <SelectItem value="muito difícil">Muito Difícil</SelectItem>
+                    <SelectItem value="complicado">Complicado (+50%)</SelectItem>
+                    <SelectItem value="difícil">Difícil (+100%)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -305,7 +340,7 @@ const PricingCalculator = () => {
 
             <Button onClick={calculatePrice} className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90`}>
               <Calculator className="mr-2 h-4 w-4" />
-              Calcular Preço Inteligente
+              Calcular Preço
             </Button>
           </CardContent>
         </Card>
@@ -320,28 +355,29 @@ const PricingCalculator = () => {
               <>
                 <div className="space-y-4">
                   <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
-                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor Final</h3>
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor Total</h3>
                     <div className={`text-2xl font-bold text-${currentTheme.accent}`}>
-                      {formatCurrency(calculatedPrice.valueWithDiscount)}
+                      {formatCurrency(calculatedPrice.totalCosts)}
                     </div>
                   </div>
                   
+                  {formData.discountPercentage > 0 && (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200">
+                      <h3 className="font-semibold text-green-700 dark:text-green-300 mb-2">Valor com Desconto</h3>
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {formatCurrency(calculatedPrice.valueWithDiscount)}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="text-sm space-y-2">
                     <div className="flex justify-between">
-                      <span>Valor/Hora:</span>
+                      <span>Valor/Hora Base:</span>
                       <span className="font-semibold">{formatCurrency(calculatedPrice.hourlyRate)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Serviço:</span>
+                      <span>Serviço ({formData.estimatedHours}h):</span>
                       <span>{formatCurrency(calculatedPrice.serviceValue)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Custos Mensais:</span>
-                      <span>{formatCurrency(calculatedPrice.monthlyCostsPortion)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Depreciação:</span>
-                      <span>{formatCurrency(calculatedPrice.depreciationCosts)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Custos Adicionais:</span>
@@ -364,9 +400,9 @@ const PricingCalculator = () => {
             ) : (
               <div className="space-y-2">
                 <DollarSign className={`mx-auto h-12 w-12 text-${currentTheme.accent}`} />
-                <h3 className={`text-2xl font-bold text-${currentTheme.accent}`}>Calculadora Inteligente</h3>
+                <h3 className={`text-2xl font-bold text-${currentTheme.accent}`}>Calculadora</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Configure sua rotina de trabalho e adicione itens/custos para usar a calculadora inteligente.
+                  Configure sua rotina de trabalho para usar a calculadora.
                 </p>
               </div>
             )}

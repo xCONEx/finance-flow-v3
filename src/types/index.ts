@@ -25,7 +25,7 @@ export interface Job {
   client: string;
   eventDate: string;
   estimatedHours: number;
-  difficultyLevel: 'fácil' | 'médio' | 'difícil' | 'muito difícil';
+  difficultyLevel: 'fácil' | 'médio' | 'complicado' | 'difícil';
   logistics: number;
   equipment: number;
   assistance: number;

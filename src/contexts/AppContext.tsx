@@ -61,7 +61,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log('📦 Carregando dados pessoais do usuário:', {
         jobs: currentData.jobs?.length || 0,
         expenses: currentData.expenses?.length || 0,
-        equipments: currentData.equipments?.length || 0
+        equipments: currentData.equipments?.length || 0,
+        routine: currentData.routine ? 'presente' : 'ausente'
       });
 
       // Carregar jobs pessoais
@@ -105,9 +106,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })));
       }
 
-      // Carregar rotina de trabalho pessoal
+      // CORRIGIDO: Carregar rotina de trabalho pessoal do Firebase
       if (currentData && 'routine' in currentData && currentData.routine) {
         const routineData = currentData.routine;
+        console.log('⚙️ Rotina carregada do Firebase:', routineData);
         setWorkRoutine({
           desiredSalary: routineData.desiredSalary || 0,
           workDaysPerMonth: routineData.workDays || 22,
@@ -116,6 +118,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           valuePerHour: routineData.valuePerHour || 0,
           userId: user!.id
         });
+      } else {
+        console.log('❌ Nenhuma rotina encontrada no Firebase');
+        setWorkRoutine(null);
       }
 
       // CORRIGIDO: Tasks do localStorage filtradas por userId
@@ -329,12 +334,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const updateWorkRoutine = (routine: Omit<WorkRoutine, 'userId'>) => {
+  const updateWorkRoutine = async (routine: Omit<WorkRoutine, 'userId'>) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para salvar rotina');
+      return;
+    }
+
     const newRoutine: WorkRoutine = {
       ...routine,
-      userId: user!.id
+      userId: user.id
     };
+    
     setWorkRoutine(newRoutine);
+
+    try {
+      // Salvar no Firebase na estrutura correta
+      const routineData = {
+        desiredSalary: routine.desiredSalary,
+        workDays: routine.workDaysPerMonth,
+        dailyHours: routine.workHoursPerDay,
+        dalilyValue: routine.valuePerDay,
+        valuePerHour: routine.valuePerHour
+      };
+
+      await firestoreService.updateUserField(user.id, 'routine', routineData);
+      console.log('✅ Rotina salva no Firebase com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao salvar rotina no Firebase:', error);
+      throw error;
+    }
   };
 
   return (

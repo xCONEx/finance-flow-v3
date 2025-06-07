@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Clock, Calculator, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,12 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrency } from '../utils/formatters';
+import { firestoreService } from '../services/firestore';
 
 const WorkRoutine = () => {
-  const { workRoutine, updateWorkRoutine, loading } = useAppContext();
+  const { workRoutine, loading } = useAppContext();
   const { currentTheme } = useTheme();
+  const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -28,26 +32,45 @@ const WorkRoutine = () => {
     }
   }, [workRoutine]);
 
-  const calculateValues = async () => {
+  const calculateAndSaveValues = async () => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Usuário não encontrado.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const valuePerDay = formData.desiredSalary / formData.workDaysPerMonth;
     const valuePerHour = valuePerDay / formData.workHoursPerDay;
     
     const updatedRoutine = {
+      desiredSalary: formData.desiredSalary,
+      workDays: formData.workDaysPerMonth,
+      dailyHours: formData.workHoursPerDay,
+      dalilyValue: valuePerDay,
+      valuePerHour: valuePerHour
+    };
+    
+    setFormData({
       ...formData,
       valuePerDay,
       valuePerHour
-    };
+    });
     
-    setFormData(updatedRoutine);
     setSubmitting(true);
     
     try {
-      await updateWorkRoutine(updatedRoutine);
+      // Salvar no Firebase na estrutura correta
+      await firestoreService.updateUserField(user.id, 'routine', updatedRoutine);
+      
       toast({
         title: "Rotina Atualizada",
         description: "Os valores foram calculados e salvos com sucesso.",
       });
     } catch (error) {
+      console.error('❌ Erro ao salvar rotina:', error);
       toast({
         title: "Erro",
         description: "Erro ao salvar rotina de trabalho.",
@@ -123,12 +146,12 @@ const WorkRoutine = () => {
             </div>
 
             <Button 
-              onClick={calculateValues} 
+              onClick={calculateAndSaveValues} 
               className={`w-full bg-gradient-to-r ${currentTheme.primary}`}
               disabled={submitting}
             >
               <Calculator className="h-4 w-4 mr-2" />
-              {submitting ? 'Salvando...' : 'Calcular Valores'}
+              {submitting ? 'Salvando...' : 'Calcular e Salvar Valores'}
             </Button>
           </CardContent>
         </Card>

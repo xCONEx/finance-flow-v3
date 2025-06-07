@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Edit, Trash2, FileText, Calendar, DollarSign, Eye, Clock } from 'lucide-react';
+import { Edit, Trash2, FileText, Calendar, DollarSign, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -19,7 +19,7 @@ import { toast } from '@/hooks/use-toast';
 import { generateJobPDF } from '../utils/pdfGenerator';
 
 const RecentJobs = () => {
-  const { jobs, deleteJob, tasks } = useAppContext();
+  const { jobs, deleteJob } = useAppContext();
   const { userData, user } = useAuth();
   const { formatValue } = usePrivacy();
   const [editingJob, setEditingJob] = useState<string | null>(null);
@@ -27,14 +27,9 @@ const RecentJobs = () => {
 
   console.log('🔍 RecentJobs - Debug inicial:', {
     jobsCount: jobs.length,
-    tasksCount: tasks.length,
     userId: user?.id,
     userData: userData ? 'presente' : 'ausente'
   });
-
-  // CORRIGIDO: Filtrar tasks por userId do usuário atual
-  const userTasks = tasks.filter(task => task.userId === user?.id);
-  console.log('📝 Tasks filtradas para o usuário:', userTasks.length);
 
   const recentJobs = jobs.slice(0, 3);
 
@@ -138,28 +133,6 @@ const RecentJobs = () => {
           <p>Nenhum job calculado ainda</p>
           <p className="text-sm">Use a calculadora para criar seu primeiro orçamento</p>
         </div>
-        
-        {/* ADICIONADO: Seção de tasks mesmo sem jobs */}
-        {userTasks.length > 0 && (
-          <div className="mt-6">
-            <h4 className="text-md font-medium mb-3">Suas Tarefas Recentes</h4>
-            <div className="space-y-2">
-              {userTasks.slice(0, 3).map((task) => (
-                <div key={task.id} className="p-3 border rounded-lg bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{task.title}</span>
-                    <Badge variant={task.completed ? "default" : "secondary"}>
-                      {task.status}
-                    </Badge>
-                  </div>
-                  {task.description && (
-                    <p className="text-sm text-gray-600 mt-1">{task.description}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -198,10 +171,6 @@ const RecentJobs = () => {
                     <span className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       {new Date(job.eventDate).toLocaleDateString('pt-BR')}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {job.estimatedHours || 0}h
                     </span>
                     <span className="flex items-center gap-1">
                       <DollarSign className="h-4 w-4" />
@@ -288,33 +257,6 @@ const RecentJobs = () => {
           </div>
         </div>
       ))}
-
-      {/* ADICIONADO: Seção de tasks quando há jobs */}
-      {userTasks.length > 0 && (
-        <div className="mt-6 pt-4 border-t">
-          <h4 className="text-md font-medium mb-3">Suas Tarefas Recentes</h4>
-          <div className="space-y-2">
-            {userTasks.slice(0, 3).map((task) => (
-              <div key={task.id} className="p-3 border rounded-lg bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{task.title}</span>
-                  <Badge variant={task.completed ? "default" : "secondary"}>
-                    {task.status}
-                  </Badge>
-                </div>
-                {task.description && (
-                  <p className="text-sm text-gray-600 mt-1">{task.description}</p>
-                )}
-                {task.dueDate && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Vencimento: {new Date(task.dueDate).toLocaleDateString('pt-BR')}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {editingJob && (
         <JobEditor
