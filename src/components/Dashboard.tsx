@@ -19,29 +19,20 @@ const Dashboard = () => {
   const { formatValue } = usePrivacy();
   const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useAppContext();
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [viewMode, setViewMode] = useState<'personal' | 'company'>('company'); // Default para empresa se tiver
 
-  // Verificar se o usuário tem acesso a empresa
+  // CORRIGIDO: Dashboard sempre usa dados pessoais do usuário
+  // Apenas Kanban e Equipe são compartilhados com a empresa
   const isCompanyUser = (user?.userType === 'company_owner' || user?.userType === 'employee') && !!agencyData;
   
-  // Determinar qual dados usar baseado no modo de visualização
-  const shouldUsePersonalData = viewMode === 'personal' || !isCompanyUser;
-  const currentData = shouldUsePersonalData ? userData : agencyData;
+  // Dashboard sempre mostra dados pessoais
+  const currentData = userData;
 
-  // Filtrar dados baseado no modo de visualização
-  const filteredJobs = shouldUsePersonalData 
-    ? jobs.filter(job => !job.companyId) 
-    : jobs.filter(job => job.companyId === agencyData?.id);
-    
-  const filteredMonthlyCosts = shouldUsePersonalData 
-    ? monthlyCosts.filter(cost => !cost.companyId) 
-    : monthlyCosts.filter(cost => cost.companyId === agencyData?.id);
-    
-  const filteredWorkItems = shouldUsePersonalData 
-    ? workItems.filter(item => !item.companyId) 
-    : workItems.filter(item => item.companyId === agencyData?.id);
+  // CORRIGIDO: Filtrar apenas jobs pessoais (sem companyId)
+  const filteredJobs = jobs.filter(job => !job.companyId);
+  const filteredMonthlyCosts = monthlyCosts.filter(cost => !cost.companyId);
+  const filteredWorkItems = workItems.filter(item => !item.companyId);
 
-  // CORRIGIDO: Calcular apenas jobs aprovados para o total
+  // CORRIGIDO: Calcular apenas jobs aprovados pessoais
   const approvedJobs = filteredJobs.filter(job => job.status === 'aprovado');
   const totalJobs = approvedJobs.length;
   const totalJobsValue = approvedJobs.reduce((sum, job) => {
@@ -57,7 +48,7 @@ const Dashboard = () => {
   const totalTasks = tasks.length;
 
   // Log para debug
-  console.log('📊 Dashboard - Modo:', viewMode, 'Jobs aprovados:', approvedJobs.length, 'Total value:', totalJobsValue);
+  console.log('📊 Dashboard - Sempre pessoal:', 'Jobs aprovados:', approvedJobs.length, 'Total value:', totalJobsValue);
 
   const metrics = [
     {
@@ -104,7 +95,6 @@ const Dashboard = () => {
     // Generate a simple report
     const report = {
       data: new Date().toISOString(),
-      viewMode,
       totalJobs,
       totalJobsValue,
       totalMonthlyCosts,
@@ -117,7 +107,7 @@ const Dashboard = () => {
     const dataStr = JSON.stringify(report, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     
-    const exportFileDefaultName = `financeflow-report-${viewMode}-${new Date().toISOString().slice(0, 10)}.json`;
+    const exportFileDefaultName = `financeflow-report-pessoal-${new Date().toISOString().slice(0, 10)}.json`;
     
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
@@ -130,36 +120,28 @@ const Dashboard = () => {
       {/* Convites pendentes só para usuários individuais */}
       {user?.userType === 'individual' && <InviteAcceptance />}
 
-      {/* Header com botão de alternância */}
+      {/* Header simplificado */}
       <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-bold">Dashboard Pessoal</h1>
         
-        {/* Botão de alternância para usuários da empresa */}
+        {/* Informação para colaboradores */}
         {isCompanyUser && (
-          <div className="flex justify-center gap-2">
-            <Button
-              variant={viewMode === 'personal' ? 'default' : 'outline'}
-              onClick={() => setViewMode('personal')}
-              className="flex items-center gap-2"
-            >
-              <User className="h-4 w-4" />
-              Dashboard Pessoal
-            </Button>
-            <Button
-              variant={viewMode === 'company' ? 'default' : 'outline'}
-              onClick={() => setViewMode('company')}
-              className="flex items-center gap-2"
-            >
-              <Building2 className="h-4 w-4" />
-              Dashboard Empresa
-            </Button>
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
+            <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+              <Building2 className="h-5 w-5" />
+              <p className="text-sm">
+                <strong>Empresa:</strong> {agencyData.name} | 
+                <span className="ml-2">Este dashboard mostra seus dados pessoais.</span>
+              </p>
+            </div>
+            <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+              Para projetos da empresa, acesse o Kanban na navegação.
+            </p>
           </div>
         )}
         
         <p className="text-gray-600 dark:text-gray-400">
-          {viewMode === 'company' && agencyData 
-            ? `${agencyData.name} - Painel da Empresa` 
-            : 'Visão geral do seu negócio pessoal'}
+          Visão geral do seu negócio pessoal
         </p>
       </div>
 

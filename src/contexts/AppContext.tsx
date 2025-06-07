@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Job, MonthlyCost, WorkItem, Task, WorkRoutine } from '../types';
 import { useAuth } from './AuthContext';
@@ -54,28 +55,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadUserData = () => {
     setLoading(true);
     
-    // Priorizar dados da agência se disponível
-    const currentData = agencyData || userData;
+    // CORRIGIDO: Sempre usar dados pessoais do usuário (userData)
+    // Não misturar com dados da empresa
+    const currentData = userData;
     
     if (currentData) {
-      console.log('📦 Carregando dados do contexto:', {
-        fonte: agencyData ? 'agência' : 'usuário',
+      console.log('📦 Carregando dados pessoais do usuário:', {
         jobs: currentData.jobs?.length || 0,
         expenses: currentData.expenses?.length || 0,
         equipments: currentData.equipments?.length || 0
       });
 
-      // Carregar jobs se existirem - com verificação de tipo
+      // Carregar jobs pessoais
       if (currentData && 'jobs' in currentData && currentData.jobs) {
         const jobsData = currentData.jobs || [];
         setJobs(jobsData.map(job => ({
           ...job,
           userId: user!.id,
-          companyId: agencyData?.id
+          // CORRIGIDO: Jobs pessoais não têm companyId
+          companyId: undefined
         })));
       }
 
-      // Carregar custos mensais (expenses) - com verificação de tipo
+      // Carregar custos mensais pessoais (expenses)
       if (currentData && 'expenses' in currentData) {
         const costsData = currentData.expenses || [];
         setMonthlyCosts(costsData.map(cost => ({
@@ -86,11 +88,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           month: cost.month || new Date().toISOString().slice(0, 7),
           createdAt: cost.createdAt || new Date().toISOString(),
           userId: user!.id,
-          companyId: agencyData?.id
+          // CORRIGIDO: Custos pessoais não têm companyId
+          companyId: undefined
         })));
       }
 
-      // Carregar equipamentos (equipments) - com verificação de tipo
+      // Carregar equipamentos pessoais (equipments)
       if (currentData && 'equipments' in currentData) {
         const itemsData = currentData.equipments || [];
         setWorkItems(itemsData.map(item => ({
@@ -101,11 +104,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           depreciationYears: item.depreciationYears || 5,
           createdAt: item.createdAt || new Date().toISOString(),
           userId: user!.id,
-          companyId: agencyData?.id
+          // CORRIGIDO: Equipamentos pessoais não têm companyId
+          companyId: undefined
         })));
       }
 
-      // Carregar rotina de trabalho - com verificação de tipo
+      // Carregar rotina de trabalho pessoal
       if (currentData && 'routine' in currentData && currentData.routine) {
         const routineData = currentData.routine;
         setWorkRoutine({
@@ -134,12 +138,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLoading(false);
   };
 
-  // CORRIGIDO: Função para salvar job no Firebase
+  // CORRIGIDO: Função para salvar job pessoal no Firebase
   const updateJob = async (id: string, updates: Partial<Job>) => {
     if (!user) return;
 
     try {
-      console.log('💾 Salvando job editado:', id, updates);
+      console.log('💾 Salvando job pessoal editado:', id, updates);
       
       // Atualizar no estado local
       setJobs(prevJobs => 
@@ -150,31 +154,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         )
       );
 
-      // Determinar se é usuário individual ou empresa
-      const isCompanyUser = !!agencyData;
-      const targetId = isCompanyUser ? agencyData.id : user.id;
-      const collection = isCompanyUser ? 'agencias' : 'usuarios';
-
-      // Buscar dados atuais
-      const currentData = isCompanyUser 
-        ? await firestoreService.getAgencyData(targetId)
-        : await firestoreService.getUserData(targetId);
+      // CORRIGIDO: Sempre salvar nos dados pessoais do usuário
+      const currentData = await firestoreService.getUserData(user.id);
 
       if (currentData && 'jobs' in currentData && currentData.jobs) {
-        // Atualizar job no array
+        // Atualizar job no array pessoal
         const updatedJobs = currentData.jobs.map(job => 
           job.id === id 
             ? { ...job, ...updates, updatedAt: new Date().toISOString() }
             : job
         );
 
-        // Salvar no Firebase
-        await firestoreService.updateField(collection, targetId, 'jobs', updatedJobs);
-        console.log('✅ Job salvo no Firebase com sucesso');
+        // Salvar no Firebase na coleção pessoal
+        await firestoreService.updateField('usuarios', user.id, 'jobs', updatedJobs);
+        console.log('✅ Job pessoal salvo no Firebase com sucesso');
       }
 
     } catch (error) {
-      console.error('❌ Erro ao salvar job:', error);
+      console.error('❌ Erro ao salvar job pessoal:', error);
     }
   };
 
@@ -185,7 +182,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       userId: user!.id,
-      companyId: agencyData?.id
+      // CORRIGIDO: Jobs pessoais não têm companyId
+      companyId: undefined
     };
     setJobs(prev => [...prev, newJob]);
   };
@@ -198,7 +196,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `cost_${Date.now()}`,
       createdAt: new Date().toISOString(),
       userId: user!.id,
-      companyId: agencyData?.id
+      // CORRIGIDO: Custos pessoais não têm companyId
+      companyId: undefined
     };
     setMonthlyCosts(prev => [...prev, newCost]);
   };
@@ -217,7 +216,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `item_${Date.now()}`,
       createdAt: new Date().toISOString(),
       userId: user!.id,
-      companyId: agencyData?.id
+      // CORRIGIDO: Itens pessoais não têm companyId
+      companyId: undefined
     };
     setWorkItems(prev => [...prev, newItem]);
   };
