@@ -9,13 +9,13 @@ interface AppContextType {
   updateJob: (id: string, updates: Partial<Job>) => Promise<void>;
   deleteJob: (id: string) => void;
   monthlyCosts: MonthlyCost[];
-  addMonthlyCost: (cost: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId'>) => void;
-  updateMonthlyCost: (id: string, updates: Partial<MonthlyCost>) => void;
-  deleteMonthlyCost: (id: string) => void;
+  addMonthlyCost: (cost: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
+  updateMonthlyCost: (id: string, updates: Partial<MonthlyCost>) => Promise<void>;
+  deleteMonthlyCost: (id: string) => Promise<void>;
   workItems: WorkItem[];
-  addWorkItem: (item: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => void;
-  updateWorkItem: (id: string, updates: Partial<WorkItem>) => void;
-  deleteWorkItem: (id: string) => void;
+  addWorkItem: (item: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
+  updateWorkItem: (id: string, updates: Partial<WorkItem>) => Promise<void>;
+  deleteWorkItem: (id: string) => Promise<void>;
   tasks: Task[];
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
@@ -226,43 +226,237 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addMonthlyCost = (cost: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId' | 'companyId'>) => {
+  // CORRIGIDO: Função para adicionar custo mensal e salvar no Firebase
+  const addMonthlyCost = async (cost: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId' | 'companyId'>) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para salvar custo');
+      throw new Error('Usuário não encontrado');
+    }
+
     const newCost: MonthlyCost = {
       ...cost,
       id: `cost_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      userId: user!.id,
+      userId: user.id,
       companyId: undefined
     };
-    setMonthlyCosts(prev => [...prev, newCost]);
+
+    try {
+      // Atualizar estado local primeiro
+      setMonthlyCosts(prev => [...prev, newCost]);
+
+      // Buscar dados atuais do usuário
+      const currentData = await firestoreService.getUserData(user.id);
+
+      if (currentData) {
+        const currentExpenses = currentData.expenses || [];
+        
+        // Converter para formato do Firebase
+        const firebaseExpense = {
+          id: newCost.id,
+          description: newCost.description,
+          category: newCost.category,
+          value: newCost.value,
+          month: newCost.month,
+          createdAt: newCost.createdAt
+        };
+
+        const updatedExpenses = [...currentExpenses, firebaseExpense];
+
+        // Salvar no Firebase
+        await firestoreService.updateField('usuarios', user.id, 'expenses', updatedExpenses);
+        console.log('✅ Custo mensal salvo no Firebase com sucesso');
+      }
+    } catch (error) {
+      // Reverter estado local em caso de erro
+      setMonthlyCosts(prev => prev.filter(c => c.id !== newCost.id));
+      console.error('❌ Erro ao salvar custo mensal:', error);
+      throw error;
+    }
   };
 
-  const updateMonthlyCost = (id: string, updates: Partial<MonthlyCost>) => {
-    setMonthlyCosts(prev => 
-      prev.map(cost => cost.id === id ? { ...cost, ...updates } : cost)
-    );
+  const updateMonthlyCost = async (id: string, updates: Partial<MonthlyCost>) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para atualizar custo');
+      throw new Error('Usuário não encontrado');
+    }
+
+    try {
+      // Atualizar estado local primeiro
+      setMonthlyCosts(prev => 
+        prev.map(cost => cost.id === id ? { ...cost, ...updates } : cost)
+      );
+
+      // Buscar dados atuais do usuário
+      const currentData = await firestoreService.getUserData(user.id);
+
+      if (currentData && currentData.expenses) {
+        // Atualizar no array de expenses
+        const updatedExpenses = currentData.expenses.map(expense => 
+          expense.id === id 
+            ? { 
+                ...expense, 
+                description: updates.description || expense.description,
+                category: updates.category || expense.category,
+                value: updates.value || expense.value,
+                month: updates.month || expense.month
+              }
+            : expense
+        );
+
+        // Salvar no Firebase
+        await firestoreService.updateField('usuarios', user.id, 'expenses', updatedExpenses);
+        console.log('✅ Custo mensal atualizado no Firebase com sucesso');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao atualizar custo mensal:', error);
+      throw error;
+    }
   };
 
-  const deleteMonthlyCost = (id: string) => setMonthlyCosts(prev => prev.filter(cost => cost.id !== id));
+  const deleteMonthlyCost = async (id: string) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para deletar custo');
+      throw new Error('Usuário não encontrado');
+    }
 
-  const addWorkItem = (item: Omit<WorkItem, 'id' | 'createdAt' | 'userId' | 'companyId'>) => {
+    try {
+      // Remover do estado local primeiro
+      setMonthlyCosts(prev => prev.filter(cost => cost.id !== id));
+
+      // Buscar dados atuais do usuário
+      const currentData = await firestoreService.getUserData(user.id);
+
+      if (currentData && currentData.expenses) {
+        // Remover do array de expenses
+        const updatedExpenses = currentData.expenses.filter(expense => expense.id !== id);
+
+        // Salvar no Firebase
+        await firestoreService.updateField('usuarios', user.id, 'expenses', updatedExpenses);
+        console.log('✅ Custo mensal removido do Firebase com sucesso');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao deletar custo mensal:', error);
+      throw error;
+    }
+  };
+
+  // CORRIGIDO: Função para adicionar item de trabalho e salvar no Firebase
+  const addWorkItem = async (item: Omit<WorkItem, 'id' | 'createdAt' | 'userId' | 'companyId'>) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para salvar item');
+      throw new Error('Usuário não encontrado');
+    }
+
     const newItem: WorkItem = {
       ...item,
       id: `item_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      userId: user!.id,
+      userId: user.id,
       companyId: undefined
     };
-    setWorkItems(prev => [...prev, newItem]);
+
+    try {
+      // Atualizar estado local primeiro
+      setWorkItems(prev => [...prev, newItem]);
+
+      // Buscar dados atuais do usuário
+      const currentData = await firestoreService.getUserData(user.id);
+
+      if (currentData) {
+        const currentEquipments = currentData.equipments || [];
+        
+        // Converter para formato do Firebase
+        const firebaseEquipment = {
+          id: newItem.id,
+          description: newItem.description,
+          name: newItem.description, // Manter compatibilidade
+          category: newItem.category,
+          value: newItem.value,
+          depreciationYears: newItem.depreciationYears,
+          createdAt: newItem.createdAt
+        };
+
+        const updatedEquipments = [...currentEquipments, firebaseEquipment];
+
+        // Salvar no Firebase
+        await firestoreService.updateField('usuarios', user.id, 'equipments', updatedEquipments);
+        console.log('✅ Item de trabalho salvo no Firebase com sucesso');
+      }
+    } catch (error) {
+      // Reverter estado local em caso de erro
+      setWorkItems(prev => prev.filter(i => i.id !== newItem.id));
+      console.error('❌ Erro ao salvar item de trabalho:', error);
+      throw error;
+    }
   };
 
-  const updateWorkItem = (id: string, updates: Partial<WorkItem>) => {
-    setWorkItems(prev => 
-      prev.map(item => item.id === id ? { ...item, ...updates } : item)
-    );
+  const updateWorkItem = async (id: string, updates: Partial<WorkItem>) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para atualizar item');
+      throw new Error('Usuário não encontrado');
+    }
+
+    try {
+      // Atualizar estado local primeiro
+      setWorkItems(prev => 
+        prev.map(item => item.id === id ? { ...item, ...updates } : item)
+      );
+
+      // Buscar dados atuais do usuário
+      const currentData = await firestoreService.getUserData(user.id);
+
+      if (currentData && currentData.equipments) {
+        // Atualizar no array de equipments
+        const updatedEquipments = currentData.equipments.map(equipment => 
+          equipment.id === id 
+            ? { 
+                ...equipment, 
+                description: updates.description || equipment.description,
+                name: updates.description || equipment.name || equipment.description,
+                category: updates.category || equipment.category,
+                value: updates.value || equipment.value,
+                depreciationYears: updates.depreciationYears || equipment.depreciationYears
+              }
+            : equipment
+        );
+
+        // Salvar no Firebase
+        await firestoreService.updateField('usuarios', user.id, 'equipments', updatedEquipments);
+        console.log('✅ Item de trabalho atualizado no Firebase com sucesso');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao atualizar item de trabalho:', error);
+      throw error;
+    }
   };
 
-  const deleteWorkItem = (id: string) => setWorkItems(prev => prev.filter(item => item.id !== id));
+  const deleteWorkItem = async (id: string) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para deletar item');
+      throw new Error('Usuário não encontrado');
+    }
+
+    try {
+      // Remover do estado local primeiro
+      setWorkItems(prev => prev.filter(item => item.id !== id));
+
+      // Buscar dados atuais do usuário
+      const currentData = await firestoreService.getUserData(user.id);
+
+      if (currentData && currentData.equipments) {
+        // Remover do array de equipments
+        const updatedEquipments = currentData.equipments.filter(equipment => equipment.id !== id);
+
+        // Salvar no Firebase
+        await firestoreService.updateField('usuarios', user.id, 'equipments', updatedEquipments);
+        console.log('✅ Item de trabalho removido do Firebase com sucesso');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao deletar item de trabalho:', error);
+      throw error;
+    }
+  };
 
   // CORRIGIDO: Tasks sempre filtram por userId do usuário atual
   const addTask = (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
