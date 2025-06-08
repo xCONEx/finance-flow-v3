@@ -163,7 +163,7 @@ const MonthlyCosts = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold flex items-center gap-2">
             <DollarSign className="text-purple-600" />
@@ -178,16 +178,28 @@ const MonthlyCosts = () => {
             )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {monthlyCosts.length > 0 && (
-            <Button onClick={handleGeneratePDF} variant="outline">
-              <FileText className="h-4 w-4 mr-2" />
-              Gerar PDF
-            </Button>
+            <>
+              {/* Desktop */}
+              <Button onClick={handleGeneratePDF} variant="outline" className="hidden sm:flex">
+                <FileText className="h-4 w-4 mr-2" />
+                Gerar PDF
+              </Button>
+              {/* Mobile */}
+              <Button onClick={handleGeneratePDF} variant="outline" className="sm:hidden" size="sm">
+                <FileText className="h-4 w-4" />
+              </Button>
+            </>
           )}
-          <Button onClick={() => setShowForm(true)} disabled={submitting}>
+          {/* Desktop */}
+          <Button onClick={() => setShowForm(true)} disabled={submitting} className="hidden sm:flex">
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Custo
+          </Button>
+          {/* Mobile */}
+          <Button onClick={() => setShowForm(true)} disabled={submitting} className="sm:hidden flex-1" size="sm">
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -195,10 +207,10 @@ const MonthlyCosts = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="bg-gradient-to-r from-red-50 to-pink-50 border-red-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-red-800">Total Mensal</h3>
-              <div className="text-3xl font-bold text-red-600">
+              <h3 className="text-sm sm:text-lg font-semibold text-red-800">Total Mensal</h3>
+              <div className="text-xl sm:text-3xl font-bold text-red-600">
                 R$ {totalMonthlyCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
@@ -206,10 +218,10 @@ const MonthlyCosts = () => {
         </Card>
         
         <Card className="bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-orange-800">Mês Atual</h3>
-              <div className="text-3xl font-bold text-orange-600">
+              <h3 className="text-sm sm:text-lg font-semibold text-orange-800">Mês Atual</h3>
+              <div className="text-xl sm:text-3xl font-bold text-orange-600">
                 R$ {currentMonthCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
@@ -225,7 +237,7 @@ const MonthlyCosts = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrição</Label>
                   <Input
@@ -256,7 +268,7 @@ const MonthlyCosts = () => {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="value">Valor (R$)</Label>
                   <CurrencyInput
@@ -295,16 +307,16 @@ const MonthlyCosts = () => {
         {monthlyCosts.map((cost) => (
           <Card key={cost.id} className="transition-all duration-300 hover:shadow-lg">
             <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold">{cost.description}</h3>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold truncate">{cost.description}</h3>
                   <p className="text-sm text-gray-600">Categoria: {cost.category}</p>
                   <p className="text-xs text-gray-500">
                     Mês: {new Date(cost.month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="text-right flex-1 sm:flex-none">
                     <div className="text-lg font-bold text-red-600">
                       R$ {cost.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>

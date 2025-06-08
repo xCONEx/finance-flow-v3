@@ -67,9 +67,6 @@ const TaskList = () => {
                 <p className={`text-sm ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                   {task.title}
                 </p>
-                <Badge variant="outline" className={`text-xs text-white ${statusInfo.color}`}>
-                  {statusInfo.label}
-                </Badge>
               </div>
               {task.description && (
                 <p className="text-xs text-gray-400 mt-1">
@@ -82,11 +79,16 @@ const TaskList = () => {
                 </p>
               )}
             </div>
-            <div className={`w-2 h-2 rounded-full ${
-              task.priority === 'alta' ? 'bg-red-500' :
-              task.priority === 'média' ? 'bg-yellow-500' :
-              'bg-green-500'
-            }`} />
+            <div className="flex flex-col items-center gap-1">
+              <div className={`w-2 h-2 rounded-full ${
+                task.priority === 'alta' ? 'bg-red-500' :
+                task.priority === 'média' ? 'bg-yellow-500' :
+                'bg-green-500'
+              }`} />
+              <Badge variant="outline" className={`text-xs text-white ${statusInfo.color}`}>
+                {statusInfo.label}
+              </Badge>
+            </div>
           </div>
         );
       })}
