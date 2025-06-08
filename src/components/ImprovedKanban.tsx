@@ -105,7 +105,7 @@ const ImprovedKanban = () => {
         setBoards({ main: existingBoard });
       } else {
         console.log('📝 Criando board inicial para empresa');
-        // Estrutura inicial do Kanban para a empresa
+        // Estrutura FIXA do Kanban - sequência definida
         const initialBoard: KanbanBoard = {
           'todo': {
             title: 'A Fazer',
@@ -134,6 +134,27 @@ const ImprovedKanban = () => {
       }
     } catch (error) {
       console.error('Erro ao carregar Kanban:', error);
+    }
+  };
+
+  const sendNotificationToTeam = async (message: string) => {
+    if (!agencyData || !('Notification' in window)) return;
+
+    try {
+      // Solicitar permissão se necessário
+      if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+
+      if (Notification.permission === 'granted') {
+        new Notification('FinanceFlow - Kanban', {
+          body: message,
+          icon: '/icons/icon-192.png',
+          badge: '/icons/icon-192.png'
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao enviar notificação:', error);
     }
   };
 
@@ -171,6 +192,9 @@ const ImprovedKanban = () => {
 
       // Salvar no Firebase
       await saveKanbanState(newBoard);
+      
+      // Enviar notificação
+      await sendNotificationToTeam(`Tarefa "${removed.title}" movida para ${destColumn.title}`);
       
       toast({
         title: "Sucesso",
@@ -252,6 +276,9 @@ const ImprovedKanban = () => {
 
       await saveKanbanState(updatedBoard);
 
+      // Enviar notificação
+      await sendNotificationToTeam(`Nova tarefa adicionada: "${newTaskTitle}"`);
+
       // Limpar formulário
       setNewTaskTitle('');
       setNewTaskDescription('');
@@ -297,6 +324,9 @@ const ImprovedKanban = () => {
 
       await saveKanbanState(updatedBoard);
       setIsEditingTask(false);
+
+      // Enviar notificação
+      await sendNotificationToTeam(`Tarefa "${selectedTask.title}" foi atualizada`);
 
       toast({
         title: "Sucesso",
@@ -364,6 +394,8 @@ const ImprovedKanban = () => {
     }
   };
 
+  // Garantir ordem fixa das colunas
+  const fixedColumnOrder = ['todo', 'inProgress', 'review', 'done'];
   const currentBoard = boards[activeBoard] || {};
 
   // Verificar se o usuário faz parte de uma empresa
@@ -439,7 +471,6 @@ const ImprovedKanban = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                {/* CORRIGIDO: Select com membros da equipe */}
                 <Select value={newTaskResponsible} onValueChange={setNewTaskResponsible}>
                   <SelectTrigger>
                     <SelectValue placeholder="Responsável" />
@@ -490,102 +521,107 @@ const ImprovedKanban = () => {
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="grid lg:grid-cols-4 gap-6">
-          {Object.entries(currentBoard).map(([columnId, column]: [string, KanbanColumn]) => (
-            <Card key={columnId} className={`${column.color} h-fit`}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-center font-semibold">
-                  {column.title}
-                  <Badge variant="secondary" className="ml-2">
-                    {column.items?.length || 0}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Droppable droppableId={columnId}>
-                  {(provided, snapshot) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className={`space-y-3 min-h-[300px] p-2 rounded-lg transition-colors ${
-                        snapshot.isDraggingOver ? 'bg-white/50' : ''
-                      }`}
-                    >
-                      {(column.items || []).map((item, index) => (
-                        <Draggable key={item.id} draggableId={item.id} index={index}>
-                          {(provided, snapshot) => (
-                            <Card
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`bg-white shadow-sm hover:shadow-md transition-all cursor-move ${
-                                snapshot.isDragging ? 'rotate-2 shadow-lg' : ''
-                              }`}
-                              onClick={() => setSelectedTask(item)}
-                            >
-                              <CardContent className="p-4 space-y-3">
-                                <div className="flex justify-between items-start">
-                                  <h4 className="font-medium text-sm leading-tight">{item.title}</h4>
-                                  <div className="flex gap-1">
-                                    <Badge className={getTypeColor(item.type)} variant="secondary">
-                                      {item.type}
-                                    </Badge>
-                                  </div>
-                                </div>
-
-                                <p className="text-xs text-gray-600 line-clamp-2">{item.description}</p>
-                                
-                                <div className="space-y-2 text-xs text-gray-600">
-                                  <div className="flex items-center gap-2">
-                                    <DollarSign className="h-3 w-3" />
-                                    <span className="font-semibold text-green-600">{item.value}</span>
-                                  </div>
-                                  
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-3 w-3" />
-                                    <span>{item.deadline}</span>
-                                  </div>
-                                  
-                                  <div className="flex items-center gap-2">
-                                    <User className="h-3 w-3" />
-                                    <span>{item.responsible}</span>
-                                  </div>
-
-                                  <div className="flex items-center justify-between pt-2">
-                                    <div className="flex gap-2">
-                                      {item.comments > 0 && (
-                                        <span className="flex items-center gap-1">
-                                          <MessageCircle className="h-3 w-3" />
-                                          {item.comments}
-                                        </span>
-                                      )}
-                                      {item.attachments > 0 && (
-                                        <span className="flex items-center gap-1">
-                                          <Paperclip className="h-3 w-3" />
-                                          {item.attachments}
-                                        </span>
-                                      )}
+          {fixedColumnOrder.map((columnId) => {
+            const column = currentBoard[columnId];
+            if (!column) return null;
+            
+            return (
+              <Card key={columnId} className={`${column.color} h-fit`}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-center font-semibold">
+                    {column.title}
+                    <Badge variant="secondary" className="ml-2">
+                      {column.items?.length || 0}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Droppable droppableId={columnId}>
+                    {(provided, snapshot) => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className={`space-y-3 min-h-[300px] p-2 rounded-lg transition-colors ${
+                          snapshot.isDraggingOver ? 'bg-white/50' : ''
+                        }`}
+                      >
+                        {(column.items || []).map((item, index) => (
+                          <Draggable key={item.id} draggableId={item.id} index={index}>
+                            {(provided, snapshot) => (
+                              <Card
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`bg-white shadow-sm hover:shadow-md transition-all cursor-move ${
+                                  snapshot.isDragging ? 'rotate-2 shadow-lg' : ''
+                                }`}
+                                onClick={() => setSelectedTask(item)}
+                              >
+                                <CardContent className="p-4 space-y-3">
+                                  <div className="flex justify-between items-start">
+                                    <h4 className="font-medium text-sm leading-tight">{item.title}</h4>
+                                    <div className="flex gap-1">
+                                      <Badge className={getTypeColor(item.type)} variant="secondary">
+                                        {item.type}
+                                      </Badge>
                                     </div>
-                                    <Badge className={getPriorityColor(item.priority)} variant="secondary">
-                                      {item.priority}
-                                    </Badge>
                                   </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </CardContent>
-            </Card>
-          ))}
+
+                                  <p className="text-xs text-gray-600 line-clamp-2">{item.description}</p>
+                                  
+                                  <div className="space-y-2 text-xs text-gray-600">
+                                    <div className="flex items-center gap-2">
+                                      <DollarSign className="h-3 w-3" />
+                                      <span className="font-semibold text-green-600">{item.value}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="h-3 w-3" />
+                                      <span>{item.deadline}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <User className="h-3 w-3" />
+                                      <span>{item.responsible}</span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-2">
+                                      <div className="flex gap-2">
+                                        {item.comments > 0 && (
+                                          <span className="flex items-center gap-1">
+                                            <MessageCircle className="h-3 w-3" />
+                                            {item.comments}
+                                          </span>
+                                        )}
+                                        {item.attachments > 0 && (
+                                          <span className="flex items-center gap-1">
+                                            <Paperclip className="h-3 w-3" />
+                                            {item.attachments}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <Badge className={getPriorityColor(item.priority)} variant="secondary">
+                                        {item.priority}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </DragDropContext>
 
-      {/* NOVO: Modal de visualização/edição de tarefa */}
+      {/* Modal de visualização/edição de tarefa */}
       <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>

@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface PrivacyContextType {
   valuesHidden: boolean;
@@ -22,7 +22,14 @@ interface PrivacyProviderProps {
 }
 
 export const PrivacyProvider = ({ children }: PrivacyProviderProps) => {
-  const [valuesHidden, setValuesHidden] = useState(false);
+  const [valuesHidden, setValuesHidden] = useState(() => {
+    const saved = localStorage.getItem('financeflow-values-hidden');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('financeflow-values-hidden', JSON.stringify(valuesHidden));
+  }, [valuesHidden]);
 
   const toggleValuesVisibility = () => {
     console.log('🔄 PrivacyContext - toggleValuesVisibility chamado');

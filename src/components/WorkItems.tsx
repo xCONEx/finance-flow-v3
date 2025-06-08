@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, Briefcase, Edit, Loader2, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -167,7 +166,7 @@ const WorkItems = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold flex items-center gap-2">
             <Briefcase className="text-purple-600" />
@@ -182,16 +181,28 @@ const WorkItems = () => {
             )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {workItems.length > 0 && (
-            <Button onClick={handleGeneratePDF} variant="outline">
-              <FileText className="h-4 w-4 mr-2" />
-              Gerar PDF
-            </Button>
+            <>
+              {/* Desktop */}
+              <Button onClick={handleGeneratePDF} variant="outline" className="hidden sm:flex">
+                <FileText className="h-4 w-4 mr-2" />
+                Gerar PDF
+              </Button>
+              {/* Mobile */}
+              <Button onClick={handleGeneratePDF} variant="outline" className="sm:hidden" size="sm">
+                <FileText className="h-4 w-4" />
+              </Button>
+            </>
           )}
-          <Button onClick={() => setShowForm(true)} disabled={submitting}>
+          {/* Desktop */}
+          <Button onClick={() => setShowForm(true)} disabled={submitting} className="hidden sm:flex">
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Item
+          </Button>
+          {/* Mobile */}
+          <Button onClick={() => setShowForm(true)} disabled={submitting} className="sm:hidden flex-1" size="sm">
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -199,10 +210,10 @@ const WorkItems = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-blue-800">Total de Itens</h3>
-              <div className="text-3xl font-bold text-blue-600">
+              <h3 className="text-sm sm:text-lg font-semibold text-blue-800">Total de Itens</h3>
+              <div className="text-xl sm:text-3xl font-bold text-blue-600">
                 R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
@@ -210,10 +221,10 @@ const WorkItems = () => {
         </Card>
         
         <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-green-800">Valor Equipamentos</h3>
-              <div className="text-3xl font-bold text-green-600">
+              <h3 className="text-sm sm:text-lg font-semibold text-green-800">Valor Equipamentos</h3>
+              <div className="text-xl sm:text-3xl font-bold text-green-600">
                 R$ {equipmentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
@@ -229,7 +240,7 @@ const WorkItems = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrição</Label>
                   <Input
@@ -260,7 +271,7 @@ const WorkItems = () => {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="value">Valor (R$)</Label>
                   <CurrencyInput
@@ -303,14 +314,14 @@ const WorkItems = () => {
         {workItems.map((item) => (
           <Card key={item.id} className="transition-all duration-300 hover:shadow-lg">
             <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold">{item.description}</h3>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold truncate">{item.description}</h3>
                   <p className="text-sm text-gray-600">Categoria: {item.category}</p>
                   <p className="text-xs text-gray-500">Depreciação: {item.depreciationYears || 5} anos</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="text-right flex-1 sm:flex-none">
                     <div className="text-lg font-bold text-blue-600">
                       R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
