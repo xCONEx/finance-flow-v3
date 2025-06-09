@@ -19,24 +19,13 @@ import {
   MessageCircle,
   Paperclip,
   Calendar,
-  Save,
-  Tag,
-  Upload,
-  Settings,
-  X
+  Save
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { firestoreService } from '../services/firestore';
 
-// Definições de tipos expandidas
-interface KanbanTag {
-  id: string;
-  name: string;
-  color: string;
-  createdBy: string;
-}
-
+// Definições de tipos
 interface KanbanTask {
   id: string;
   title: string;
@@ -48,67 +37,43 @@ interface KanbanTask {
   comments: number;
   attachments: number;
   priority: 'alta' | 'média' | 'baixa';
-  urgency: 'alta' | 'média' | 'baixa';
-  tags: string[];
   createdAt: string;
 }
 
 interface KanbanColumn {
-  id: string;
   title: string;
   color: string;
   items: KanbanTask[];
-  isCustom?: boolean;
 }
 
 interface KanbanBoard {
-  columns: { [key: string]: KanbanColumn };
-  tags: KanbanTag[];
+  [key: string]: KanbanColumn;
+}
+
+interface KanbanBoards {
+  [boardId: string]: KanbanBoard;
 }
 
 const ImprovedKanban = () => {
-  const [board, setBoard] = useState<KanbanBoard>({ columns: {}, tags: [] });
+  const [boards, setBoards] = useState<KanbanBoards>({});
+  const [activeBoard, setActiveBoard] = useState('main');
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskValue, setNewTaskValue] = useState('');
   const [newTaskDeadline, setNewTaskDeadline] = useState('');
   const [newTaskResponsible, setNewTaskResponsible] = useState('');
   const [newTaskType, setNewTaskType] = useState('');
-  const [newTaskUrgency, setNewTaskUrgency] = useState<'alta' | 'média' | 'baixa'>('média');
-  const [newTaskTags, setNewTaskTags] = useState<string[]>([]);
   const [selectedColumn, setSelectedColumn] = useState('todo');
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
-  
-  // Estados para etiquetas
-  const [showTagModal, setShowTagModal] = useState(false);
-  const [newTagName, setNewTagName] = useState('');
-  const [newTagColor, setNewTagColor] = useState('#3B82F6');
-  
-  // Estados para colunas customizadas
-  const [showColumnModal, setShowColumnModal] = useState(false);
-  const [newColumnTitle, setNewColumnTitle] = useState('');
-  const [newColumnColor, setNewColumnColor] = useState('bg-gray-50 border-gray-200');
-  
-  // Estados para logo upload
-  const [showLogoModal, setShowLogoModal] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  
   const { user, agencyData } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     loadKanbanData();
     loadTeamMembers();
-    requestNotificationPermission();
   }, [agencyData]);
-
-  const requestNotificationPermission = async () => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      await Notification.requestPermission();
-    }
-  };
 
   const loadTeamMembers = async () => {
     if (!agencyData) return;
@@ -132,45 +97,39 @@ const ImprovedKanban = () => {
     try {
       console.log('Carregando dados do Kanban para empresa:', agencyData.id);
       
+      // Tentar carregar board existente do Firebase
       const existingBoard = await firestoreService.getKanbanBoard(agencyData.id);
       
-      if (existingBoard && existingBoard.columns) {
+      if (existingBoard) {
         console.log('✅ Board existente carregado do Firebase');
-        // Type cast the Firebase data to KanbanBoard
-        setBoard(existingBoard as KanbanBoard);
+        setBoards({ main: existingBoard });
       } else {
         console.log('📝 Criando board inicial para empresa');
+        // Estrutura FIXA do Kanban - sequência definida
         const initialBoard: KanbanBoard = {
-          columns: {
-            'todo': {
-              id: 'todo',
-              title: 'A Fazer',
-              color: 'bg-red-50 border-red-200',
-              items: []
-            },
-            'inProgress': {
-              id: 'inProgress',
-              title: 'Em Produção',
-              color: 'bg-yellow-50 border-yellow-200',
-              items: []
-            },
-            'review': {
-              id: 'review',
-              title: 'Em Revisão',
-              color: 'bg-blue-50 border-blue-200',
-              items: []
-            },
-            'done': {
-              id: 'done',
-              title: 'Finalizado',
-              color: 'bg-green-50 border-green-200',
-              items: []
-            }
+          'todo': {
+            title: 'A Fazer',
+            color: 'bg-red-50 border-red-200',
+            items: []
           },
-          tags: []
+          'inProgress': {
+            title: 'Em Produção',
+            color: 'bg-yellow-50 border-yellow-200',
+            items: []
+          },
+          'review': {
+            title: 'Em Revisão',
+            color: 'bg-blue-50 border-blue-200',
+            items: []
+          },
+          'done': {
+            title: 'Finalizado',
+            color: 'bg-green-50 border-green-200',
+            items: []
+          }
         };
 
-        setBoard(initialBoard);
+        setBoards({ main: initialBoard });
         await saveKanbanState(initialBoard);
       }
     } catch (error) {
@@ -178,10 +137,15 @@ const ImprovedKanban = () => {
     }
   };
 
-  const sendNotificationToAllMembers = async (message: string) => {
+  const sendNotificationToTeam = async (message: string) => {
     if (!agencyData || !('Notification' in window)) return;
 
     try {
+      // Solicitar permissão se necessário
+      if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+
       if (Notification.permission === 'granted') {
         new Notification('FinanceFlow - Kanban', {
           body: message,
@@ -198,10 +162,12 @@ const ImprovedKanban = () => {
     if (!result.destination) return;
 
     const { source, destination } = result;
+    const board = boards[activeBoard];
     
     if (source.droppableId !== destination.droppableId) {
-      const sourceColumn = board.columns[source.droppableId];
-      const destColumn = board.columns[destination.droppableId];
+      // Mover entre colunas
+      const sourceColumn = board[source.droppableId];
+      const destColumn = board[destination.droppableId];
       const sourceItems = [...sourceColumn.items];
       const destItems = [...destColumn.items];
       const [removed] = sourceItems.splice(source.index, 1);
@@ -209,46 +175,51 @@ const ImprovedKanban = () => {
       
       const newBoard = {
         ...board,
-        columns: {
-          ...board.columns,
-          [source.droppableId]: {
-            ...sourceColumn,
-            items: sourceItems
-          },
-          [destination.droppableId]: {
-            ...destColumn,
-            items: destItems
-          }
+        [source.droppableId]: {
+          ...sourceColumn,
+          items: sourceItems
+        },
+        [destination.droppableId]: {
+          ...destColumn,
+          items: destItems
         }
       };
 
-      setBoard(newBoard);
+      setBoards({
+        ...boards,
+        [activeBoard]: newBoard
+      });
+
+      // Salvar no Firebase
       await saveKanbanState(newBoard);
       
-      await sendNotificationToAllMembers(`Tarefa "${removed.title}" movida para ${destColumn.title}`);
+      // Enviar notificação
+      await sendNotificationToTeam(`Tarefa "${removed.title}" movida para ${destColumn.title}`);
       
       toast({
         title: "Sucesso",
         description: "Tarefa movida com sucesso"
       });
     } else {
-      const column = board.columns[source.droppableId];
+      // Reordenar na mesma coluna
+      const column = board[source.droppableId];
       const copiedItems = [...column.items];
       const [removed] = copiedItems.splice(source.index, 1);
       copiedItems.splice(destination.index, 0, removed);
       
       const newBoard = {
         ...board,
-        columns: {
-          ...board.columns,
-          [source.droppableId]: {
-            ...column,
-            items: copiedItems
-          }
+        [source.droppableId]: {
+          ...column,
+          items: copiedItems
         }
       };
 
-      setBoard(newBoard);
+      setBoards({
+        ...boards,
+        [activeBoard]: newBoard
+      });
+
       await saveKanbanState(newBoard);
     }
   };
@@ -286,25 +257,27 @@ const ImprovedKanban = () => {
         comments: 0,
         attachments: 0,
         priority: 'média',
-        urgency: newTaskUrgency,
-        tags: newTaskTags,
         createdAt: new Date().toISOString()
       };
 
+      const board = boards[activeBoard];
       const updatedBoard = {
         ...board,
-        columns: {
-          ...board.columns,
-          [selectedColumn]: {
-            ...board.columns[selectedColumn],
-            items: [...board.columns[selectedColumn].items, newTask]
-          }
+        [selectedColumn]: {
+          ...board[selectedColumn],
+          items: [...board[selectedColumn].items, newTask]
         }
       };
 
-      setBoard(updatedBoard);
+      setBoards({
+        ...boards,
+        [activeBoard]: updatedBoard
+      });
+
       await saveKanbanState(updatedBoard);
-      await sendNotificationToAllMembers(`Nova tarefa adicionada: "${newTaskTitle}"`);
+
+      // Enviar notificação
+      await sendNotificationToTeam(`Nova tarefa adicionada: "${newTaskTitle}"`);
 
       // Limpar formulário
       setNewTaskTitle('');
@@ -313,8 +286,6 @@ const ImprovedKanban = () => {
       setNewTaskDeadline('');
       setNewTaskResponsible('');
       setNewTaskType('');
-      setNewTaskUrgency('média');
-      setNewTaskTags([]);
 
       toast({
         title: "Sucesso",
@@ -330,23 +301,32 @@ const ImprovedKanban = () => {
     }
   };
 
+  // NOVA FUNÇÃO: Salvar edições do card
   const handleSaveTaskEdit = async () => {
     if (!selectedTask) return;
 
     try {
-      const updatedBoard = { ...board };
+      const board = boards[activeBoard];
+      let updatedBoard = { ...board };
 
-      Object.keys(updatedBoard.columns).forEach(columnId => {
-        const taskIndex = updatedBoard.columns[columnId].items.findIndex(item => item.id === selectedTask.id);
+      // Encontrar e atualizar a tarefa em todas as colunas
+      Object.keys(updatedBoard).forEach(columnId => {
+        const taskIndex = updatedBoard[columnId].items.findIndex(item => item.id === selectedTask.id);
         if (taskIndex !== -1) {
-          updatedBoard.columns[columnId].items[taskIndex] = selectedTask;
+          updatedBoard[columnId].items[taskIndex] = selectedTask;
         }
       });
 
-      setBoard(updatedBoard);
+      setBoards({
+        ...boards,
+        [activeBoard]: updatedBoard
+      });
+
       await saveKanbanState(updatedBoard);
       setIsEditingTask(false);
-      await sendNotificationToAllMembers(`Tarefa "${selectedTask.title}" foi atualizada`);
+
+      // Enviar notificação
+      await sendNotificationToTeam(`Tarefa "${selectedTask.title}" foi atualizada`);
 
       toast({
         title: "Sucesso",
@@ -362,15 +342,22 @@ const ImprovedKanban = () => {
     }
   };
 
+  // NOVA FUNÇÃO: Deletar tarefa
   const handleDeleteTask = async (taskId: string) => {
     try {
-      const updatedBoard = { ...board };
+      const board = boards[activeBoard];
+      let updatedBoard = { ...board };
 
-      Object.keys(updatedBoard.columns).forEach(columnId => {
-        updatedBoard.columns[columnId].items = updatedBoard.columns[columnId].items.filter(item => item.id !== taskId);
+      // Remover a tarefa de todas as colunas
+      Object.keys(updatedBoard).forEach(columnId => {
+        updatedBoard[columnId].items = updatedBoard[columnId].items.filter(item => item.id !== taskId);
       });
 
-      setBoard(updatedBoard);
+      setBoards({
+        ...boards,
+        [activeBoard]: updatedBoard
+      });
+
       await saveKanbanState(updatedBoard);
       setSelectedTask(null);
 
@@ -388,112 +375,18 @@ const ImprovedKanban = () => {
     }
   };
 
-  const handleAddTag = async () => {
-    if (!newTagName.trim()) return;
-
-    const newTag: KanbanTag = {
-      id: `tag_${Date.now()}`,
-      name: newTagName,
-      color: newTagColor,
-      createdBy: user?.id || ''
-    };
-
-    const updatedBoard = {
-      ...board,
-      tags: [...board.tags, newTag]
-    };
-
-    setBoard(updatedBoard);
-    await saveKanbanState(updatedBoard);
-    
-    setNewTagName('');
-    setNewTagColor('#3B82F6');
-    setShowTagModal(false);
-
-    toast({
-      title: "Sucesso",
-      description: "Etiqueta criada com sucesso"
-    });
-  };
-
-  const handleAddColumn = async () => {
-    if (!newColumnTitle.trim() || !isOwner()) return;
-
-    const columnId = `custom_${Date.now()}`;
-    const newColumn: KanbanColumn = {
-      id: columnId,
-      title: newColumnTitle,
-      color: newColumnColor,
-      items: [],
-      isCustom: true
-    };
-
-    const updatedBoard = {
-      ...board,
-      columns: {
-        ...board.columns,
-        [columnId]: newColumn
-      }
-    };
-
-    setBoard(updatedBoard);
-    await saveKanbanState(updatedBoard);
-    
-    setNewColumnTitle('');
-    setNewColumnColor('bg-gray-50 border-gray-200');
-    setShowColumnModal(false);
-
-    toast({
-      title: "Sucesso",
-      description: "Coluna criada com sucesso"
-    });
-  };
-
-  const handleLogoUpload = async () => {
-    if (!logoFile || !agencyData || !isOwner()) return;
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const logoBase64 = e.target?.result as string;
-        
-        // Atualizar no Firebase
-        await firestoreService.updateCompany(agencyData.id, { logoBase64 });
-        
-        toast({
-          title: "Sucesso",
-          description: "Logo atualizado com sucesso"
-        });
-        
-        setShowLogoModal(false);
-        setLogoFile(null);
-      };
-      reader.readAsDataURL(logoFile);
-    } catch (error) {
-      console.error('Erro ao fazer upload do logo:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao fazer upload do logo",
-        variant: "destructive"
-      });
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'Filmagem': return 'bg-blue-100 text-blue-800';
+      case 'Edição': return 'bg-purple-100 text-purple-800';
+      case 'Motion Graphics': return 'bg-orange-100 text-orange-800';
+      case 'Geral': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const isOwner = () => {
-    return agencyData && user && agencyData.ownerId === user.id;
-  };
-
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case 'alta': return 'border-l-red-500';
-      case 'média': return 'border-l-yellow-500';
-      case 'baixa': return 'border-l-green-500';
-      default: return 'border-l-gray-300';
-    }
-  };
-
-  const getUrgencyBg = (urgency: string) => {
-    switch (urgency) {
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
       case 'alta': return 'bg-red-100 text-red-800';
       case 'média': return 'bg-yellow-100 text-yellow-800';
       case 'baixa': return 'bg-green-100 text-green-800';
@@ -501,13 +394,11 @@ const ImprovedKanban = () => {
     }
   };
 
-  // Ordem fixa das colunas padrão + colunas customizadas
-  const getColumnOrder = () => {
-    const defaultOrder = ['todo', 'inProgress', 'review', 'done'];
-    const customColumns = Object.keys(board.columns).filter(key => !defaultOrder.includes(key));
-    return [...defaultOrder, ...customColumns];
-  };
+  // Garantir ordem fixa das colunas
+  const fixedColumnOrder = ['todo', 'inProgress', 'review', 'done'];
+  const currentBoard = boards[activeBoard] || {};
 
+  // Verificar se o usuário faz parte de uma empresa
   if (!agencyData) {
     return (
       <div className="text-center py-16">
@@ -527,9 +418,9 @@ const ImprovedKanban = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="text-center md:text-left space-y-2">
-          <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+      <div className="flex justify-between items-center">
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-bold flex items-center gap-2">
             <Briefcase className="text-purple-600" />
             Kanban de Projetos
           </h2>
@@ -538,177 +429,110 @@ const ImprovedKanban = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {isOwner() && (
-            <>
-              <Button onClick={() => setShowLogoModal(true)} variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                Logo
-              </Button>
-              <Button onClick={() => setShowColumnModal(true)} variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Coluna
-              </Button>
-            </>
-          )}
-          <Button onClick={() => setShowTagModal(true)} variant="outline" size="sm">
-            <Tag className="h-4 w-4 mr-2" />
-            Etiqueta
-          </Button>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Tarefa
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Adicionar Nova Tarefa</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Tarefa
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Adicionar Nova Tarefa</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
                 <Input
                   placeholder="Título da tarefa"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                 />
-                
+              </div>
+              
+              <div>
                 <Textarea
                   placeholder="Descrição detalhada"
                   value={newTaskDescription}
                   onChange={(e) => setNewTaskDescription(e.target.value)}
                 />
-
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    placeholder="Valor (R$)"
-                    value={newTaskValue}
-                    onChange={(e) => setNewTaskValue(e.target.value)}
-                  />
-                  <Input
-                    type="date"
-                    value={newTaskDeadline}
-                    onChange={(e) => setNewTaskDeadline(e.target.value)}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <Select value={newTaskResponsible} onValueChange={setNewTaskResponsible}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Responsável" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teamMembers.map((member, index) => (
-                        <SelectItem key={index} value={member.email}>
-                          {member.email}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value={user?.name || 'Eu'}>
-                        {user?.name || 'Eu'}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={newTaskType} onValueChange={setNewTaskType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Filmagem">Filmagem</SelectItem>
-                      <SelectItem value="Edição">Edição</SelectItem>
-                      <SelectItem value="Motion Graphics">Motion Graphics</SelectItem>
-                      <SelectItem value="Geral">Geral</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <Select value={newTaskUrgency} onValueChange={(value: any) => setNewTaskUrgency(value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Urgência" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                      <SelectItem value="média">Média</SelectItem>
-                      <SelectItem value="alta">Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={selectedColumn} onValueChange={setSelectedColumn}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Coluna" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getColumnOrder().map((columnId) => (
-                        <SelectItem key={columnId} value={columnId}>
-                          {board.columns[columnId]?.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Etiquetas */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Etiquetas</label>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {board.tags.map((tag) => (
-                      <Badge
-                        key={tag.id}
-                        style={{ backgroundColor: tag.color }}
-                        className={`cursor-pointer text-white ${
-                          newTaskTags.includes(tag.id) ? 'ring-2 ring-offset-1' : ''
-                        }`}
-                        onClick={() => {
-                          if (newTaskTags.includes(tag.id)) {
-                            setNewTaskTags(newTaskTags.filter(t => t !== tag.id));
-                          } else {
-                            setNewTaskTags([...newTaskTags, tag.id]);
-                          }
-                        }}
-                      >
-                        {tag.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <Button onClick={handleAddTask} className="w-full">
-                  Adicionar Tarefa
-                </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Valor (R$)"
+                  value={newTaskValue}
+                  onChange={(e) => setNewTaskValue(e.target.value)}
+                />
+                <Input
+                  type="date"
+                  value={newTaskDeadline}
+                  onChange={(e) => setNewTaskDeadline(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={newTaskResponsible} onValueChange={setNewTaskResponsible}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map((member, index) => (
+                      <SelectItem key={index} value={member.email}>
+                        {member.email}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={user?.name || 'Eu'}>
+                      {user?.name || 'Eu'}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={newTaskType} onValueChange={setNewTaskType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Filmagem">Filmagem</SelectItem>
+                    <SelectItem value="Edição">Edição</SelectItem>
+                    <SelectItem value="Motion Graphics">Motion Graphics</SelectItem>
+                    <SelectItem value="Geral">Geral</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Select value={selectedColumn} onValueChange={setSelectedColumn}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Coluna" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">A Fazer</SelectItem>
+                  <SelectItem value="inProgress">Em Produção</SelectItem>
+                  <SelectItem value="review">Em Revisão</SelectItem>
+                  <SelectItem value="done">Finalizado</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button onClick={handleAddTask} className="w-full">
+                Adicionar Tarefa
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 md:gap-6">
-          {getColumnOrder().map((columnId) => {
-            const column = board.columns[columnId];
+        <div className="grid lg:grid-cols-4 gap-6">
+          {fixedColumnOrder.map((columnId) => {
+            const column = currentBoard[columnId];
             if (!column) return null;
             
             return (
               <Card key={columnId} className={`${column.color} h-fit`}>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-center font-semibold text-sm md:text-base">
+                  <CardTitle className="text-center font-semibold">
                     {column.title}
                     <Badge variant="secondary" className="ml-2">
                       {column.items?.length || 0}
                     </Badge>
-                    {column.isCustom && isOwner() && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="ml-2 h-6 w-6 p-0"
-                        onClick={() => {
-                          const updatedBoard = { ...board };
-                          delete updatedBoard.columns[columnId];
-                          setBoard(updatedBoard);
-                          saveKanbanState(updatedBoard);
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -717,7 +541,7 @@ const ImprovedKanban = () => {
                       <div
                         {...provided.droppableProps}
                         ref={provided.innerRef}
-                        className={`space-y-3 min-h-[200px] md:min-h-[300px] p-2 rounded-lg transition-colors ${
+                        className={`space-y-3 min-h-[300px] p-2 rounded-lg transition-colors ${
                           snapshot.isDraggingOver ? 'bg-white/50' : ''
                         }`}
                       >
@@ -728,57 +552,57 @@ const ImprovedKanban = () => {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className={`bg-white shadow-sm hover:shadow-md transition-all cursor-move border-l-4 ${getUrgencyColor(item.urgency)} ${
+                                className={`bg-white shadow-sm hover:shadow-md transition-all cursor-move ${
                                   snapshot.isDragging ? 'rotate-2 shadow-lg' : ''
                                 }`}
                                 onClick={() => setSelectedTask(item)}
                               >
-                                <CardContent className="p-3 md:p-4 space-y-2">
-                                  <h4 className="font-medium text-sm leading-tight">{item.title}</h4>
-                                  
-                                  <div className="flex items-center gap-1 text-xs text-gray-600">
-                                    <User className="h-3 w-3" />
-                                    <span className="truncate">{item.responsible}</span>
+                                <CardContent className="p-4 space-y-3">
+                                  <div className="flex justify-between items-start">
+                                    <h4 className="font-medium text-sm leading-tight">{item.title}</h4>
+                                    <div className="flex gap-1">
+                                      <Badge className={getTypeColor(item.type)} variant="secondary">
+                                        {item.type}
+                                      </Badge>
+                                    </div>
                                   </div>
 
-                                  {/* Etiquetas */}
-                                  {item.tags && item.tags.length > 0 && (
-                                    <div className="space-y-1">
-                                      <div className="text-xs text-gray-500">Etiquetas</div>
-                                      <div className="flex flex-wrap gap-1">
-                                        {item.tags.map((tagId) => {
-                                          const tag = board.tags.find(t => t.id === tagId);
-                                          return tag ? (
-                                            <Badge
-                                              key={tag.id}
-                                              style={{ backgroundColor: tag.color }}
-                                              className="text-white text-xs px-2 py-0"
-                                            >
-                                              {tag.name}
-                                            </Badge>
-                                          ) : null;
-                                        })}
-                                      </div>
+                                  <p className="text-xs text-gray-600 line-clamp-2">{item.description}</p>
+                                  
+                                  <div className="space-y-2 text-xs text-gray-600">
+                                    <div className="flex items-center gap-2">
+                                      <DollarSign className="h-3 w-3" />
+                                      <span className="font-semibold text-green-600">{item.value}</span>
                                     </div>
-                                  )}
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="h-3 w-3" />
+                                      <span>{item.deadline}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <User className="h-3 w-3" />
+                                      <span>{item.responsible}</span>
+                                    </div>
 
-                                  <div className="flex items-center justify-between">
-                                    <Badge className={getUrgencyBg(item.urgency)} variant="secondary">
-                                      {item.urgency}
-                                    </Badge>
-                                    <div className="flex gap-1 text-xs text-gray-500">
-                                      {item.comments > 0 && (
-                                        <span className="flex items-center gap-1">
-                                          <MessageCircle className="h-3 w-3" />
-                                          {item.comments}
-                                        </span>
-                                      )}
-                                      {item.attachments > 0 && (
-                                        <span className="flex items-center gap-1">
-                                          <Paperclip className="h-3 w-3" />
-                                          {item.attachments}
-                                        </span>
-                                      )}
+                                    <div className="flex items-center justify-between pt-2">
+                                      <div className="flex gap-2">
+                                        {item.comments > 0 && (
+                                          <span className="flex items-center gap-1">
+                                            <MessageCircle className="h-3 w-3" />
+                                            {item.comments}
+                                          </span>
+                                        )}
+                                        {item.attachments > 0 && (
+                                          <span className="flex items-center gap-1">
+                                            <Paperclip className="h-3 w-3" />
+                                            {item.attachments}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <Badge className={getPriorityColor(item.priority)} variant="secondary">
+                                        {item.priority}
+                                      </Badge>
                                     </div>
                                   </div>
                                 </CardContent>
@@ -900,63 +724,6 @@ const ImprovedKanban = () => {
                 )}
               </div>
 
-              <div>
-                <label className="text-sm font-medium">Urgência</label>
-                {isEditingTask ? (
-                  <Select
-                    value={selectedTask.urgency}
-                    onValueChange={(value: any) => setSelectedTask({...selectedTask, urgency: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                      <SelectItem value="média">Média</SelectItem>
-                      <SelectItem value="alta">Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Badge className={getUrgencyBg(selectedTask.urgency)} variant="secondary">
-                    {selectedTask.urgency}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Etiquetas na edição */}
-              {isEditingTask && (
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Etiquetas</label>
-                  <div className="flex flex-wrap gap-1">
-                    {board.tags.map((tag) => (
-                      <Badge
-                        key={tag.id}
-                        style={{ backgroundColor: tag.color }}
-                        className={`cursor-pointer text-white ${
-                          selectedTask.tags?.includes(tag.id) ? 'ring-2 ring-offset-1' : ''
-                        }`}
-                        onClick={() => {
-                          const currentTags = selectedTask.tags || [];
-                          if (currentTags.includes(tag.id)) {
-                            setSelectedTask({
-                              ...selectedTask,
-                              tags: currentTags.filter(t => t !== tag.id)
-                            });
-                          } else {
-                            setSelectedTask({
-                              ...selectedTask,
-                              tags: [...currentTags, tag.id]
-                            });
-                          }
-                        }}
-                      >
-                        {tag.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {isEditingTask && (
                 <Button onClick={handleSaveTaskEdit} className="w-full">
                   <Save className="h-4 w-4 mr-2" />
@@ -967,96 +734,6 @@ const ImprovedKanban = () => {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Modal para criar etiqueta */}
-      <Dialog open={showTagModal} onOpenChange={setShowTagModal}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Nova Etiqueta</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              placeholder="Nome da etiqueta"
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
-            />
-            <div>
-              <label className="text-sm font-medium mb-2 block">Cor</label>
-              <input
-                type="color"
-                value={newTagColor}
-                onChange={(e) => setNewTagColor(e.target.value)}
-                className="w-full h-10 rounded border"
-              />
-            </div>
-            <Button onClick={handleAddTag} className="w-full" disabled={!newTagName.trim()}>
-              Criar Etiqueta
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para criar coluna (apenas owner) */}
-      {isOwner() && (
-        <Dialog open={showColumnModal} onOpenChange={setShowColumnModal}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Nova Coluna</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Input
-                placeholder="Nome da coluna"
-                value={newColumnTitle}
-                onChange={(e) => setNewColumnTitle(e.target.value)}
-              />
-              <div>
-                <label className="text-sm font-medium mb-2 block">Estilo</label>
-                <Select value={newColumnColor} onValueChange={setNewColumnColor}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bg-purple-50 border-purple-200">Roxo</SelectItem>
-                    <SelectItem value="bg-pink-50 border-pink-200">Rosa</SelectItem>
-                    <SelectItem value="bg-indigo-50 border-indigo-200">Índigo</SelectItem>
-                    <SelectItem value="bg-orange-50 border-orange-200">Laranja</SelectItem>
-                    <SelectItem value="bg-gray-50 border-gray-200">Cinza</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={handleAddColumn} className="w-full" disabled={!newColumnTitle.trim()}>
-                Criar Coluna
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Modal para upload de logo (apenas owner) */}
-      {isOwner() && (
-        <Dialog open={showLogoModal} onOpenChange={setShowLogoModal}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Upload do Logo</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                className="w-full"
-              />
-              <Button 
-                onClick={handleLogoUpload} 
-                className="w-full" 
-                disabled={!logoFile}
-              >
-                Fazer Upload
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 };

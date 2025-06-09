@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('🔍 Verificando agências:', allAgencies.length);
             
             for (const agency of allAgencies) {
-              const agencyData = agency as any;
+              const agencyData = agency as any; // Type assertion to avoid TypeScript errors
               
               console.log('🔍 Verificando agência:', agencyData.id, {
                 ownerId: agencyData.ownerId,
@@ -167,7 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
 
           setUser(appUser);
-          setUserData(userData as FirestoreUser);
+          setUserData(userData);
 
           console.log('✅ Dados do usuário carregados com sucesso!');
           console.log('👤 Tipo de usuário FINAL:', userType);
