@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,11 +59,14 @@ interface KanbanColumn {
 
 interface KanbanBoard {
   [key: string]: KanbanColumn;
+}
+
+interface KanbanBoardWithTags extends KanbanBoard {
   customTags?: Tag[];
 }
 
 interface KanbanBoards {
-  [boardId: string]: KanbanBoard;
+  [boardId: string]: KanbanBoardWithTags;
 }
 
 const ImprovedKanban = () => {
@@ -106,7 +110,7 @@ const ImprovedKanban = () => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
-        await firestoreService.updateCompanyLogo(agencyData.id, base64);
+        await firestoreService.updateCompanyField(agencyData.id, 'logoBase64', base64);
         setLogo(base64);
         toast({
           title: "Sucesso",
@@ -156,7 +160,7 @@ const ImprovedKanban = () => {
         setCustomTags(existingBoard.customTags || []);
       } else {
         console.log('📝 Criando board inicial para empresa');
-        const initialBoard: KanbanBoard = {
+        const initialBoard: KanbanBoardWithTags = {
           'todo': {
             title: 'A Fazer',
             color: 'bg-red-50 border-red-200',
@@ -369,7 +373,7 @@ const ImprovedKanban = () => {
     }
   };
 
-  const saveKanbanState = async (boardData: KanbanBoard) => {
+  const saveKanbanState = async (boardData: KanbanBoardWithTags) => {
     if (!agencyData) return;
 
     try {
@@ -457,9 +461,10 @@ const ImprovedKanban = () => {
 
       Object.keys(updatedBoard).forEach(columnId => {
         if (columnId !== 'customTags') {
-          const taskIndex = updatedBoard[columnId].items.findIndex(item => item.id === selectedTask.id);
+          const column = updatedBoard[columnId] as KanbanColumn;
+          const taskIndex = column.items.findIndex(item => item.id === selectedTask.id);
           if (taskIndex !== -1) {
-            updatedBoard[columnId].items[taskIndex] = selectedTask;
+            column.items[taskIndex] = selectedTask;
           }
         }
       });
@@ -495,7 +500,8 @@ const ImprovedKanban = () => {
 
       Object.keys(updatedBoard).forEach(columnId => {
         if (columnId !== 'customTags') {
-          updatedBoard[columnId].items = updatedBoard[columnId].items.filter(item => item.id !== taskId);
+          const column = updatedBoard[columnId] as KanbanColumn;
+          column.items = column.items.filter(item => item.id !== taskId);
         }
       });
 
@@ -708,7 +714,7 @@ const ImprovedKanban = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {allColumns.map((columnId) => {
-                        const column = currentBoard[columnId];
+                        const column = currentBoard[columnId] as KanbanColumn;
                         return column ? (
                           <SelectItem key={columnId} value={columnId}>
                             {column.title}
@@ -742,7 +748,7 @@ const ImprovedKanban = () => {
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="grid lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {allColumns.map((columnId) => {
-            const column = currentBoard[columnId];
+            const column = currentBoard[columnId] as KanbanColumn;
             if (!column) return null;
             
             return (
