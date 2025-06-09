@@ -136,7 +136,8 @@ const ImprovedKanban = () => {
       
       if (existingBoard && existingBoard.columns) {
         console.log('✅ Board existente carregado do Firebase');
-        setBoard(existingBoard);
+        // Type cast the Firebase data to KanbanBoard
+        setBoard(existingBoard as KanbanBoard);
       } else {
         console.log('📝 Criando board inicial para empresa');
         const initialBoard: KanbanBoard = {

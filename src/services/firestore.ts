@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
@@ -18,6 +17,27 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+export interface FirestoreUser {
+  email: string;
+  uid: string;
+  logobase64: string;
+  equipments: any[];
+  expenses: any[];
+  jobs: any[];
+  routine: {
+    dailyHours: number;
+    dalilyValue: number;
+    desiredSalary: number;
+    workDays: number;
+  };
+  tasks?: any[];
+  personalInfo?: {
+    phone?: string;
+    company?: string;
+  };
+  imageuser?: string;
+}
 
 export const firestoreService = {
   auth,
@@ -44,9 +64,9 @@ export const firestoreService = {
     }
   },
 
-  async createUser(userId: string, userData: any) {
+  async createUser(userData: FirestoreUser) {
     try {
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, 'usuarios', userData.uid);
       await setDoc(userRef, userData, { merge: true });
     } catch (error) {
       console.error("Erro ao criar usuário:", error);
@@ -110,6 +130,17 @@ export const firestoreService = {
     }
   },
 
+  async getAllAgencies() {
+    try {
+      const companiesRef = collection(db, 'companies');
+      const snapshot = await getDocs(companiesRef);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error("Erro ao buscar todas as agências:", error);
+      return [];
+    }
+  },
+
   async banUser(userId: string, banned: boolean) {
     try {
       await this.updateUserField(userId, 'banned', banned);
@@ -130,7 +161,7 @@ export const firestoreService = {
 
   async getUserData(userId: string) {
     try {
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, 'usuarios', userId);
       const docSnap = await getDoc(userRef);
       if (docSnap.exists()) {
         return docSnap.data();

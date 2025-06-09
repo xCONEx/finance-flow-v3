@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -7,6 +8,27 @@ export interface User {
   userType: 'admin' | 'company_owner' | 'employee' | 'individual';
   companyId?: string;
   createdAt: string;
+}
+
+export interface FirestoreUser {
+  email: string;
+  uid: string;
+  logobase64: string;
+  equipments: WorkItem[];
+  expenses: MonthlyCost[];
+  jobs: Job[];
+  routine: {
+    dailyHours: number;
+    dalilyValue: number;
+    desiredSalary: number;
+    workDays: number;
+  };
+  tasks?: Task[];
+  personalInfo?: {
+    phone?: string;
+    company?: string;
+  };
+  imageuser?: string;
 }
 
 export interface Company {
