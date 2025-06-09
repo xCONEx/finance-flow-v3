@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus, Trash2, DollarSign, Edit, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +23,7 @@ const EXPENSE_CATEGORIES = [
 
 const MonthlyCosts = () => {
   const { monthlyCosts, addMonthlyCost, updateMonthlyCost, deleteMonthlyCost, loading } = useAppContext();
-  const { userData, user } = useAuth();
+  const { userData } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [editingCost, setEditingCost] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -54,11 +55,7 @@ const MonthlyCosts = () => {
         });
         setEditingCost(null);
       } else {
-        await addMonthlyCost({
-          ...formData,
-          createdAt: new Date().toISOString(),
-          userId: user?.id || ''
-        });
+        await addMonthlyCost(formData);
         toast({
           title: "Custo Adicionado",
           description: "O custo mensal foi cadastrado com sucesso.",

@@ -10,69 +10,36 @@ export interface User {
   createdAt: string;
 }
 
-export interface FirestoreUser extends User {
-  personalInfo?: {
-    phone?: string;
-    company?: string;
-  };
-  imageuser?: string;
-  jobs?: Job[];
-  equipments?: Equipment[];
-  expenses?: Expense[];
-  tasks?: Task[];
-  routine?: WorkRoutine;
-}
-
 export interface Company {
   id: string;
   name: string;
   logo?: string;
-  logoBase64?: string;
   plan: 'free' | 'premium';
   ownerId: string;
   createdAt: string;
-  jobs?: Job[];
-  equipments?: Equipment[];
-  expenses?: Expense[];
-  tasks?: Task[];
-  routine?: WorkRoutine;
 }
 
 export interface Job {
   id: string;
-  title: string;
   description: string;
-  value: number;
-  client?: string;
-  eventDate?: string;
-  estimatedHours?: number;
-  difficultyLevel?: 'fácil' | 'médio' | 'complicado' | 'difícil';
-  logistics?: number;
-  equipment?: number;
-  assistance?: number;
-  status?: 'pendente' | 'aprovado';
-  category?: string;
-  discountValue?: number;
-  totalCosts?: number;
-  serviceValue?: number;
-  valueWithDiscount?: number;
-  profitMargin?: number;
-  createdAt?: string;
-  updatedAt?: string;
-  userId?: string;
+  client: string;
+  eventDate: string;
+  estimatedHours: number;
+  difficultyLevel: 'fácil' | 'médio' | 'complicado' | 'difícil';
+  logistics: number;
+  equipment: number;
+  assistance: number;
+  status: 'pendente' | 'aprovado';
+  category: string;
+  discountValue: number;
+  totalCosts: number;
+  serviceValue: number;
+  valueWithDiscount: number;
+  profitMargin: number;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
   companyId?: string;
-}
-
-export interface Equipment {
-  id: string;
-  name: string;
-  cost: number;
-}
-
-export interface Expense {
-  id: string;
-  description: string;
-  value: number;
 }
 
 export interface MonthlyCost {
@@ -130,15 +97,4 @@ export interface UserSettings {
   colorTheme: string;
   notifications: boolean;
   language: 'pt-BR';
-}
-
-export interface Invite {
-  id: string;
-  email: string;
-  companyId: string;
-  companyName: string;
-  role: string;
-  invitedBy: string;
-  sentAt: string;
-  status: 'pending' | 'accepted' | 'declined';
 }
