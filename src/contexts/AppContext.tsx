@@ -7,6 +7,24 @@ interface Job {
   title: string;
   description: string;
   value: number;
+  client?: string;
+  eventDate?: string;
+  estimatedHours?: number;
+  difficultyLevel?: 'fácil' | 'médio' | 'complicado' | 'difícil';
+  logistics?: number;
+  equipment?: number;
+  assistance?: number;
+  status?: 'pendente' | 'aprovado';
+  category?: string;
+  discountValue?: number;
+  totalCosts?: number;
+  serviceValue?: number;
+  valueWithDiscount?: number;
+  profitMargin?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  userId?: string;
+  companyId?: string;
 }
 
 interface Equipment {
@@ -21,11 +39,50 @@ interface Expense {
   value: number;
 }
 
+interface WorkItem {
+  id: string;
+  description: string;
+  category: string;
+  value: number;
+  depreciationYears?: number;
+  createdAt?: string;
+  userId?: string;
+  companyId?: string;
+}
+
+interface MonthlyCost {
+  id: string;
+  description: string;
+  category: string;
+  value: number;
+  month: string;
+  createdAt?: string;
+  userId?: string;
+  companyId?: string;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  priority: 'baixa' | 'média' | 'alta';
+  status?: 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision';
+  dueDate?: string;
+  createdAt?: string;
+  userId?: string;
+}
+
 interface WorkRoutine {
   dailyHours: number;
   dalilyValue: number;
   desiredSalary: number;
   workDays: number;
+  valuePerDay?: number;
+  valuePerHour?: number;
+  workDaysPerMonth?: number;
+  workHoursPerDay?: number;
+  userId?: string;
 }
 
 interface AppContextType {
@@ -41,7 +98,20 @@ interface AppContextType {
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
   updateExpense: (id: string, updatedExpense: Partial<Expense>) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
+  workItems: WorkItem[];
+  addWorkItem: (item: Omit<WorkItem, 'id'>) => Promise<void>;
+  updateWorkItem: (id: string, updatedItem: Partial<WorkItem>) => Promise<void>;
+  deleteWorkItem: (id: string) => Promise<void>;
+  monthlyCosts: MonthlyCost[];
+  addMonthlyCost: (cost: Omit<MonthlyCost, 'id'>) => Promise<void>;
+  updateMonthlyCost: (id: string, updatedCost: Partial<MonthlyCost>) => Promise<void>;
+  deleteMonthlyCost: (id: string) => Promise<void>;
+  tasks: Task[];
+  addTask: (task: Omit<Task, 'id'>) => Promise<void>;
+  updateTask: (id: string, updatedTask: Partial<Task>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
   routine: WorkRoutine | null;
+  workRoutine: WorkRoutine | null;
   updateRoutine: (updatedRoutine: Partial<WorkRoutine>) => Promise<void>;
   loading: boolean;
 }
@@ -61,6 +131,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [workItems, setWorkItems] = useState<WorkItem[]>([]);
+  const [monthlyCosts, setMonthlyCosts] = useState<MonthlyCost[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [routine, setRoutine] = useState<WorkRoutine | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -74,6 +147,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setJobs(userDetails.jobs || []);
             setEquipments(userDetails.equipments || []);
             setExpenses(userDetails.expenses || []);
+            setWorkItems(userDetails.equipments || []);
+            setMonthlyCosts(userDetails.expenses || []);
+            setTasks(userDetails.tasks || []);
             setRoutine(userDetails.routine || {
               dailyHours: 8,
               dalilyValue: 0,
@@ -98,6 +174,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setJobs(Array.isArray(userData.jobs) ? userData.jobs : []);
       setEquipments(Array.isArray(userData.equipments) ? userData.equipments : []);
       setExpenses(Array.isArray(userData.expenses) ? userData.expenses : []);
+      setWorkItems(Array.isArray(userData.equipments) ? userData.equipments : []);
+      setMonthlyCosts(Array.isArray(userData.expenses) ? userData.expenses : []);
+      setTasks(Array.isArray(userData.tasks) ? userData.tasks : []);
       setRoutine(userData.routine || {
         dailyHours: 8,
         dalilyValue: 0,
@@ -109,6 +188,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setJobs(Array.isArray(agencyData.jobs) ? agencyData.jobs : []);
       setEquipments(Array.isArray(agencyData.equipments) ? agencyData.equipments : []);
       setExpenses(Array.isArray(agencyData.expenses) ? agencyData.expenses : []);
+      setWorkItems(Array.isArray(agencyData.equipments) ? agencyData.equipments : []);
+      setMonthlyCosts(Array.isArray(agencyData.expenses) ? agencyData.expenses : []);
+      setTasks(Array.isArray(agencyData.tasks) ? agencyData.tasks : []);
       setRoutine(agencyData.routine || {
         dailyHours: 8,
         dalilyValue: 0,
@@ -127,7 +209,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
 
       if (agencyData?.id) {
-        // Se é agência, atualizar no documento da empresa
         const currentData = await firestoreService.getCompanyById(agencyData.id);
         if (currentData) {
           const updatedJobs = Array.isArray(currentData.jobs) ? [...currentData.jobs, newJob] : [newJob];
@@ -136,7 +217,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       } else if (user?.id) {
-        // Se é usuário individual, atualizar no documento do usuário
         const currentData = await firestoreService.getUserData(user.id);
         if (currentData) {
           const updatedJobs = Array.isArray(currentData.jobs) ? [...currentData.jobs, newJob] : [newJob];
@@ -153,7 +233,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateJob = async (id: string, updatedJob: Partial<Job>) => {
     try {
       if (agencyData?.id) {
-        // Se é agência, atualizar no documento da empresa
         const currentData = await firestoreService.getCompanyById(agencyData.id);
         if (currentData) {
           const updatedJobs = Array.isArray(currentData.jobs) ? 
@@ -163,7 +242,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       } else if (user?.id) {
-        // Se é usuário individual, atualizar no documento do usuário
         const currentData = await firestoreService.getUserData(user.id);
         if (currentData) {
           const updatedJobs = Array.isArray(currentData.jobs) ? 
@@ -181,7 +259,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteJob = async (id: string) => {
     try {
       if (agencyData?.id) {
-        // Se é agência, atualizar no documento da empresa
         const currentData = await firestoreService.getCompanyById(agencyData.id);
         if (currentData) {
           const updatedJobs = Array.isArray(currentData.jobs) ? 
@@ -191,7 +268,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       } else if (user?.id) {
-        // Se é usuário individual, atualizar no documento do usuário
         const currentData = await firestoreService.getUserData(user.id);
         if (currentData) {
           const updatedJobs = Array.isArray(currentData.jobs) ? 
@@ -214,7 +290,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
 
       if (agencyData?.id) {
-        // Se é agência, atualizar no documento da empresa
         const currentData = await firestoreService.getCompanyById(agencyData.id);
         if (currentData) {
           const updatedExpenses = Array.isArray(currentData.expenses) ? [...currentData.expenses, newExpense] : [newExpense];
@@ -223,7 +298,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       } else if (user?.id) {
-        // Se é usuário individual, atualizar no documento do usuário
         const currentData = await firestoreService.getUserData(user.id);
         if (currentData) {
           const updatedExpenses = Array.isArray(currentData.expenses) ? [...currentData.expenses, newExpense] : [newExpense];
@@ -240,7 +314,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateExpense = async (id: string, updatedExpense: Partial<Expense>) => {
     try {
       if (agencyData?.id) {
-        // Se é agência, atualizar no documento da empresa
         const currentData = await firestoreService.getCompanyById(agencyData.id);
         if (currentData) {
           const updatedExpenses = Array.isArray(currentData.expenses) ? 
@@ -250,7 +323,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       } else if (user?.id) {
-        // Se é usuário individual, atualizar no documento do usuário
         const currentData = await firestoreService.getUserData(user.id);
         if (currentData) {
           const updatedExpenses = Array.isArray(currentData.expenses) ? 
@@ -268,7 +340,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteExpense = async (id: string) => {
     try {
       if (agencyData?.id) {
-        // Se é agência, atualizar no documento da empresa
         const currentData = await firestoreService.getCompanyById(agencyData.id);
         if (currentData) {
           const updatedExpenses = Array.isArray(currentData.expenses) ? 
@@ -278,7 +349,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       } else if (user?.id) {
-        // Se é usuário individual, atualizar no documento do usuário
         const currentData = await firestoreService.getUserData(user.id);
         if (currentData) {
           const updatedExpenses = Array.isArray(currentData.expenses) ? 
@@ -301,7 +371,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
 
       if (agencyData?.id) {
-        // Se é agência, atualizar no documento da empresa
         const currentData = await firestoreService.getCompanyById(agencyData.id);
         if (currentData) {
           const updatedEquipments = Array.isArray(currentData.equipments) ? [...currentData.equipments, newEquipment] : [newEquipment];
@@ -310,7 +379,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       } else if (user?.id) {
-        // Se é usuário individual, atualizar no documento do usuário
         const currentData = await firestoreService.getUserData(user.id);
         if (currentData) {
           const updatedEquipments = Array.isArray(currentData.equipments) ? [...currentData.equipments, newEquipment] : [newEquipment];
@@ -327,7 +395,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateEquipment = async (id: string, updatedEquipment: Partial<Equipment>) => {
     try {
       if (agencyData?.id) {
-        // Se é agência, atualizar no documento da empresa
         const currentData = await firestoreService.getCompanyById(agencyData.id);
         if (currentData) {
           const updatedEquipments = Array.isArray(currentData.equipments) ? 
@@ -337,7 +404,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       } else if (user?.id) {
-        // Se é usuário individual, atualizar no documento do usuário
         const currentData = await firestoreService.getUserData(user.id);
         if (currentData) {
           const updatedEquipments = Array.isArray(currentData.equipments) ? 
@@ -355,7 +421,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteEquipment = async (id: string) => {
     try {
       if (agencyData?.id) {
-        // Se é agência, atualizar no documento da empresa
         const currentData = await firestoreService.getCompanyById(agencyData.id);
         if (currentData) {
           const updatedEquipments = Array.isArray(currentData.equipments) ? 
@@ -365,7 +430,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       } else if (user?.id) {
-        // Se é usuário individual, atualizar no documento do usuário
         const currentData = await firestoreService.getUserData(user.id);
         if (currentData) {
           const updatedEquipments = Array.isArray(currentData.equipments) ? 
@@ -377,6 +441,220 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setEquipments(prev => prev.filter(eq => eq.id !== id));
     } catch (error) {
       console.error('Erro ao deletar equipamento:', error);
+    }
+  };
+
+  // WorkItems functions
+  const addWorkItem = async (item: Omit<WorkItem, 'id'>) => {
+    try {
+      const newItem: WorkItem = {
+        ...item,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        userId: user?.id
+      };
+
+      if (agencyData?.id) {
+        const currentData = await firestoreService.getCompanyById(agencyData.id);
+        if (currentData) {
+          const updatedItems = Array.isArray(currentData.equipments) ? [...currentData.equipments, newItem] : [newItem];
+          await firestoreService.updateCompany(agencyData.id, { equipments: updatedItems });
+        }
+      } else if (user?.id) {
+        const currentData = await firestoreService.getUserData(user.id);
+        if (currentData) {
+          const updatedItems = Array.isArray(currentData.equipments) ? [...currentData.equipments, newItem] : [newItem];
+          await firestoreService.updateUserField(user.id, 'equipments', updatedItems);
+        }
+      }
+
+      setWorkItems(prev => [...prev, newItem]);
+    } catch (error) {
+      console.error('Erro ao adicionar item de trabalho:', error);
+    }
+  };
+
+  const updateWorkItem = async (id: string, updatedItem: Partial<WorkItem>) => {
+    try {
+      if (agencyData?.id) {
+        const currentData = await firestoreService.getCompanyById(agencyData.id);
+        if (currentData) {
+          const updatedItems = Array.isArray(currentData.equipments) ? 
+            currentData.equipments.map((item: WorkItem) => item.id === id ? { ...item, ...updatedItem } : item) : [];
+          await firestoreService.updateCompany(agencyData.id, { equipments: updatedItems });
+        }
+      } else if (user?.id) {
+        const currentData = await firestoreService.getUserData(user.id);
+        if (currentData) {
+          const updatedItems = Array.isArray(currentData.equipments) ? 
+            currentData.equipments.map((item: WorkItem) => item.id === id ? { ...item, ...updatedItem } : item) : [];
+          await firestoreService.updateUserField(user.id, 'equipments', updatedItems);
+        }
+      }
+
+      setWorkItems(prev => prev.map(item => item.id === id ? { ...item, ...updatedItem } : item));
+    } catch (error) {
+      console.error('Erro ao atualizar item de trabalho:', error);
+    }
+  };
+
+  const deleteWorkItem = async (id: string) => {
+    try {
+      if (agencyData?.id) {
+        const currentData = await firestoreService.getCompanyById(agencyData.id);
+        if (currentData) {
+          const updatedItems = Array.isArray(currentData.equipments) ? 
+            currentData.equipments.filter((item: WorkItem) => item.id !== id) : [];
+          await firestoreService.updateCompany(agencyData.id, { equipments: updatedItems });
+        }
+      } else if (user?.id) {
+        const currentData = await firestoreService.getUserData(user.id);
+        if (currentData) {
+          const updatedItems = Array.isArray(currentData.equipments) ? 
+            currentData.equipments.filter((item: WorkItem) => item.id !== id) : [];
+          await firestoreService.updateUserField(user.id, 'equipments', updatedItems);
+        }
+      }
+
+      setWorkItems(prev => prev.filter(item => item.id !== id));
+    } catch (error) {
+      console.error('Erro ao deletar item de trabalho:', error);
+    }
+  };
+
+  // MonthlyCosts functions
+  const addMonthlyCost = async (cost: Omit<MonthlyCost, 'id'>) => {
+    try {
+      const newCost: MonthlyCost = {
+        ...cost,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        userId: user?.id
+      };
+
+      if (agencyData?.id) {
+        const currentData = await firestoreService.getCompanyById(agencyData.id);
+        if (currentData) {
+          const updatedCosts = Array.isArray(currentData.expenses) ? [...currentData.expenses, newCost] : [newCost];
+          await firestoreService.updateCompany(agencyData.id, { expenses: updatedCosts });
+        }
+      } else if (user?.id) {
+        const currentData = await firestoreService.getUserData(user.id);
+        if (currentData) {
+          const updatedCosts = Array.isArray(currentData.expenses) ? [...currentData.expenses, newCost] : [newCost];
+          await firestoreService.updateUserField(user.id, 'expenses', updatedCosts);
+        }
+      }
+
+      setMonthlyCosts(prev => [...prev, newCost]);
+    } catch (error) {
+      console.error('Erro ao adicionar custo mensal:', error);
+    }
+  };
+
+  const updateMonthlyCost = async (id: string, updatedCost: Partial<MonthlyCost>) => {
+    try {
+      if (agencyData?.id) {
+        const currentData = await firestoreService.getCompanyById(agencyData.id);
+        if (currentData) {
+          const updatedCosts = Array.isArray(currentData.expenses) ? 
+            currentData.expenses.map((cost: MonthlyCost) => cost.id === id ? { ...cost, ...updatedCost } : cost) : [];
+          await firestoreService.updateCompany(agencyData.id, { expenses: updatedCosts });
+        }
+      } else if (user?.id) {
+        const currentData = await firestoreService.getUserData(user.id);
+        if (currentData) {
+          const updatedCosts = Array.isArray(currentData.expenses) ? 
+            currentData.expenses.map((cost: MonthlyCost) => cost.id === id ? { ...cost, ...updatedCost } : cost) : [];
+          await firestoreService.updateUserField(user.id, 'expenses', updatedCosts);
+        }
+      }
+
+      setMonthlyCosts(prev => prev.map(cost => cost.id === id ? { ...cost, ...updatedCost } : cost));
+    } catch (error) {
+      console.error('Erro ao atualizar custo mensal:', error);
+    }
+  };
+
+  const deleteMonthlyCost = async (id: string) => {
+    try {
+      if (agencyData?.id) {
+        const currentData = await firestoreService.getCompanyById(agencyData.id);
+        if (currentData) {
+          const updatedCosts = Array.isArray(currentData.expenses) ? 
+            currentData.expenses.filter((cost: MonthlyCost) => cost.id !== id) : [];
+          await firestoreService.updateCompany(agencyData.id, { expenses: updatedCosts });
+        }
+      } else if (user?.id) {
+        const currentData = await firestoreService.getUserData(user.id);
+        if (currentData) {
+          const updatedCosts = Array.isArray(currentData.expenses) ? 
+            currentData.expenses.filter((cost: MonthlyCost) => cost.id !== id) : [];
+          await firestoreService.updateUserField(user.id, 'expenses', updatedCosts);
+        }
+      }
+
+      setMonthlyCosts(prev => prev.filter(cost => cost.id !== id));
+    } catch (error) {
+      console.error('Erro ao deletar custo mensal:', error);
+    }
+  };
+
+  // Tasks functions
+  const addTask = async (task: Omit<Task, 'id'>) => {
+    try {
+      const newTask: Task = {
+        ...task,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        userId: user?.id
+      };
+
+      if (user?.id) {
+        const currentData = await firestoreService.getUserData(user.id);
+        if (currentData) {
+          const updatedTasks = Array.isArray(currentData.tasks) ? [...currentData.tasks, newTask] : [newTask];
+          await firestoreService.updateUserField(user.id, 'tasks', updatedTasks);
+        }
+      }
+
+      setTasks(prev => [...prev, newTask]);
+    } catch (error) {
+      console.error('Erro ao adicionar tarefa:', error);
+    }
+  };
+
+  const updateTask = async (id: string, updatedTask: Partial<Task>) => {
+    try {
+      if (user?.id) {
+        const currentData = await firestoreService.getUserData(user.id);
+        if (currentData) {
+          const updatedTasks = Array.isArray(currentData.tasks) ? 
+            currentData.tasks.map((task: Task) => task.id === id ? { ...task, ...updatedTask } : task) : [];
+          await firestoreService.updateUserField(user.id, 'tasks', updatedTasks);
+        }
+      }
+
+      setTasks(prev => prev.map(task => task.id === id ? { ...task, ...updatedTask } : task));
+    } catch (error) {
+      console.error('Erro ao atualizar tarefa:', error);
+    }
+  };
+
+  const deleteTask = async (id: string) => {
+    try {
+      if (user?.id) {
+        const currentData = await firestoreService.getUserData(user.id);
+        if (currentData) {
+          const updatedTasks = Array.isArray(currentData.tasks) ? 
+            currentData.tasks.filter((task: Task) => task.id !== id) : [];
+          await firestoreService.updateUserField(user.id, 'tasks', updatedTasks);
+        }
+      }
+
+      setTasks(prev => prev.filter(task => task.id !== id));
+    } catch (error) {
+      console.error('Erro ao deletar tarefa:', error);
     }
   };
 
@@ -407,7 +685,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addExpense,
     updateExpense,
     deleteExpense,
+    workItems,
+    addWorkItem,
+    updateWorkItem,
+    deleteWorkItem,
+    monthlyCosts,
+    addMonthlyCost,
+    updateMonthlyCost,
+    deleteMonthlyCost,
+    tasks,
+    addTask,
+    updateTask,
+    deleteTask,
     routine,
+    workRoutine: routine,
     updateRoutine,
     loading
   };

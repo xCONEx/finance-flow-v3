@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   email: string;
@@ -21,24 +22,26 @@ export interface Company {
 
 export interface Job {
   id: string;
+  title: string;
   description: string;
-  client: string;
-  eventDate: string;
-  estimatedHours: number;
-  difficultyLevel: 'fácil' | 'médio' | 'complicado' | 'difícil';
-  logistics: number;
-  equipment: number;
-  assistance: number;
-  status: 'pendente' | 'aprovado';
-  category: string;
-  discountValue: number;
-  totalCosts: number;
-  serviceValue: number;
-  valueWithDiscount: number;
-  profitMargin: number;
-  createdAt: string;
-  updatedAt: string;
-  userId: string;
+  value: number;
+  client?: string;
+  eventDate?: string;
+  estimatedHours?: number;
+  difficultyLevel?: 'fácil' | 'médio' | 'complicado' | 'difícil';
+  logistics?: number;
+  equipment?: number;
+  assistance?: number;
+  status?: 'pendente' | 'aprovado';
+  category?: string;
+  discountValue?: number;
+  totalCosts?: number;
+  serviceValue?: number;
+  valueWithDiscount?: number;
+  profitMargin?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  userId?: string;
   companyId?: string;
 }
 
@@ -98,3 +101,4 @@ export interface UserSettings {
   notifications: boolean;
   language: 'pt-BR';
 }
+
