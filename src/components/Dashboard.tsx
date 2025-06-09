@@ -182,9 +182,7 @@ const Dashboard = () => {
 
         {/* Recent Jobs */}
         <Card className="lg:col-span-2 transition-all duration-300 hover:shadow-lg">
-          <CardHeader>
-            <CardTitle>Últimos Jobs Calculados</CardTitle>
-          </CardHeader>
+
           <CardContent>
             <RecentJobs />
           </CardContent>

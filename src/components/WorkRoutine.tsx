@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { useAppContext } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -108,18 +109,15 @@ const WorkRoutine = () => {
             <CardTitle>Configuração da Rotina</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="desiredSalary">Salário Desejado (R$/mês)</Label>
-              <Input
-                id="desiredSalary"
-                type="number"
-                step="0.01"
-                value={formData.desiredSalary}
-                onChange={(e) => setFormData({...formData, desiredSalary: Number(e.target.value)})}
-                placeholder="8000.00"
-                disabled={submitting}
-              />
-            </div>
+<div className="space-y-2">
+  <Label htmlFor="desiredSalary">Salário Desejado (R$/mês)</Label>
+  <CurrencyInput
+    id="desiredSalary"
+    value={formData.desiredSalary}
+    onChange={(value) => setFormData({ ...formData, desiredSalary: value })}
+    placeholder="8.000,00"
+  />
+</div>
             
             <div className="space-y-2">
               <Label htmlFor="workDaysPerMonth">Dias de Trabalho por Mês</Label>

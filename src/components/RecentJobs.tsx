@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Edit, Trash2, FileText, Calendar, DollarSign, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -106,17 +107,17 @@ const RecentJobs = () => {
   if (recentJobs.length === 0) {
     return (
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Últimos Jobs Calculados</h3>
-          <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Eye className="h-4 w-4 mr-2" />
-                Ver Histórico
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
+<div className="flex justify-between items-start mb-4 mt-2">
+  <h3 className="text-2xl font-bold text-gray-900">Últimos Jobs Calculados</h3>
+  <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+    <DialogTrigger asChild>
+      <Button variant="outline" size="sm" className="mt-1">
+        <Eye className="h-4 w-4 mr-2" />
+        Ver Histórico
+      </Button>
+    </DialogTrigger>
+    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogHeader>
                 <DialogTitle>Histórico Completo de Jobs</DialogTitle>
                 <DialogDescription>
                   Visualize todos os jobs calculados anteriormente
@@ -139,22 +140,22 @@ const RecentJobs = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Últimos Jobs Calculados</h3>
-        <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Eye className="h-4 w-4 mr-2" />
-              Ver Histórico
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Histórico Completo de Jobs</DialogTitle>
-              <DialogDescription>
-                Visualize e gerencie todos os jobs calculados anteriormente
-              </DialogDescription>
-            </DialogHeader>
+<div className="flex justify-between items-start mb-8 mt-6">
+  <CardTitle>Últimos Jobs Calculados</CardTitle>
+  <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+    <DialogTrigger asChild>
+      <Button variant="outline" size="sm" className="mt-1">
+        <Eye className="h-4 w-4 mr-2" />
+        Ver Histórico
+      </Button>
+    </DialogTrigger>
+    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>Histórico Completo de Jobs</DialogTitle>
+        <DialogDescription>
+          Visualize e gerencie todos os jobs calculados anteriormente
+        </DialogDescription>
+      </DialogHeader>
             <div className="space-y-4">
               {jobs.map((job) => (
                 <div key={`history-${job.id}`} className="p-4 border rounded-lg space-y-3">

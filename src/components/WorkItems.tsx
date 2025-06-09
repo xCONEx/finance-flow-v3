@@ -284,16 +284,20 @@ const WorkItems = () => {
                 <div className="space-y-2">
                   <Label htmlFor="depreciationYears">Anos de Depreciação</Label>
                   <Input
-                    id="depreciationYears"
-                    type="number"
-                    inputMode="numeric"
-                    min="1"
-                    max="20"
-                    value={formData.depreciationYears}
-                    onChange={(e) => setFormData({...formData, depreciationYears: Number(e.target.value)})}
-                    placeholder="5"
-                    disabled={submitting}
-                  />
+  id="depreciationYears"
+  type="number"
+  inputMode="numeric"
+  min="1"
+  max="20"
+  value={formData.depreciationYears || ""}
+  onChange={(e) => {
+    const raw = e.target.value;
+    const clean = raw.replace(/^0+/, ""); // remove zeros à esquerda
+    setFormData({ ...formData, depreciationYears: Number(clean) });
+  }}
+  placeholder="5"
+  disabled={submitting}
+/>
                 </div>
               </div>
               <div className="flex gap-2">
