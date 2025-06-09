@@ -87,7 +87,9 @@ const Dashboard = () => {
       description: 'Novo Custo',
       category: 'Geral',
       value: 0,
-      month: new Date().toISOString().slice(0, 7)
+      month: new Date().toISOString().slice(0, 7),
+      createdAt: new Date().toISOString(),
+      userId: user?.id || ''
     });
   };
 

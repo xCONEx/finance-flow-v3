@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Plus, Trash2, Briefcase, Edit, Loader2, FileText } from 'lucide-react';
+import { Plus, Trash2, Settings, Edit, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,20 +12,20 @@ import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { generateWorkItemsPDF } from '../utils/pdfGenerator';
 
-const EQUIPMENT_CATEGORIES = [
+const ITEM_CATEGORIES = [
   'Câmera',
-  'Lente', 
-  'Hardware',
-  'Software',
+  'Lente',
   'Iluminação',
-  'Audio',
+  'Áudio',
   'Acessórios',
+  'Computador',
+  'Software',
   'Outros'
 ];
 
 const WorkItems = () => {
   const { workItems, addWorkItem, updateWorkItem, deleteWorkItem, loading } = useAppContext();
-  const { userData } = useAuth();
+  const { userData, user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -56,7 +57,11 @@ const WorkItems = () => {
         });
         setEditingItem(null);
       } else {
-        await addWorkItem(formData);
+        await addWorkItem({
+          ...formData,
+          createdAt: new Date().toISOString(),
+          userId: user?.id || ''
+        });
         toast({
           title: "Item Adicionado",
           description: "O item de trabalho foi cadastrado com sucesso.",

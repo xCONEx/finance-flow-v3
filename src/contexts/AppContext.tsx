@@ -101,7 +101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (agencyData?.id) {
         const currentData = await firestoreService.getCompanyById(agencyData.id);
-        if (currentData) {
+        if (currentData && currentData.jobs) {
           const updatedJobs = Array.isArray(currentData.jobs) ? [...currentData.jobs, newJob] : [newJob];
           await firestoreService.updateCompany(agencyData.id, {
             jobs: updatedJobs
@@ -109,7 +109,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } else if (user?.id) {
         const currentData = await firestoreService.getUserData(user.id);
-        if (currentData) {
+        if (currentData && currentData.jobs) {
           const updatedJobs = Array.isArray(currentData.jobs) ? [...currentData.jobs, newJob] : [newJob];
           await firestoreService.updateUserField(user.id, 'jobs', updatedJobs);
         }
