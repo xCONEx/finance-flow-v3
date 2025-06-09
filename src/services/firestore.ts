@@ -1,4 +1,5 @@
-import { initializeApp } from 'firebase/app';
+
+import { initializeApp, getApps } from 'firebase/app';
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -34,6 +35,21 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+export interface FirestoreUser {
+  uid: string;
+  email: string;
+  logobase64?: string;
+  equipments?: any[];
+  expenses?: any[];
+  jobs?: any[];
+  routine?: {
+    dailyHours: number;
+    dalilyValue: number;
+    desiredSalary: number;
+    workDays: number;
+  };
+}
+
 export class FirestoreService {
   private app;
   private auth;
@@ -41,7 +57,12 @@ export class FirestoreService {
   private storage;
 
   constructor() {
-    this.app = initializeApp(firebaseConfig);
+    // Verificar se o app já foi inicializado
+    if (getApps().length === 0) {
+      this.app = initializeApp(firebaseConfig);
+    } else {
+      this.app = getApps()[0];
+    }
     this.auth = getAuth(this.app);
     this.db = getFirestore(this.app);
     this.storage = getStorage(this.app);
@@ -99,6 +120,19 @@ export class FirestoreService {
   }
 
   // Métodos de usuário
+  async createUser(userData: FirestoreUser) {
+    try {
+      await setDoc(doc(this.db, 'usuarios', userData.uid), {
+        ...userData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Erro ao criar usuário:', error);
+      throw error;
+    }
+  }
+
   async createUserDocument(userId: string, userData: any) {
     try {
       await setDoc(doc(this.db, 'usuarios', userId), {
@@ -126,6 +160,79 @@ export class FirestoreService {
       }
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error);
+      throw error;
+    }
+  }
+
+  async getAllUsers() {
+    try {
+      const usersRef = collection(this.db, 'usuarios');
+      const querySnapshot = await getDocs(usersRef);
+      const users: any[] = [];
+      querySnapshot.forEach((doc) => {
+        users.push({ id: doc.id, ...doc.data() });
+      });
+      return users;
+    } catch (error) {
+      console.error('Erro ao buscar todos os usuários:', error);
+      throw error;
+    }
+  }
+
+  async getAllCompanies() {
+    try {
+      const companiesRef = collection(this.db, 'empresas');
+      const querySnapshot = await getDocs(companiesRef);
+      const companies: any[] = [];
+      querySnapshot.forEach((doc) => {
+        companies.push({ id: doc.id, ...doc.data() });
+      });
+      return companies;
+    } catch (error) {
+      console.error('Erro ao buscar todas as empresas:', error);
+      throw error;
+    }
+  }
+
+  async getAllAgencies() {
+    try {
+      return await this.getAllCompanies();
+    } catch (error) {
+      console.error('Erro ao buscar agências:', error);
+      throw error;
+    }
+  }
+
+  async getAnalyticsData() {
+    try {
+      const users = await this.getAllUsers();
+      const companies = await this.getAllCompanies();
+      
+      return {
+        totalUsers: users.length,
+        totalCompanies: companies.length,
+        activeUsers: users.filter(u => u.lastActive && new Date(u.lastActive) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length
+      };
+    } catch (error) {
+      console.error('Erro ao buscar dados de analytics:', error);
+      throw error;
+    }
+  }
+
+  async banUser(userId: string) {
+    try {
+      await this.updateUserData(userId, { banned: true });
+    } catch (error) {
+      console.error('Erro ao banir usuário:', error);
+      throw error;
+    }
+  }
+
+  async updateUserSubscription(userId: string, subscription: any) {
+    try {
+      await this.updateUserData(userId, { subscription });
+    } catch (error) {
+      console.error('Erro ao atualizar assinatura:', error);
       throw error;
     }
   }
@@ -263,6 +370,24 @@ export class FirestoreService {
     }
   }
 
+  async sendKanbanNotification(companyId: string, message: string, taskData: any) {
+    try {
+      const notificationData = {
+        companyId,
+        message,
+        taskData,
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+      
+      const notificationsRef = collection(this.db, 'notifications');
+      await addDoc(notificationsRef, notificationData);
+    } catch (error) {
+      console.error('Erro ao enviar notificação:', error);
+      throw error;
+    }
+  }
+
   // Métodos de empresa
   async createCompany(companyData: any) {
     try {
@@ -336,6 +461,120 @@ export class FirestoreService {
       });
     } catch (error) {
       console.error('Erro ao atualizar empresa:', error);
+      throw error;
+    }
+  }
+
+  async updateCompanyField(companyId: string, field: string, value: any) {
+    try {
+      const companyRef = doc(this.db, 'empresas', companyId);
+      await updateDoc(companyRef, {
+        [field]: value,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error(`Erro ao atualizar campo ${field} da empresa:`, error);
+      throw error;
+    }
+  }
+
+  async getCompanyInvites(companyId: string) {
+    try {
+      const invitesRef = collection(this.db, 'invites');
+      const q = query(invitesRef, where('companyId', '==', companyId));
+      const querySnapshot = await getDocs(q);
+      
+      const invites: any[] = [];
+      querySnapshot.forEach((doc) => {
+        invites.push({ id: doc.id, ...doc.data() });
+      });
+      
+      return invites;
+    } catch (error) {
+      console.error('Erro ao buscar convites da empresa:', error);
+      throw error;
+    }
+  }
+
+  async getUserInvites(userId: string) {
+    try {
+      const invitesRef = collection(this.db, 'invites');
+      const q = query(invitesRef, where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+      
+      const invites: any[] = [];
+      querySnapshot.forEach((doc) => {
+        invites.push({ id: doc.id, ...doc.data() });
+      });
+      
+      return invites;
+    } catch (error) {
+      console.error('Erro ao buscar convites do usuário:', error);
+      throw error;
+    }
+  }
+
+  async sendInvite(inviteData: any) {
+    try {
+      const invitesRef = collection(this.db, 'invites');
+      const newInvite = {
+        ...inviteData,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+      
+      const docRef = await addDoc(invitesRef, newInvite);
+      return { id: docRef.id, ...newInvite };
+    } catch (error) {
+      console.error('Erro ao enviar convite:', error);
+      throw error;
+    }
+  }
+
+  async acceptInvite(inviteId: string) {
+    try {
+      const inviteRef = doc(this.db, 'invites', inviteId);
+      await updateDoc(inviteRef, {
+        status: 'accepted',
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Erro ao aceitar convite:', error);
+      throw error;
+    }
+  }
+
+  async updateInviteStatus(inviteId: string, status: string) {
+    try {
+      const inviteRef = doc(this.db, 'invites', inviteId);
+      await updateDoc(inviteRef, {
+        status,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar status do convite:', error);
+      throw error;
+    }
+  }
+
+  async removeCompanyMember(companyId: string, memberId: string) {
+    try {
+      const companyRef = doc(this.db, 'empresas', companyId);
+      const companyDoc = await getDoc(companyRef);
+      
+      if (companyDoc.exists()) {
+        const companyData = companyDoc.data();
+        let colaboradores = companyData.colaboradores || [];
+        
+        colaboradores = colaboradores.filter((c: any) => c.id !== memberId && c.uid !== memberId);
+        
+        await updateDoc(companyRef, {
+          colaboradores,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao remover membro da empresa:', error);
       throw error;
     }
   }
