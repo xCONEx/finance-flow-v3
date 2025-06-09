@@ -30,6 +30,7 @@ export interface FirestoreUser {
     dalilyValue: number;
     desiredSalary: number;
     workDays: number;
+    valuePerHour?: number;
   };
   tasks?: any[];
   personalInfo?: {
@@ -37,6 +38,8 @@ export interface FirestoreUser {
     company?: string;
   };
   imageuser?: string;
+  phone?: string;
+  company?: string;
 }
 
 export const firestoreService = {
@@ -76,7 +79,7 @@ export const firestoreService = {
 
   async getUser(userId: string) {
     try {
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, 'usuarios', userId);
       const docSnap = await getDoc(userRef);
       if (docSnap.exists()) {
         return docSnap.data();
@@ -91,7 +94,7 @@ export const firestoreService = {
 
   async updateUser(userId: string, data: any) {
     try {
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, 'usuarios', userId);
       await updateDoc(userRef, data);
     } catch (error) {
       console.error("Erro ao atualizar usuário:", error);
@@ -101,7 +104,7 @@ export const firestoreService = {
 
   async updateUserField(userId: string, field: string, value: any) {
     try {
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, 'usuarios', userId);
       await updateDoc(userRef, { [field]: value });
     } catch (error) {
       console.error("Erro ao atualizar campo do usuário:", error);
@@ -111,7 +114,7 @@ export const firestoreService = {
 
   async deleteUser(userId: string) {
     try {
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, 'usuarios', userId);
       await deleteDoc(userRef);
     } catch (error) {
       console.error("Erro ao deletar usuário:", error);
@@ -121,7 +124,7 @@ export const firestoreService = {
 
   async getAllUsers() {
     try {
-      const usersRef = collection(db, 'users');
+      const usersRef = collection(db, 'usuarios');
       const snapshot = await getDocs(usersRef);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -137,6 +140,17 @@ export const firestoreService = {
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       console.error("Erro ao buscar todas as agências:", error);
+      return [];
+    }
+  },
+
+  async getAllCompanies() {
+    try {
+      const companiesRef = collection(db, 'companies');
+      const snapshot = await getDocs(companiesRef);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error("Erro ao buscar todas as empresas:", error);
       return [];
     }
   },
@@ -218,17 +232,6 @@ export const firestoreService = {
     } catch (error) {
       console.error("Erro ao buscar empresa:", error);
       throw error;
-    }
-  },
-
-  async getAllCompanies() {
-    try {
-      const companiesRef = collection(db, 'companies');
-      const snapshot = await getDocs(companiesRef);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch (error) {
-      console.error("Erro ao buscar todas as empresas:", error);
-      return [];
     }
   },
 
@@ -361,7 +364,7 @@ export const firestoreService = {
         overview: {
           totalUsers,
           totalCompanies,
-          totalRevenue: premiumUsers * 29.99, // Assumindo valor do plano premium
+          totalRevenue: premiumUsers * 29.99,
           activeUsers
         },
         userStats: {

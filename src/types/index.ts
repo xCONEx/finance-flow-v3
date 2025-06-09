@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -22,6 +21,7 @@ export interface FirestoreUser {
     dalilyValue: number;
     desiredSalary: number;
     workDays: number;
+    valuePerHour?: number;
   };
   tasks?: Task[];
   personalInfo?: {
@@ -29,6 +29,8 @@ export interface FirestoreUser {
     company?: string;
   };
   imageuser?: string;
+  phone?: string;
+  company?: string;
 }
 
 export interface Company {
