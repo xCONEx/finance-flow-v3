@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -97,4 +96,35 @@ export interface UserSettings {
   colorTheme: string;
   notifications: boolean;
   language: 'pt-BR';
+}
+
+export interface KanbanBoard {
+  columns: KanbanColumn[];
+  tags: KanbanTag[];
+  cards: KanbanCard[];
+}
+
+export interface KanbanColumn {
+  id: string;
+  title: string;
+  color: string;
+  order: number;
+}
+
+export interface KanbanTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface KanbanCard {
+  id: string;
+  title: string;
+  description?: string;
+  columnId: string;
+  assignedTo?: string;
+  urgency: 'baixa' | 'média' | 'alta';
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
 }
