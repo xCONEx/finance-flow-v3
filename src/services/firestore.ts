@@ -1,4 +1,3 @@
-
 import { initializeApp, getApps } from 'firebase/app';
 import { 
   getAuth, 
@@ -496,47 +495,30 @@ export class FirestoreService {
     }
   }
 
-  async getUserInvites(userId: string) {
+  async getUserInvites(email: string): Promise<any[]> {
     try {
-      const invitesRef = collection(this.db, 'invites');
-      const q = query(invitesRef, where('userId', '==', userId));
+      const q = query(
+        collection(this.db, 'invites'),
+        where('email', '==', email),
+        where('status', '==', 'pending')
+      );
       const querySnapshot = await getDocs(q);
-      
-      const invites: any[] = [];
-      querySnapshot.forEach((doc) => {
-        invites.push({ id: doc.id, ...doc.data() });
-      });
-      
-      return invites;
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
     } catch (error) {
-      console.error('Erro ao buscar convites do usuário:', error);
-      throw error;
+      console.error('Erro ao buscar convites:', error);
+      return [];
     }
   }
 
-  async sendInvite(inviteData: any) {
-    try {
-      const invitesRef = collection(this.db, 'invites');
-      const newInvite = {
-        ...inviteData,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      };
-      
-      const docRef = await addDoc(invitesRef, newInvite);
-      return { id: docRef.id, ...newInvite };
-    } catch (error) {
-      console.error('Erro ao enviar convite:', error);
-      throw error;
-    }
-  }
-
-  async acceptInvite(inviteId: string) {
+  async acceptInvite(inviteId: string): Promise<void> {
     try {
       const inviteRef = doc(this.db, 'invites', inviteId);
       await updateDoc(inviteRef, {
         status: 'accepted',
-        updatedAt: new Date().toISOString()
+        acceptedAt: new Date().toISOString()
       });
     } catch (error) {
       console.error('Erro ao aceitar convite:', error);
@@ -544,7 +526,7 @@ export class FirestoreService {
     }
   }
 
-  async updateInviteStatus(inviteId: string, status: string) {
+  async updateInviteStatus(inviteId: string, status: string): Promise<void> {
     try {
       const inviteRef = doc(this.db, 'invites', inviteId);
       await updateDoc(inviteRef, {
@@ -652,6 +634,27 @@ export class FirestoreService {
     } catch (error) {
       console.error('Erro ao fazer upload de arquivo:', error);
       throw error;
+    }
+  }
+
+  async exportData(userId: string, type: string): Promise<any[]> {
+    try {
+      const userData = await this.getUserData(userId);
+      if (!userData) return [];
+
+      switch (type) {
+        case 'jobs':
+          return userData.jobs || [];
+        case 'costs':
+          return userData.expenses || [];
+        case 'items':
+          return userData.equipments || [];
+        default:
+          return [];
+      }
+    } catch (error) {
+      console.error('Erro ao exportar dados:', error);
+      return [];
     }
   }
 }

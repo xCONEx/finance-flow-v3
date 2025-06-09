@@ -1,5 +1,4 @@
 
-
 export interface User {
   id: string;
   email: string;
@@ -11,13 +10,32 @@ export interface User {
   createdAt: string;
 }
 
+export interface FirestoreUser extends User {
+  personalInfo?: {
+    phone?: string;
+    company?: string;
+  };
+  imageuser?: string;
+  jobs?: Job[];
+  equipments?: Equipment[];
+  expenses?: Expense[];
+  tasks?: Task[];
+  routine?: WorkRoutine;
+}
+
 export interface Company {
   id: string;
   name: string;
   logo?: string;
+  logoBase64?: string;
   plan: 'free' | 'premium';
   ownerId: string;
   createdAt: string;
+  jobs?: Job[];
+  equipments?: Equipment[];
+  expenses?: Expense[];
+  tasks?: Task[];
+  routine?: WorkRoutine;
 }
 
 export interface Job {
@@ -43,6 +61,18 @@ export interface Job {
   updatedAt?: string;
   userId?: string;
   companyId?: string;
+}
+
+export interface Equipment {
+  id: string;
+  name: string;
+  cost: number;
+}
+
+export interface Expense {
+  id: string;
+  description: string;
+  value: number;
 }
 
 export interface MonthlyCost {
@@ -102,3 +132,13 @@ export interface UserSettings {
   language: 'pt-BR';
 }
 
+export interface Invite {
+  id: string;
+  email: string;
+  companyId: string;
+  companyName: string;
+  role: string;
+  invitedBy: string;
+  sentAt: string;
+  status: 'pending' | 'accepted' | 'declined';
+}

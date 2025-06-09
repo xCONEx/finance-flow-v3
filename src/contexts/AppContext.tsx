@@ -1,89 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { firestoreService } from '../services/firestore';
-
-interface Job {
-  id: string;
-  title: string;
-  description: string;
-  value: number;
-  client?: string;
-  eventDate?: string;
-  estimatedHours?: number;
-  difficultyLevel?: 'fácil' | 'médio' | 'complicado' | 'difícil';
-  logistics?: number;
-  equipment?: number;
-  assistance?: number;
-  status?: 'pendente' | 'aprovado';
-  category?: string;
-  discountValue?: number;
-  totalCosts?: number;
-  serviceValue?: number;
-  valueWithDiscount?: number;
-  profitMargin?: number;
-  createdAt?: string;
-  updatedAt?: string;
-  userId?: string;
-  companyId?: string;
-}
-
-interface Equipment {
-  id: string;
-  name: string;
-  cost: number;
-}
-
-interface Expense {
-  id: string;
-  description: string;
-  value: number;
-}
-
-interface WorkItem {
-  id: string;
-  description: string;
-  category: string;
-  value: number;
-  depreciationYears?: number;
-  createdAt?: string;
-  userId?: string;
-  companyId?: string;
-}
-
-interface MonthlyCost {
-  id: string;
-  description: string;
-  category: string;
-  value: number;
-  month: string;
-  createdAt?: string;
-  userId?: string;
-  companyId?: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  priority: 'baixa' | 'média' | 'alta';
-  status?: 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision';
-  dueDate?: string;
-  createdAt?: string;
-  userId?: string;
-}
-
-interface WorkRoutine {
-  dailyHours: number;
-  dalilyValue: number;
-  desiredSalary: number;
-  workDays: number;
-  valuePerDay?: number;
-  valuePerHour?: number;
-  workDaysPerMonth?: number;
-  workHoursPerDay?: number;
-  userId?: string;
-}
+import { Job, Equipment, Expense, WorkItem, MonthlyCost, Task, WorkRoutine } from '../types';
 
 interface AppContextType {
   jobs: Job[];
@@ -138,39 +56,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadUserData = async () => {
-      setLoading(true);
-      try {
-        if (user?.id) {
-          const userDetails = await firestoreService.getUserData(user.id);
-          if (userDetails) {
-            setJobs(userDetails.jobs || []);
-            setEquipments(userDetails.equipments || []);
-            setExpenses(userDetails.expenses || []);
-            setWorkItems(userDetails.equipments || []);
-            setMonthlyCosts(userDetails.expenses || []);
-            setTasks(userDetails.tasks || []);
-            setRoutine(userDetails.routine || {
-              dailyHours: 8,
-              dalilyValue: 0,
-              desiredSalary: 0,
-              workDays: 22
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUserData();
-  }, [user]);
-
-  useEffect(() => {
     if (userData) {
-      console.log('📦 Carregando dados do contexto:', userData);
+      console.log('📦 Carregando dados do usuário:', userData);
       setJobs(Array.isArray(userData.jobs) ? userData.jobs : []);
       setEquipments(Array.isArray(userData.equipments) ? userData.equipments : []);
       setExpenses(Array.isArray(userData.expenses) ? userData.expenses : []);
@@ -178,10 +65,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setMonthlyCosts(Array.isArray(userData.expenses) ? userData.expenses : []);
       setTasks(Array.isArray(userData.tasks) ? userData.tasks : []);
       setRoutine(userData.routine || {
-        dailyHours: 8,
-        dalilyValue: 0,
         desiredSalary: 0,
-        workDays: 22
+        workDaysPerMonth: 22,
+        workHoursPerDay: 8,
+        valuePerDay: 0,
+        valuePerHour: 0,
+        userId: user?.id || ''
       });
     } else if (agencyData) {
       console.log('🏢 Carregando dados da agência:', agencyData);
@@ -192,14 +81,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setMonthlyCosts(Array.isArray(agencyData.expenses) ? agencyData.expenses : []);
       setTasks(Array.isArray(agencyData.tasks) ? agencyData.tasks : []);
       setRoutine(agencyData.routine || {
-        dailyHours: 8,
-        dalilyValue: 0,
         desiredSalary: 0,
-        workDays: 22
+        workDaysPerMonth: 22,
+        workHoursPerDay: 8,
+        valuePerDay: 0,
+        valuePerHour: 0,
+        userId: user?.id || ''
       });
     }
     setLoading(false);
-  }, [userData, agencyData]);
+  }, [userData, agencyData, user]);
 
   const addJob = async (job: Omit<Job, 'id'>) => {
     try {
