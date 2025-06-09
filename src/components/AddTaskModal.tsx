@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 interface AddTaskModalProps {
@@ -16,6 +16,7 @@ interface AddTaskModalProps {
 
 const AddTaskModal: React.FC<AddTaskModalProps> = ({ open, onOpenChange }) => {
   const { addTask } = useAppContext();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -41,7 +42,9 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ open, onOpenChange }) => {
       priority: formData.priority,
       dueDate: formData.dueDate || undefined,
       completed: false,
-      status: 'todo'
+      status: 'todo',
+      createdAt: new Date().toISOString(),
+      userId: user?.id || ''
     });
 
     toast({

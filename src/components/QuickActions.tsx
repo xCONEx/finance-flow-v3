@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Calculator, Calendar, FileText, Briefcase, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { CurrencyInput } from '@/components/ui/currency-input';
 import AddTaskModal from './AddTaskModal';
 import { useAppContext } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 interface QuickActionsProps {
@@ -17,6 +17,7 @@ interface QuickActionsProps {
 
 const QuickActions = ({ onNavigate }: QuickActionsProps) => {
   const { addMonthlyCost, addWorkItem } = useAppContext();
+  const { user } = useAuth();
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
@@ -81,7 +82,9 @@ const QuickActions = ({ onNavigate }: QuickActionsProps) => {
         description: expenseData.description,
         category: expenseData.category,
         value: expenseData.value,
-        month: new Date().toISOString().slice(0, 7)
+        month: new Date().toISOString().slice(0, 7),
+        createdAt: new Date().toISOString(),
+        userId: user?.id || ''
       });
 
       toast({
@@ -115,7 +118,9 @@ const QuickActions = ({ onNavigate }: QuickActionsProps) => {
         description: itemData.description,
         category: itemData.category,
         value: itemData.value,
-        depreciationYears: 5
+        depreciationYears: 5,
+        createdAt: new Date().toISOString(),
+        userId: user?.id || ''
       });
 
       toast({

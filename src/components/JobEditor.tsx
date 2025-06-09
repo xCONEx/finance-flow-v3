@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { PercentageInput } from '@/components/ui/percentage-input';
 import { useAppContext } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Job } from '../types';
 import { toast } from '@/hooks/use-toast';
 
@@ -20,7 +21,9 @@ interface JobEditorProps {
 
 const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
   const { jobs, addJob, updateJob } = useAppContext();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
+    title: '',
     description: '',
     client: '',
     eventDate: '',
@@ -35,7 +38,8 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
     totalCosts: 0,
     serviceValue: 0,
     valueWithDiscount: 0,
-    profitMargin: 30
+    profitMargin: 30,
+    value: 0
   });
 
   useEffect(() => {
@@ -43,21 +47,23 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
       const job = jobs.find(j => j.id === jobId);
       if (job) {
         setFormData({
+          title: job.title || '',
           description: job.description,
-          client: job.client,
-          eventDate: job.eventDate.split('T')[0],
-          estimatedHours: job.estimatedHours,
-          difficultyLevel: job.difficultyLevel,
+          client: job.client || '',
+          eventDate: job.eventDate ? job.eventDate.split('T')[0] : '',
+          estimatedHours: job.estimatedHours || 0,
+          difficultyLevel: job.difficultyLevel || 'médio',
           logistics: job.logistics || 0,
           equipment: job.equipment || 0,
           assistance: job.assistance || 0,
-          status: job.status,
-          category: job.category,
-          discountValue: job.discountValue,
-          totalCosts: job.totalCosts,
-          serviceValue: job.serviceValue,
-          valueWithDiscount: job.valueWithDiscount,
-          profitMargin: job.profitMargin
+          status: job.status || 'pendente',
+          category: job.category || '',
+          discountValue: job.discountValue || 0,
+          totalCosts: job.totalCosts || 0,
+          serviceValue: job.serviceValue || 0,
+          valueWithDiscount: job.valueWithDiscount || 0,
+          profitMargin: job.profitMargin || 30,
+          value: job.value
         });
       }
     }
@@ -95,12 +101,13 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
     setFormData(prev => ({
       ...prev,
       totalCosts: costs,
-      valueWithDiscount: valueWithDiscount
+      valueWithDiscount: valueWithDiscount,
+      value: valueWithDiscount || formData.serviceValue
     }));
   }, [formData.logistics, formData.equipment, formData.assistance, formData.serviceValue, formData.discountValue]);
 
   const handleSave = async () => {
-    if (!formData.description || !formData.client) {
+    if (!formData.title || !formData.description) {
       toast({
         title: "Erro",
         description: "Preencha os campos obrigatórios.",
@@ -111,7 +118,7 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
 
     const jobData = {
       ...formData,
-      eventDate: new Date(formData.eventDate).toISOString(),
+      eventDate: formData.eventDate ? new Date(formData.eventDate).toISOString() : new Date().toISOString(),
     };
 
     try {
@@ -152,16 +159,16 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="description">Descrição *</Label>
+              <Label htmlFor="title">Título *</Label>
               <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
                 placeholder="Ex: Filmagem de casamento"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="client">Cliente *</Label>
+              <Label htmlFor="client">Cliente</Label>
               <Input
                 id="client"
                 value={formData.client}
@@ -169,6 +176,16 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
                 placeholder="Nome do cliente"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição *</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              placeholder="Descrição do serviço"
+            />
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -212,8 +229,8 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
                 <SelectContent>
                   <SelectItem value="fácil">Fácil</SelectItem>
                   <SelectItem value="médio">Médio</SelectItem>
+                  <SelectItem value="complicado">Complicado</SelectItem>
                   <SelectItem value="difícil">Difícil</SelectItem>
-                  <SelectItem value="muito difícil">Muito Difícil</SelectItem>
                 </SelectContent>
               </Select>
             </div>

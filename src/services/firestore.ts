@@ -657,6 +657,27 @@ export class FirestoreService {
       return [];
     }
   }
+
+  async sendInvite(email: string, companyId: string, companyName: string) {
+    try {
+      const inviteData = {
+        email,
+        companyId,
+        companyName,
+        role: 'employee',
+        invitedBy: this.auth.currentUser?.uid || '',
+        sentAt: new Date().toISOString(),
+        status: 'pending'
+      };
+      
+      const inviteRef = collection(this.db, 'invites');
+      const docRef = await addDoc(inviteRef, inviteData);
+      return { id: docRef.id, ...inviteData };
+    } catch (error) {
+      console.error('Erro ao enviar convite:', error);
+      throw error;
+    }
+  }
 }
 
 export const firestoreService = new FirestoreService();
