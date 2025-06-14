@@ -12,14 +12,36 @@ const SubscriptionPlans = () => {
   const { currentTheme } = useTheme();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   
-  // Simular dados de assinatura atual (substituir por dados reais do Stripe)
-  const currentPlan = 'free'; // free, premium, enterprise
+  // Simular dados de assinatura atual (substituir por dados reais da Cakto)
+  const currentPlan = 'free'; // free, basic, premium, enterprise
 
   const plans = [
     {
       id: 'free',
       name: 'Free',
       price: 'R$ 0',
+      period: '/mês',
+      description: 'Para começar a organizar suas finanças',
+      icon: Zap,
+      color: 'from-gray-600 to-gray-700',
+      borderColor: 'border-gray-200',
+      features: [
+        'Calculadora de precificação',
+        'Controle de custos mensais',
+        'Gestão de equipamentos',
+        'Relatórios básicos',
+        'Suporte por email'
+      ],
+      limitations: [
+        'Máximo 10 jobs por mês',
+        'Sem backup em nuvem',
+        'Sem recursos de equipe'
+      ]
+    },
+    {
+      id: 'basic',
+      name: 'Basic',
+      price: 'R$ 29,90',
       period: '/mês',
       description: 'Para começar a organizar suas finanças',
       icon: Zap,
@@ -49,7 +71,7 @@ const SubscriptionPlans = () => {
       borderColor: 'border-purple-200',
       popular: true,
       features: [
-        'Tudo do plano Free',
+        'Tudo do plano Basic',
         'Jobs ilimitados',
         'Relatórios avançados com gráficos',
         'Geração de PDF com logo personalizável',
@@ -86,13 +108,13 @@ const SubscriptionPlans = () => {
     setIsLoading(planId);
     
     try {
-      // Aqui será implementada a integração com Stripe
+      // Aqui será implementada a integração com Cakto
       console.log('Iniciando checkout para o plano:', planId);
       
       // Simular processo de checkout
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Redirecionar para Stripe Checkout ou abrir modal de pagamento
+      // Redirecionar para Cakto Checkout ou abrir modal de pagamento
       alert(`Redirecionando para checkout do plano ${planId}`);
       
     } catch (error) {
@@ -136,7 +158,7 @@ const SubscriptionPlans = () => {
         </Card>
       )}
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-4 gap-6">
         {plans.map((plan) => (
           <Card 
             key={plan.id}
