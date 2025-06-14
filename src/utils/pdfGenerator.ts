@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Job, WorkItem, MonthlyCost } from '../types';
@@ -167,20 +166,20 @@ export const generateJobPDF = async (job: Job, userData: any) => {
     valorComDesconto
   });
   
-  // Tabela de serviços
+  // Tabela de serviços - removendo coluna PREÇO UNIT.
   const tableData = [
-    ['Horas estimadas', `${job.estimatedHours || 0}h`, '', ''],
-    ['Logística', '', logistics.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), ''],
-    ['Equipamentos', '', equipment.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), ''],
-    ['Assistência', '', assistance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), ''],
-    ['Custo total', '', custoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), ''],
-    ['Valor do serviço', '1', job.serviceValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), job.serviceValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]
+    ['Horas estimadas', `${job.estimatedHours || 0}h`, ''],
+    ['Logística', '', logistics.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
+    ['Equipamentos', '', equipment.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
+    ['Assistência', '', assistance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
+    ['Custo total', '', custoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })],
+    ['Valor do serviço', '1', job.serviceValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]
   ];
   
   if (job.discountValue && job.discountValue > 0) {
-    tableData.push(['Desconto (%)', '', `${job.discountValue}%`, desconto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
-    tableData.push(['', '', '', '']);
-    tableData.push(['VALOR TOTAL COM DESCONTO', '', '', valorComDesconto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
+    tableData.push(['Desconto (%)', `${job.discountValue}%`, desconto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
+    tableData.push(['', '', '']);
+    tableData.push(['VALOR TOTAL COM DESCONTO', '', valorComDesconto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
   }
   
   try {
@@ -190,7 +189,7 @@ export const generateJobPDF = async (job: Job, userData: any) => {
     // Usar a sintaxe correta do autoTable
     autoTable(doc, {
       startY: currentY,
-      head: [['DESCRIÇÃO', 'QTD', 'PREÇO UNIT.', 'TOTAL']],
+      head: [['DESCRIÇÃO', 'QTD', 'TOTAL']],
       body: tableData,
       theme: 'grid',
       headStyles: {
@@ -205,10 +204,9 @@ export const generateJobPDF = async (job: Job, userData: any) => {
         cellPadding: 3
       },
       columnStyles: {
-        0: { halign: 'left', cellWidth: 80 },
-        1: { halign: 'center', cellWidth: 20 },
-        2: { halign: 'right', cellWidth: 40 },
-        3: { halign: 'right', cellWidth: 40 }
+        0: { halign: 'left', cellWidth: 100 },
+        1: { halign: 'center', cellWidth: 30 },
+        2: { halign: 'right', cellWidth: 50 }
       },
       alternateRowStyles: {
         fillColor: [245, 247, 250]
