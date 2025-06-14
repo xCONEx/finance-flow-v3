@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Job, MonthlyCost, WorkItem, Task, WorkRoutine } from '../types';
 import { useAuth } from './AuthContext';
 import { firestoreService } from '../services/firestore';
+import { taskService } from '../services/taskService';
 
 interface AppContextType {
   jobs: Job[];
@@ -17,9 +18,9 @@ interface AppContextType {
   updateWorkItem: (id: string, updates: Partial<WorkItem>) => Promise<void>;
   deleteWorkItem: (id: string) => Promise<void>;
   tasks: Task[];
-  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => void;
-  updateTask: (id: string, updates: Partial<Task>) => void;
-  deleteTask: (id: string) => void;
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
+  updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
   workRoutine: WorkRoutine | null;
   updateWorkRoutine: (routine: Omit<WorkRoutine, 'userId'>) => void;
   loading: boolean;
@@ -51,7 +52,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [user, userData, agencyData]);
 
-  const loadUserData = () => {
+  const loadUserData = async () => {
     setLoading(true);
     
     // CORRIGIDO: Sempre usar dados pessoais do usuário (userData)
@@ -123,19 +124,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setWorkRoutine(null);
       }
 
-      // CORRIGIDO: Tasks do localStorage filtradas por userId
-      const storedTasks = localStorage.getItem('financeflow_tasks');
-      if (storedTasks) {
-        try {
-          const tasksData = JSON.parse(storedTasks);
-          console.log('📝 Tasks do localStorage:', tasksData.length);
-          const userTasks = tasksData.filter((task: Task) => task.userId === user!.id);
-          console.log('📝 Tasks filtradas para o usuário:', userTasks.length);
-          setTasks(userTasks);
-        } catch (error) {
-          console.error('❌ Erro ao carregar tasks:', error);
-          setTasks([]);
-        }
+      // NOVO: Carregar tasks do Firebase e migrar localStorage se necessário
+      try {
+        // Primeiro, tentar migrar tasks do localStorage
+        await taskService.migrateLocalStorageTasks(user!.id);
+        
+        // Depois carregar todas as tasks do Firebase
+        const userTasks = await taskService.getUserTasks(user!.id);
+        console.log('📝 Tasks carregadas do Firebase:', userTasks.length);
+        setTasks(userTasks);
+      } catch (error) {
+        console.error('❌ Erro ao carregar/migrar tasks:', error);
+        setTasks([]);
       }
     }
     
@@ -458,73 +458,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // CORRIGIDO: Tasks sempre filtram por userId do usuário atual
-  const addTask = (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
-    const newTask: Task = {
-      ...task,
-      id: `task_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      userId: user!.id // SEMPRE userId do usuário atual
-    };
-    const allTasks = [...tasks, newTask];
-    setTasks(allTasks);
-    
-    // Salvar todas as tasks no localStorage (não apenas as do usuário)
-    const storedTasks = localStorage.getItem('financeflow_tasks');
-    let existingTasks = [];
-    if (storedTasks) {
-      try {
-        existingTasks = JSON.parse(storedTasks);
-      } catch (error) {
-        console.error('Erro ao carregar tasks existentes:', error);
-      }
+  // CORRIGIDO: Tasks agora salvam no Firebase com validação
+  const addTask = async (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para salvar task');
+      throw new Error('Usuário não encontrado');
     }
-    
-    // Adicionar a nova task às existentes
-    const updatedAllTasks = [...existingTasks, newTask];
-    localStorage.setItem('financeflow_tasks', JSON.stringify(updatedAllTasks));
-    console.log('📝 Task adicionada e salva no localStorage');
+
+    try {
+      // Salvar no Firebase primeiro
+      const firebaseId = await taskService.addTask({
+        ...task,
+        userId: user.id
+      });
+      
+      // Criar task para o estado local
+      const newTask: Task = {
+        ...task,
+        id: firebaseId,
+        createdAt: new Date().toISOString(),
+        userId: user.id
+      };
+      
+      setTasks(prev => [...prev, newTask]);
+      console.log('✅ Task adicionada e salva no Firebase');
+    } catch (error) {
+      console.error('❌ Erro ao salvar task no Firebase:', error);
+      throw error;
+    }
   };
 
-  const updateTask = (id: string, updates: Partial<Task>) => {
-    // Atualizar no estado local
-    const updatedTasks = tasks.map(task => 
-      task.id === id ? { ...task, ...updates } : task
-    );
-    setTasks(updatedTasks);
-    
-    // Atualizar no localStorage (todas as tasks)
-    const storedTasks = localStorage.getItem('financeflow_tasks');
-    if (storedTasks) {
-      try {
-        const allTasks = JSON.parse(storedTasks);
-        const updatedAllTasks = allTasks.map((task: Task) => 
+  const updateTask = async (id: string, updates: Partial<Task>) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para atualizar task');
+      throw new Error('Usuário não encontrado');
+    }
+
+    try {
+      // Atualizar no Firebase
+      await taskService.updateTask(id, updates);
+      
+      // Atualizar no estado local
+      setTasks(prev => 
+        prev.map(task => 
           task.id === id ? { ...task, ...updates } : task
-        );
-        localStorage.setItem('financeflow_tasks', JSON.stringify(updatedAllTasks));
-        console.log('📝 Task atualizada no localStorage');
-      } catch (error) {
-        console.error('Erro ao atualizar task no localStorage:', error);
-      }
+        )
+      );
+      
+      console.log('✅ Task atualizada no Firebase');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar task no Firebase:', error);
+      throw error;
     }
   };
 
-  const deleteTask = (id: string) => {
-    // Remover do estado local
-    const updatedTasks = tasks.filter(task => task.id !== id);
-    setTasks(updatedTasks);
-    
-    // Remover do localStorage (todas as tasks)
-    const storedTasks = localStorage.getItem('financeflow_tasks');
-    if (storedTasks) {
-      try {
-        const allTasks = JSON.parse(storedTasks);
-        const updatedAllTasks = allTasks.filter((task: Task) => task.id !== id);
-        localStorage.setItem('financeflow_tasks', JSON.stringify(updatedAllTasks));
-        console.log('📝 Task removida do localStorage');
-      } catch (error) {
-        console.error('Erro ao remover task do localStorage:', error);
-      }
+  const deleteTask = async (id: string) => {
+    if (!user) {
+      console.error('❌ Usuário não encontrado para deletar task');
+      throw new Error('Usuário não encontrado');
+    }
+
+    try {
+      // Deletar do Firebase
+      await taskService.deleteTask(id);
+      
+      // Remover do estado local
+      setTasks(prev => prev.filter(task => task.id !== id));
+      
+      console.log('✅ Task deletada do Firebase');
+    } catch (error) {
+      console.error('❌ Erro ao deletar task do Firebase:', error);
+      throw error;
     }
   };
 

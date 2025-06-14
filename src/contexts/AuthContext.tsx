@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   signInWithEmailAndPassword,
@@ -7,7 +8,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
-import { auth } from '../services/firebase';
+import { auth, forceTokenRefresh } from '../services/firebase';
 import { firestoreService, FirestoreUser } from '../services/firestore';
 import { User } from '../types';
 
@@ -44,21 +45,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (firebaseUser) {
         try {
           console.log('🔄 Usuário autenticado, carregando dados...', firebaseUser.uid);
+          console.log('📧 Email do Firebase:', firebaseUser.email);
           
-          // Verificar se o usuário existe na coleção 'usuarios'
+          await forceTokenRefresh();
+          
+          let userEmail = firebaseUser.email;
+          if (!userEmail) {
+            console.warn('⚠️ Email não disponível no Firebase Auth, tentando recarregar...');
+            await firebaseUser.reload();
+            userEmail = firebaseUser.email || '';
+          }
+
+          console.log('📧 Email final para salvar:', userEmail);
+          
+          // Buscar ou criar usuário
           let userData = await firestoreService.getUserData(firebaseUser.uid);
           
-          // Se não existir, criar um novo documento
-          if (!userData) {
-            console.log('👤 Criando novo usuário na coleção usuarios...');
+          if (!userData || !userData.email || userData.email !== userEmail) {
+            console.log('👤 Criando/atualizando usuário na coleção usuarios...');
             const newUserData: FirestoreUser = {
-              email: firebaseUser.email || '',
+              ...(userData || {}),
+              email: userEmail || '',
               uid: firebaseUser.uid,
-              logobase64: '',
-              equipments: [],
-              expenses: [],
-              jobs: [],
-              routine: {
+              name: firebaseUser.displayName || userData?.name || userEmail?.split('@')[0] || '',
+              logobase64: userData?.logobase64 || '',
+              equipments: userData?.equipments || [],
+              expenses: userData?.expenses || [],
+              jobs: userData?.jobs || [],
+              routine: userData?.routine || {
                 dailyHours: 8,
                 dalilyValue: 0,
                 desiredSalary: 0,
@@ -68,99 +82,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             await firestoreService.createUser(newUserData);
             userData = newUserData;
-            console.log('✅ Usuário criado com dados padrão');
+            console.log('✅ Usuário criado/atualizado com email:', userEmail);
           } else {
-            console.log('📦 Dados do usuário encontrados:', {
-              equipments: userData.equipments?.length || 0,
-              expenses: userData.expenses?.length || 0,
-              jobs: userData.jobs?.length || 0,
-              routine: userData.routine
-            });
+            console.log('📦 Dados do usuário encontrados com email:', userData.email);
           }
 
-          // CORRIGIDO: Verificação mais robusta para proprietário da agência
-          console.log('🏢 Verificando se usuário pertence a uma agência...');
-          let userAgency = null;
+          // Verificar se é admin
+          const isAdmin = firebaseUser.email === 'adm.financeflow@gmail.com' || firebaseUser.email === 'yuriadrskt@gmail.com';
           let userType: 'individual' | 'company_owner' | 'employee' | 'admin' = 'individual';
           
-          try {
-            // Buscar por agências onde o usuário é colaborador
-            const allAgencies = await firestoreService.getAllAgencies();
-            console.log('🔍 Verificando agências:', allAgencies.length);
+          if (isAdmin) {
+            userType = 'admin';
+            console.log('👑 Usuário administrador identificado:', firebaseUser.email);
             
-            for (const agency of allAgencies) {
-              const agencyData = agency as any; // Type assertion to avoid TypeScript errors
-              
-              console.log('🔍 Verificando agência:', agencyData.id, {
-                ownerId: agencyData.ownerId,
-                ownerUID: agencyData.ownerUID,
-                owner: agencyData.owner,
-                userUID: firebaseUser.uid,
-                userEmail: firebaseUser.email
-              });
-              
-              // CORRIGIDO: Verificar múltiplos campos possíveis para proprietário
-              const isOwner = (
-                (agencyData.ownerId && agencyData.ownerId === firebaseUser.uid) ||
-                (agencyData.ownerUID && agencyData.ownerUID === firebaseUser.uid) ||
-                (agencyData.owner && agencyData.owner === firebaseUser.uid) ||
-                (agencyData.owner && agencyData.owner === firebaseUser.email) ||
-                (agencyData.ownerId && agencyData.ownerId === firebaseUser.email)
-              );
-              
-              if (isOwner) {
-                userAgency = agencyData;
-                userType = 'company_owner';
-                console.log('👑 Usuário é DONO da agência:', agencyData.id);
-                console.log('✅ Tipo identificado: PROPRIETÁRIO');
-                break;
-              }
-              
-              // Verificar se é colaborador
-              if (agencyData.colaboradores && Array.isArray(agencyData.colaboradores)) {
-                const isCollaborator = agencyData.colaboradores.some((colab: any) => 
-                  colab.uid === firebaseUser.uid || colab.email === firebaseUser.email
-                );
-                
-                if (isCollaborator) {
-                  userAgency = agencyData;
-                  userType = 'employee';
-                  console.log('👥 Usuário é colaborador da agência:', agencyData.id);
-                  break;
-                }
-              }
+            // Atualizar role no banco se necessário
+            if (userData.role !== 'admin') {
+              await firestoreService.updateUserField(firebaseUser.uid, 'role', 'admin');
+              userData.role = 'admin';
             }
+          }
+
+          // Buscar dados da agência usando novo método
+          console.log('🏢 Verificando agência do usuário...');
+          let userAgency = null;
+          
+          try {
+            userAgency = await firestoreService.getUserAgencyData(firebaseUser.uid);
             
             if (userAgency) {
-              console.log('🏢 Usuário encontrado em agência:', userAgency.id);
-              console.log('📦 Dados da agência carregados:', {
-                equipments: userAgency.equipments?.length || 0,
-                expenses: userAgency.expenses?.length || 0,
-                jobs: userAgency.jobs?.length || 0,
-                colaboradores: userAgency.colaboradores?.length || 0
-              });
+              console.log('🏢 Agência encontrada:', userAgency.id);
+              console.log('👤 Role na agência:', userAgency.userRole);
+              
+              // Definir userType baseado no role
+              if (userAgency.userRole === 'admin') {
+                userType = 'admin';
+              } else if (userAgency.userRole === 'owner') {
+                userType = 'company_owner';
+              } else if (userAgency.userRole === 'editor' || userAgency.userRole === 'viewer') {
+                userType = 'employee';
+              }
+              
               setAgencyData(userAgency);
-            } else {
+            } else if (!isAdmin) {
               console.log('👤 Usuário individual (não pertence a agência)');
+              setAgencyData(null);
+            } else {
               setAgencyData(null);
             }
             
           } catch (error) {
-            console.error('❌ Erro ao buscar agências:', error);
+            console.error('❌ Erro ao buscar agência:', error);
             setAgencyData(null);
-          }
-
-          // Verificar se é admin
-          const isAdmin = firebaseUser.email === 'adm.financeflow@gmail.com';
-          if (isAdmin) {
-            userType = 'admin';
           }
           
           // Converter para o formato do contexto
           const appUser: User = {
             id: firebaseUser.uid,
             email: userData.email,
-            name: firebaseUser.displayName || userData.email.split('@')[0],
+            name: firebaseUser.displayName || userData.name || userData.email.split('@')[0],
             userType: userType,
             createdAt: new Date().toISOString(),
             photoURL: firebaseUser.photoURL || undefined
@@ -171,8 +150,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           console.log('✅ Dados do usuário carregados com sucesso!');
           console.log('👤 Tipo de usuário FINAL:', userType);
+          console.log('📧 Email salvo no contexto:', userData.email);
           if (isAdmin) {
-            console.log('👑 Usuário administrador identificado');
+            console.log('👑 Usuário administrador confirmado com acesso total');
           }
 
         } catch (error) {
@@ -204,6 +184,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('🔐 Iniciando login com Google...');
       const provider = new GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error('❌ Erro no login com Google:', error);
@@ -216,10 +198,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('📝 Criando nova conta...');
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Criar documento do usuário na coleção 'usuarios'
       const newUserData: FirestoreUser = {
         email: email,
         uid: userCredential.user.uid,
+        name: name,
         logobase64: '',
         equipments: [],
         expenses: [],
@@ -229,11 +211,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           dalilyValue: 0,
           desiredSalary: 0,
           workDays: 22
-        }
+        },
+        role: 'individual'
       };
 
       await firestoreService.createUser(newUserData);
-      console.log('✅ Conta criada com sucesso!');
+      console.log('✅ Conta criada com sucesso com email:', email);
     } catch (error) {
       console.error('❌ Erro ao criar conta:', error);
       throw error;
@@ -266,3 +249,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
+
+export default AuthProvider;
