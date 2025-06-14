@@ -55,7 +55,7 @@ const Settings = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
+               
                 📘 Sobre o FinanceFlow
               </CardTitle>
             </CardHeader>

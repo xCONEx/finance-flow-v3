@@ -1,6 +1,12 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Plus, Save } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,18 +20,17 @@ interface AddTaskModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const AddTaskModal: React.FC<AddTaskModalProps> = ({ open, onOpenChange }) => {
+const AddTaskModal = ({ open, onOpenChange }: AddTaskModalProps) => {
   const { addTask } = useAppContext();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     priority: 'média' as 'baixa' | 'média' | 'alta',
-    dueDate: ''
+    dueDate: '',
+    status: 'todo' as 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision'
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSave = async () => {
     if (!formData.title.trim()) {
       toast({
         title: "Erro",
@@ -35,65 +40,85 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ open, onOpenChange }) => {
       return;
     }
 
-    addTask({
-      title: formData.title,
-      description: formData.description,
-      priority: formData.priority,
-      dueDate: formData.dueDate || undefined,
-      completed: false,
-      status: 'todo'
-    });
+    try {
+      // Criar objeto da task, removendo campos undefined/vazios
+      const taskData: any = {
+        title: formData.title,
+        description: formData.description || '',
+        priority: formData.priority,
+        completed: false,
+        status: formData.status
+      };
 
-    toast({
-      title: "Tarefa Adicionada",
-      description: "A tarefa foi criada com sucesso.",
-    });
+      // Só adicionar dueDate se não for vazio
+      if (formData.dueDate && formData.dueDate.trim()) {
+        taskData.dueDate = formData.dueDate;
+      }
 
-    setFormData({
-      title: '',
-      description: '',
-      priority: 'média',
-      dueDate: ''
-    });
-    
-    onOpenChange(false);
+      await addTask(taskData);
+
+      toast({
+        title: "Tarefa Adicionada",
+        description: "A tarefa foi criada com sucesso.",
+      });
+
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        priority: 'média',
+        dueDate: '',
+        status: 'todo'
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('❌ Erro ao adicionar task:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar tarefa.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova Tarefa</DialogTitle>
-          <DialogDescription>
-            Crie uma nova tarefa para sua lista de afazeres
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Plus className="h-5 w-5" />
+            Nova Tarefa
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Título *</Label>
+            <Label htmlFor="task-title">Título *</Label>
             <Input
-              id="title"
+              id="task-title"
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
               placeholder="Ex: Finalizar edição do vídeo"
+              className="text-sm"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="task-description">Descrição</Label>
             <Textarea
-              id="description"
+              id="task-description"
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
               placeholder="Detalhes da tarefa..."
+              className="min-h-[60px] text-sm"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="priority">Prioridade</Label>
-              <Select value={formData.priority} onValueChange={(value: any) => setFormData({...formData, priority: value})}>
-                <SelectTrigger>
+              <Label htmlFor="task-priority">Prioridade</Label>
+              <Select value={formData.priority} onValueChange={(value: 'baixa' | 'média' | 'alta') => setFormData({...formData, priority: value})}>
+                <SelectTrigger className="text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -105,23 +130,43 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ open, onOpenChange }) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dueDate">Data de Vencimento</Label>
+              <Label htmlFor="task-dueDate">Data de Vencimento</Label>
               <Input
-                id="dueDate"
+                id="task-dueDate"
                 type="date"
                 value={formData.dueDate}
                 onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+                className="text-sm"
               />
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button type="submit" className="flex-1">Adicionar</Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="space-y-2">
+            <Label htmlFor="task-status">Status</Label>
+            <Select value={formData.status} onValueChange={(value: 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision') => setFormData({...formData, status: value})}>
+              <SelectTrigger className="text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todo">A fazer</SelectItem>
+                <SelectItem value="editing">Em edição</SelectItem>
+                <SelectItem value="urgent">Urgente</SelectItem>
+                <SelectItem value="delivered">Entregue</SelectItem>
+                <SelectItem value="revision">Alteração</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-2 pt-4">
+            <Button onClick={handleSave} className="flex-1 order-1">
+              <Save className="h-4 w-4 mr-2" />
+              Salvar Tarefa
+            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="order-2 md:order-2">
               Cancelar
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

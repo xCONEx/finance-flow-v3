@@ -277,38 +277,17 @@ const UserProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="company">Empresa</Label>
-                  {isInCompany ? (
-                    <div className="space-y-1">
-                      <p className="text-sm py-2 px-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded font-medium text-blue-700 dark:text-blue-300">
-                        {companyName}
-                      </p>
-                      <p className="text-xs text-gray-500">Você faz parte desta empresa</p>
-                    </div>
-                  ) : (
-                    isEditing ? (
-                      <Input
-                        id="company"
-                        value={formData.company}
-                        onChange={(e) => handleInputChange('company', e.target.value)}
-                        placeholder="Nome da empresa"
-                      />
-                    ) : (
-                      <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">{formData.company || 'Não informado'}</p>
-                    )
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tipo de Usuário</Label>
+                 <Label>Tipo de Usuário</Label>
                 <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">
                   {user?.userType === 'admin' && 'Administrador do Sistema'}
                   {user?.userType === 'company_owner' && 'Dono da Empresa'}
                   {user?.userType === 'employee' && 'Colaborador'}
                   {user?.userType === 'individual' && 'Usuário Individual'}
                 </p>
+                </div>
               </div>
+
+            
             </div>
 
             {/* Save Button */}

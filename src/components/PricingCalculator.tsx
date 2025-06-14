@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Calculator, Save, DollarSign } from 'lucide-react';
+import { Calculator, Save, DollarSign, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,11 +14,13 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../utils/formatters';
 import { firestoreService } from '../services/firestore';
+import ManualValueModal from './ManualValueModal';
 
 const PricingCalculator = () => {
   const { addJob, workRoutine } = useAppContext();
   const { currentTheme } = useTheme();
   const { user } = useAuth();
+  const [showManualValue, setShowManualValue] = useState(false);
   
   const [formData, setFormData] = useState({
     description: '',
@@ -218,6 +219,18 @@ const PricingCalculator = () => {
           Calculadora Inteligente
         </h2>
         <p className="text-gray-600 dark:text-gray-400">Calcule automaticamente baseado em seus custos e rotina</p>
+        
+        {/* NOVO: Botão para valores manuais */}
+        <div className="pt-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowManualValue(true)}
+            className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Valor Manual
+          </Button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -409,6 +422,12 @@ const PricingCalculator = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* NOVO: Modal para valores manuais */}
+      <ManualValueModal 
+        open={showManualValue} 
+        onOpenChange={setShowManualValue}
+      />
     </div>
   );
 };

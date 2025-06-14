@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,9 +15,10 @@ import { toast } from '@/hooks/use-toast';
 interface JobEditorProps {
   jobId?: string;
   onClose: () => void;
+  onSaved?: () => void; // NOVO: Callback quando salvar
 }
 
-const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
+const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
   const { jobs, addJob, updateJob } = useAppContext();
   const [formData, setFormData] = useState({
     description: '',
@@ -129,6 +129,12 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
           description: "O novo job foi criado com sucesso.",
         });
       }
+      
+      // NOVO: Chamar callback se disponível
+      if (onSaved) {
+        onSaved();
+      }
+      
       onClose();
     } catch (error) {
       console.error('❌ Erro ao salvar job:', error);
@@ -141,16 +147,17 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{jobId ? 'Editar Job' : 'Novo Job'}</CardTitle>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+      <Card className="w-full max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
+        <CardHeader className="flex flex-row items-center justify-between p-4 md:p-6">
+          <CardTitle className="text-lg md:text-xl">{jobId ? 'Editar Job' : 'Novo Job'}</CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <CardContent className="space-y-4 p-4 md:p-6">
+          {/* MELHORADO: Grid responsivo */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="description">Descrição *</Label>
               <Input
@@ -158,6 +165,7 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 placeholder="Ex: Filmagem de casamento"
+                className="text-sm"
               />
             </div>
             <div className="space-y-2">
@@ -167,11 +175,13 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
                 value={formData.client}
                 onChange={(e) => setFormData({...formData, client: e.target.value})}
                 placeholder="Nome do cliente"
+                className="text-sm"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          {/* MELHORADO: Grid mais compacto no mobile */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="eventDate">Data do Evento</Label>
               <Input
@@ -179,6 +189,7 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
                 type="date"
                 value={formData.eventDate}
                 onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
+                className="text-sm"
               />
             </div>
             <div className="space-y-2">
@@ -189,6 +200,7 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
                 value={formData.estimatedHours}
                 onChange={(e) => setFormData({...formData, estimatedHours: Number(e.target.value)})}
                 placeholder="8"
+                className="text-sm"
               />
             </div>
             <div className="space-y-2">
@@ -198,6 +210,7 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
                 value={formData.category}
                 onChange={(e) => setFormData({...formData, category: e.target.value})}
                 placeholder="Ex: Casamento"
+                className="text-sm"
               />
             </div>
           </div>
@@ -295,11 +308,11 @@ const JobEditor = ({ jobId, onClose }: JobEditorProps) => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex flex-col md:flex-row justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={onClose} className="order-2 md:order-1">
               Cancelar
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} className="order-1 md:order-2">
               <Save className="h-4 w-4 mr-2" />
               Salvar
             </Button>

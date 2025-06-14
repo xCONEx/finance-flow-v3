@@ -39,14 +39,23 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
   useEffect(() => {
     if (task) {
       setFormData({
-        title: task.title,
+        title: task.title || '',
         description: task.description || '',
         status: task.status || 'todo',
-        priority: task.priority,
+        priority: task.priority || 'média',
         dueDate: task.dueDate || ''
       });
+    } else {
+      // Reset form when no task is selected
+      setFormData({
+        title: '',
+        description: '',
+        status: 'todo',
+        priority: 'média',
+        dueDate: ''
+      });
     }
-  }, [task]);
+  }, [task, taskId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,14 +70,25 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
     }
 
     try {
-      await updateTask(taskId, {
+      // Criar objeto de updates, removendo campos undefined
+      const updates: any = {
         title: formData.title,
-        description: formData.description,
-        priority: formData.priority,
-        dueDate: formData.dueDate || undefined,
         status: formData.status,
+        priority: formData.priority,
         completed: formData.status === 'delivered'
-      });
+      };
+
+      // Só adicionar description se não for vazia
+      if (formData.description) {
+        updates.description = formData.description;
+      }
+
+      // Só adicionar dueDate se não for vazia
+      if (formData.dueDate) {
+        updates.dueDate = formData.dueDate;
+      }
+
+      await updateTask(taskId, updates);
 
       toast({
         title: "Tarefa Atualizada",
@@ -110,7 +130,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Tarefa</DialogTitle>
           <DialogDescription>
@@ -125,6 +145,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
               placeholder="Título da tarefa"
+              className="text-sm"
             />
           </div>
           
@@ -135,6 +156,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
               placeholder="Detalhes da tarefa..."
+              className="min-h-[60px] text-sm"
             />
           </div>
 
@@ -145,7 +167,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
                 <Badge
                   key={status.value}
                   variant={formData.status === status.value ? "default" : "outline"}
-                  className={`cursor-pointer ${formData.status === status.value ? status.color : ''}`}
+                  className={`cursor-pointer text-xs ${formData.status === status.value ? status.color : ''}`}
                   onClick={() => setFormData({...formData, status: status.value})}
                 >
                   {status.label}
@@ -154,13 +176,14 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="priority">Prioridade</Label>
               <select
+                id="priority"
                 value={formData.priority}
-                onChange={(e) => setFormData({...formData, priority: e.target.value as any})}
-                className="w-full p-2 border rounded-md"
+                onChange={(e) => setFormData({...formData, priority: e.target.value as 'baixa' | 'média' | 'alta'})}
+                className="w-full p-2 border rounded-md text-sm"
               >
                 <option value="baixa">Baixa</option>
                 <option value="média">Média</option>
@@ -175,13 +198,14 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
                 type="date"
                 value={formData.dueDate}
                 onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+                className="text-sm"
               />
             </div>
           </div>
 
-          <div className="flex gap-2 pt-4 border-t">
-            <Button type="submit" className="flex-1">Salvar</Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col md:flex-row gap-2 pt-4 border-t">
+            <Button type="submit" className="flex-1 order-1">Salvar</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="order-2">
               Cancelar
             </Button>
             <Button 
@@ -189,6 +213,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskI
               variant="destructive" 
               size="icon"
               onClick={handleDelete}
+              className="order-3 md:order-3"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

@@ -3,103 +3,27 @@ import React, { useState } from 'react';
 import { Plus, Trash2, DollarSign, Edit, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CurrencyInput } from '@/components/ui/currency-input';
 import { useAppContext } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { generateExpensesPDF } from '../utils/pdfGenerator';
-
-const EXPENSE_CATEGORIES = [
-  'Moradia',
-  'Alimentação',
-  'Transporte',
-  'Saúde',
-  'Lazer',
-  'Outros'
-];
+import ExpenseModal from './ExpenseModal';
 
 const MonthlyCosts = () => {
-  const { monthlyCosts, addMonthlyCost, updateMonthlyCost, deleteMonthlyCost, loading } = useAppContext();
+  const { monthlyCosts, updateMonthlyCost, deleteMonthlyCost, loading } = useAppContext();
   const { userData } = useAuth();
-  const [showForm, setShowForm] = useState(false);
-  const [editingCost, setEditingCost] = useState<string | null>(null);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingCost, setEditingCost] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    description: '',
-    category: '',
-    value: 0,
-    month: new Date().toISOString().slice(0, 7)
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.description || !formData.category || formData.value <= 0) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos corretamente.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      if (editingCost) {
-        await updateMonthlyCost(editingCost, formData);
-        toast({
-          title: "Custo Atualizado",
-          description: "O custo foi atualizado com sucesso.",
-        });
-        setEditingCost(null);
-      } else {
-        await addMonthlyCost(formData);
-        toast({
-          title: "Custo Adicionado",
-          description: "O custo mensal foi cadastrado com sucesso.",
-        });
-      }
-      
-      setFormData({
-        description: '',
-        category: '',
-        value: 0,
-        month: new Date().toISOString().slice(0, 7)
-      });
-      setShowForm(false);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: editingCost ? "Erro ao atualizar custo." : "Erro ao adicionar custo mensal.",
-        variant: "destructive"
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleEdit = (cost: any) => {
-    setFormData({
-      description: cost.description,
-      category: cost.category,
-      value: cost.value,
-      month: cost.month
-    });
-    setEditingCost(cost.id);
-    setShowForm(true);
+    setEditingCost(cost);
+    setShowExpenseModal(true);
   };
 
-  const handleCancelEdit = () => {
+  const handleCloseModal = () => {
     setEditingCost(null);
-    setShowForm(false);
-    setFormData({
-      description: '',
-      category: '',
-      value: 0,
-      month: new Date().toISOString().slice(0, 7)
-    });
+    setShowExpenseModal(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -193,12 +117,12 @@ const MonthlyCosts = () => {
             </>
           )}
           {/* Desktop */}
-          <Button onClick={() => setShowForm(true)} disabled={submitting} className="hidden sm:flex">
+          <Button onClick={() => setShowExpenseModal(true)} disabled={submitting} className="hidden sm:flex">
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Custo
           </Button>
           {/* Mobile */}
-          <Button onClick={() => setShowForm(true)} disabled={submitting} className="sm:hidden flex-1" size="sm">
+          <Button onClick={() => setShowExpenseModal(true)} disabled={submitting} className="sm:hidden flex-1" size="sm">
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -228,79 +152,6 @@ const MonthlyCosts = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Add/Edit Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingCost ? 'Editar Custo Mensal' : 'Novo Custo Mensal'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Input
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Ex: Aluguel do escritório"
-                    disabled={submitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Categoria</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({...formData, category: value})}
-                    disabled={submitting}
-                  >
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border shadow-lg z-50">
-                      {EXPENSE_CATEGORIES.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="value">Valor (R$)</Label>
-                  <CurrencyInput
-                    id="value"
-                    value={formData.value}
-                    onChange={(value) => setFormData({...formData, value})}
-                    placeholder="1.500,00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="month">Mês</Label>
-                  <Input
-                    id="month"
-                    type="month"
-                    value={formData.month}
-                    onChange={(e) => setFormData({...formData, month: e.target.value})}
-                    disabled={submitting}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? (editingCost ? 'Atualizando...' : 'Adicionando...') : (editingCost ? 'Atualizar' : 'Adicionar')}
-                </Button>
-                <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={submitting}>
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Costs List */}
       <div className="grid gap-4">
@@ -345,18 +196,24 @@ const MonthlyCosts = () => {
           </Card>
         ))}
         
-        {monthlyCosts.length === 0 && !showForm && (
+        {monthlyCosts.length === 0 && (
           <Card>
             <CardContent className="p-8 text-center text-gray-500">
               <DollarSign className="mx-auto h-12 w-12 mb-4" />
               <p>Nenhum custo cadastrado ainda</p>
-              <Button variant="outline" className="mt-4" onClick={() => setShowForm(true)}>
+              <Button variant="outline" className="mt-4" onClick={() => setShowExpenseModal(true)}>
                 Adicionar Primeiro Custo
               </Button>
             </CardContent>
           </Card>
         )}
       </div>
+
+      <ExpenseModal 
+        open={showExpenseModal} 
+        onOpenChange={handleCloseModal}
+        editingCost={editingCost}
+      />
     </div>
   );
 };

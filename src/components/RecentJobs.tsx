@@ -4,6 +4,7 @@ import { Edit, Trash2, FileText, Calendar, DollarSign, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ const RecentJobs = () => {
   const { formatValue } = usePrivacy();
   const [editingJob, setEditingJob] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+    const { currentTheme } = useTheme();
 
   console.log('🔍 RecentJobs - Debug inicial:', {
     jobsCount: jobs.length,
@@ -49,6 +51,7 @@ const RecentJobs = () => {
 
   const handleEdit = (jobId: string) => {
     console.log('🔧 Editando job:', jobId);
+    setHistoryOpen(false); // Fechar histórico quando editar
     setEditingJob(jobId);
   };
 
@@ -97,7 +100,12 @@ const RecentJobs = () => {
     }
   };
 
-  // CORRIGIDO: Função para obter valor seguro do job
+  const handleJobSaved = () => {
+    // Reabre o histórico após salvar o job
+    setHistoryOpen(true);
+  };
+
+  // Função para obter valor seguro do job
   const getSafeJobValue = (job: any) => {
     const value = job?.valueWithDiscount || job?.serviceValue || 0;
     console.log('💰 getSafeJobValue para job:', job.id, 'valor:', value);
@@ -107,17 +115,18 @@ const RecentJobs = () => {
   if (recentJobs.length === 0) {
     return (
       <div className="space-y-4">
-<div className="flex justify-between items-start mb-4 mt-2">
-  <h3 className="text-2xl font-bold text-gray-900">Últimos Jobs Calculados</h3>
-  <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-    <DialogTrigger asChild>
-      <Button variant="outline" size="sm" className="mt-1">
-        <Eye className="h-4 w-4 mr-2" />
-        Ver Histórico
-      </Button>
-    </DialogTrigger>
-    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-      <DialogHeader>
+        <div className="flex justify-between items-start mb-4 mt-2">
+          <h3 className="text-2xl font-bold text-gray-900">Últimos Jobs Calculados</h3>
+          <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+            <DialogTrigger asChild>
+              <Button  size="sm" 
+              className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`} >
+                <Eye className="h-4 w-4 mr-2" />
+                Ver Histórico
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[95vw] max-w-4xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
                 <DialogTitle>Histórico Completo de Jobs</DialogTitle>
                 <DialogDescription>
                   Visualize todos os jobs calculados anteriormente
@@ -140,71 +149,79 @@ const RecentJobs = () => {
 
   return (
     <div className="space-y-4">
-<div className="flex justify-between items-start mb-8 mt-6">
-  <CardTitle>Últimos Jobs Calculados</CardTitle>
-  <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-    <DialogTrigger asChild>
-      <Button variant="outline" size="sm" className="mt-1">
-        <Eye className="h-4 w-4 mr-2" />
-        Ver Histórico
-      </Button>
-    </DialogTrigger>
-    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>Histórico Completo de Jobs</DialogTitle>
-        <DialogDescription>
-          Visualize e gerencie todos os jobs calculados anteriormente
-        </DialogDescription>
-      </DialogHeader>
-            <div className="space-y-4">
+      <div className="flex justify-between items-start mb-8 mt-6">
+        <CardTitle>Últimos Jobs Calculados</CardTitle>
+        <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" 
+              className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}>
+              <Eye className="h-4 w-4 mr-2" />
+              Ver Histórico
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="w-[95vw] max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Histórico Completo de Jobs</DialogTitle>
+              <DialogDescription>
+                Visualize e gerencie todos os jobs calculados anteriormente
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 p-2">
               {jobs.map((job) => (
-                <div key={`history-${job.id}`} className="p-4 border rounded-lg space-y-3">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium">{job.description}</h4>
-                    <Badge className={getStatusColor(job.status)}>
-                      {job.status}
-                    </Badge>
+                <div key={`history-${job.id}`} className="p-3 md:p-4 border rounded-lg space-y-3">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2">
+                    <h4 className="font-medium flex-1">{job.description}</h4>
+                    <div className="flex items-center gap-2">
+                      {(job as any).isManual && (
+                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                          Manual
+                        </Badge>
+                      )}
+                      <Badge className={getStatusColor(job.status)}>
+                        {job.status}
+                      </Badge>
+                    </div>
                   </div>
                   
                   <p className="text-sm text-gray-600">{job.client || 'Cliente não informado'}</p>
                   
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-sm text-gray-600">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       {new Date(job.eventDate).toLocaleDateString('pt-BR')}
                     </span>
                     <span className="flex items-center gap-1">
-                      <DollarSign className="h-4 w-4" />
+                      
                       {formatValue(getSafeJobValue(job))}
                     </span>
                   </div>
                   
-                  <div className="flex items-center gap-2 pt-2">
+                  <div className="flex flex-wrap items-center gap-2 pt-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(job.id)}
-                      className="text-blue-600 hover:text-blue-700"
+                      className="text-blue-600 hover:text-blue-700 text-xs"
                     >
-                      <Edit className="h-4 w-4 mr-1" />
+                      <Edit className="h-3 w-3 mr-1" />
                       Editar
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handlePrintPDF(job.id)}
-                      className="text-green-600 hover:text-green-700"
+                      className="text-green-600 hover:text-green-700 text-xs"
                     >
-                      <FileText className="h-4 w-4 mr-1" />
+                      <FileText className="h-3 w-3 mr-1" />
                       PDF
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(job.id)}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700 text-xs"
                     >
-                      <Trash2 className="h-4 w-4 mr-1" />
+                      <Trash2 className="h-3 w-3 mr-1" />
                       Excluir
                     </Button>
                   </div>
@@ -232,29 +249,44 @@ const RecentJobs = () => {
                   {new Date(job.eventDate).toLocaleDateString('pt-BR')}
                 </span>
                 <span className="flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
+                  
                   {formatValue(getSafeJobValue(job))}
                 </span>
               </div>
             </div>
-            <Badge variant={job.status === 'aprovado' ? 'default' : 'secondary'}>
-              {job.status}
-            </Badge>
+            <Badge className={getStatusColor(job.status)}>
+                        {job.status}
+                      </Badge>
           </div>
           
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => handleEdit(job.id)}>
-              <Edit className="h-3 w-3 mr-1" />
-              Editar
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => handleDelete(job.id)}>
-              <Trash2 className="h-3 w-3 mr-1" />
-              Excluir
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => handlePrintPDF(job.id)}>
-              <FileText className="h-3 w-3 mr-1" />
-              PDF
-            </Button>
+            <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(job.id)}
+                      className="text-blue-600 hover:text-blue-700 text-xs"
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePrintPDF(job.id)}
+                      className="text-green-600 hover:text-green-700 text-xs"
+                    >
+                      <FileText className="h-3 w-3 mr-1" />
+                      PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(job.id)}
+                      className="text-red-600 hover:text-red-700 text-xs"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Excluir
+                    </Button>
           </div>
         </div>
       ))}
@@ -262,10 +294,8 @@ const RecentJobs = () => {
       {editingJob && (
         <JobEditor
           jobId={editingJob}
-          onClose={() => {
-            console.log('🔄 Fechando editor de job');
-            setEditingJob(null);
-          }}
+          onClose={() => setEditingJob(null)}
+          onSaved={handleJobSaved}
         />
       )}
     </div>

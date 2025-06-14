@@ -11,7 +11,9 @@ import CostDistributionChart from './CostDistributionChart';
 import RecentJobs from './RecentJobs';
 import TaskList from './TaskList';
 import AddTaskModal from './AddTaskModal';
-import InviteAcceptance from './InviteAcceptance';
+import ManualValueModal from '@/components/ManualValueModal';
+import ExpenseModal from '@/components/ExpenseModal'; // ajuste o caminho se necessário
+
 
 const Dashboard = () => {
   const { user, userData, agencyData } = useAuth();
@@ -26,6 +28,11 @@ const Dashboard = () => {
   
   // Dashboard sempre mostra dados pessoais
   const currentData = userData;
+
+  // CORRIGIDO: Modal para adicionar valor manual
+const [showManualModal, setShowManualModal] = useState(false);
+const [showExpenseModal, setShowExpenseModal] = useState(false);
+
 
   // CORRIGIDO: Filtrar apenas jobs pessoais (sem companyId)
   const filteredJobs = jobs.filter(job => !job.companyId);
@@ -117,8 +124,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
-      {/* Convites pendentes só para usuários individuais */}
-      {user?.userType === 'individual' && <InviteAcceptance />}
+     
 
       {/* Header simplificado */}
       <div className="text-center space-y-4">
@@ -200,7 +206,7 @@ const Dashboard = () => {
             </CardTitle>
             <Button 
               size="sm" 
-              className={`bg-gradient-to-r ${currentTheme.primary}`}
+              className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
               onClick={() => setShowTaskModal(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -214,55 +220,61 @@ const Dashboard = () => {
 
         {/* Quick Actions */}
         <Card className="transition-all duration-300 hover:shadow-lg">
-          <CardHeader>
-            <CardTitle>Ações Rápidas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button 
-              className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
-              onClick={() => window.location.hash = '#calculadora'}
-            >
-              <Calculator className="mr-2 h-4 w-4" />
-              Nova Calculadora
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full transition-all duration-300 hover:scale-105"
-              onClick={handleQuickAddCost}
-            >
-              <DollarSign className="mr-2 h-4 w-4" />
-              Adicionar Custo
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full transition-all duration-300 hover:scale-105"
-              onClick={handleExportReport}
-            >
-              <TrendingUp className="mr-2 h-4 w-4" />
-              Exportar Relatório
-            </Button>
-            
-            {/* Summary Stats */}
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="text-sm space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Faturamento Total:</span>
-                  <span className="font-semibold">{formatValue(totalJobsValue)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Jobs Pendentes:</span>
-                  <span className="font-semibold">{filteredJobs.filter(j => j.status === 'pendente').length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Taxa de Conclusão:</span>
-                  <span className="font-semibold">
-                    {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+  <CardHeader>
+    <CardTitle>Ações Rápidas</CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-3">
+    <Button
+      className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
+      onClick={() => setShowManualModal(true)} // ✅ Abre ManualValueModal
+    >
+      <Calculator className="mr-2 h-4 w-4" />
+      Adicionar Valor Manual
+    </Button>
+
+    <Button
+      variant="outline"
+      className="w-full transition-all duration-300 hover:scale-105"
+      onClick={() => setShowExpenseModal(true)} // ✅ Abre ExpenseModal
+    >
+      <DollarSign className="mr-2 h-4 w-4" />
+      Adicionar Custo
+    </Button>
+
+    <Button
+      variant="outline"
+      className="w-full transition-all duration-300 hover:scale-105"
+      onClick={handleExportReport}
+    >
+      <TrendingUp className="mr-2 h-4 w-4" />
+      Exportar Relatório
+    </Button>
+
+    {/* Summary Stats */}
+    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="text-sm space-y-2">
+        <div className="flex justify-between">
+          <span className="text-gray-600 dark:text-gray-400">Faturamento Total:</span>
+          <span className="font-semibold">{formatValue(totalJobsValue)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-600 dark:text-gray-400">Jobs Pendentes:</span>
+          <span className="font-semibold">{filteredJobs.filter(j => j.status === 'pendente').length}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-600 dark:text-gray-400">Taxa de Conclusão:</span>
+          <span className="font-semibold">
+            {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+          </span>
+        </div>
+      </div>
+    </div>
+  </CardContent>
+
+  {/* Modais que abrem ao clicar nos botões */}
+  <ManualValueModal open={showManualModal} onOpenChange={setShowManualModal} />
+  <ExpenseModal open={showExpenseModal} onOpenChange={setShowExpenseModal} />
+</Card>
       </div>
 
       <AddTaskModal open={showTaskModal} onOpenChange={setShowTaskModal} />

@@ -1,106 +1,29 @@
+
 import React, { useState } from 'react';
 import { Plus, Trash2, Briefcase, Edit, Loader2, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CurrencyInput } from '@/components/ui/currency-input';
 import { useAppContext } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { generateWorkItemsPDF } from '../utils/pdfGenerator';
-
-const EQUIPMENT_CATEGORIES = [
-  'Câmera',
-  'Lente', 
-  'Hardware',
-  'Software',
-  'Iluminação',
-  'Audio',
-  'Acessórios',
-  'Outros'
-];
+import WorkItemModal from './WorkItemModal';
 
 const WorkItems = () => {
-  const { workItems, addWorkItem, updateWorkItem, deleteWorkItem, loading } = useAppContext();
+  const { workItems, updateWorkItem, deleteWorkItem, loading } = useAppContext();
   const { userData } = useAuth();
-  const [showForm, setShowForm] = useState(false);
-  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    description: '',
-    category: '',
-    value: 0,
-    depreciationYears: 5
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.description || !formData.category || formData.value <= 0) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos corretamente.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      if (editingItem) {
-        await updateWorkItem(editingItem, formData);
-        toast({
-          title: "Item Atualizado",
-          description: "O item foi atualizado com sucesso.",
-        });
-        setEditingItem(null);
-      } else {
-        await addWorkItem(formData);
-        toast({
-          title: "Item Adicionado",
-          description: "O item de trabalho foi cadastrado com sucesso.",
-        });
-      }
-      
-      setFormData({
-        description: '',
-        category: '',
-        value: 0,
-        depreciationYears: 5
-      });
-      setShowForm(false);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: editingItem ? "Erro ao atualizar item." : "Erro ao adicionar item de trabalho.",
-        variant: "destructive"
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleEdit = (item: any) => {
-    setFormData({
-      description: item.description,
-      category: item.category,
-      value: item.value,
-      depreciationYears: item.depreciationYears || 5
-    });
-    setEditingItem(item.id);
-    setShowForm(true);
+    setEditingItem(item);
+    setShowItemModal(true);
   };
 
-  const handleCancelEdit = () => {
+  const handleCloseModal = () => {
     setEditingItem(null);
-    setShowForm(false);
-    setFormData({
-      description: '',
-      category: '',
-      value: 0,
-      depreciationYears: 5
-    });
+    setShowItemModal(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -196,12 +119,12 @@ const WorkItems = () => {
             </>
           )}
           {/* Desktop */}
-          <Button onClick={() => setShowForm(true)} disabled={submitting} className="hidden sm:flex">
+          <Button onClick={() => setShowItemModal(true)} disabled={submitting} className="hidden sm:flex">
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Item
           </Button>
           {/* Mobile */}
-          <Button onClick={() => setShowForm(true)} disabled={submitting} className="sm:hidden flex-1" size="sm">
+          <Button onClick={() => setShowItemModal(true)} disabled={submitting} className="sm:hidden flex-1" size="sm">
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -231,87 +154,6 @@ const WorkItems = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Add/Edit Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingItem ? 'Editar Item de Trabalho' : 'Novo Item de Trabalho'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Input
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Ex: Câmera Sony A7 III"
-                    disabled={submitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Categoria</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({...formData, category: value})}
-                    disabled={submitting}
-                  >
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border shadow-lg z-50">
-                      {EQUIPMENT_CATEGORIES.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="value">Valor (R$)</Label>
-                  <CurrencyInput
-                    id="value"
-                    value={formData.value}
-                    onChange={(value) => setFormData({...formData, value})}
-                    placeholder="15.000,00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="depreciationYears">Anos de Depreciação</Label>
-                  <Input
-  id="depreciationYears"
-  type="number"
-  inputMode="numeric"
-  min="1"
-  max="20"
-  value={formData.depreciationYears || ""}
-  onChange={(e) => {
-    const raw = e.target.value;
-    const clean = raw.replace(/^0+/, ""); // remove zeros à esquerda
-    setFormData({ ...formData, depreciationYears: Number(clean) });
-  }}
-  placeholder="5"
-  disabled={submitting}
-/>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? (editingItem ? 'Atualizando...' : 'Adicionando...') : (editingItem ? 'Atualizar' : 'Adicionar')}
-                </Button>
-                <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={submitting}>
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Items List */}
       <div className="grid gap-4">
@@ -354,18 +196,24 @@ const WorkItems = () => {
           </Card>
         ))}
         
-        {workItems.length === 0 && !showForm && (
+        {workItems.length === 0 && (
           <Card>
             <CardContent className="p-8 text-center text-gray-500">
               <Briefcase className="mx-auto h-12 w-12 mb-4" />
               <p>Nenhum item cadastrado ainda</p>
-              <Button variant="outline" className="mt-4" onClick={() => setShowForm(true)}>
+              <Button variant="outline" className="mt-4" onClick={() => setShowItemModal(true)}>
                 Adicionar Primeiro Item
               </Button>
             </CardContent>
           </Card>
         )}
       </div>
+
+      <WorkItemModal 
+        open={showItemModal} 
+        onOpenChange={handleCloseModal}
+        editingItem={editingItem}
+      />
     </div>
   );
 };

@@ -131,17 +131,30 @@ const WorkRoutine = () => {
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="workHoursPerDay">Horas de Trabalho por Dia</Label>
-              <Input
-                id="workHoursPerDay"
-                type="number"
-                value={formData.workHoursPerDay}
-                onChange={(e) => setFormData({...formData, workHoursPerDay: Number(e.target.value)})}
-                placeholder="8"
-                disabled={submitting}
-              />
-            </div>
+<div className="space-y-2">
+  <Label htmlFor="workHoursPerDay">Horas de Trabalho por Dia</Label>
+  <Input
+    id="workHoursPerDay"
+    type="number"
+    inputMode="numeric"
+    pattern="[0-9]*"
+    value={formData.workHoursPerDay || ""}
+    onChange={(e) => {
+      const rawValue = e.target.value;
+
+      // Impede zeros à esquerda e converte para número
+      const cleanedValue = rawValue.replace(/^0+(?=\d)/, "");
+
+      setFormData({
+        ...formData,
+        workHoursPerDay: cleanedValue === "" ? 0 : Number(cleanedValue),
+      });
+    }}
+    placeholder="8"
+    disabled={submitting}
+  />
+</div>
+
 
             <Button 
               onClick={calculateAndSaveValues} 
