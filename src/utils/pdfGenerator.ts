@@ -59,14 +59,12 @@ const addCompanyData = (doc: jsPDF, userData: any, startY: number, margin: numbe
   const companyName = userData?.personalInfo?.company || userData?.company || 'Sua Empresa';
   const email = userData?.email || 'contato@empresa.com';
   const phone = userData?.personalInfo?.phone || 'Telefone não informado';
-  const address = userData?.personalInfo?.address || 'Endereço não informado';
   
   doc.text(`Empresa: ${companyName}`, margin, currentY);
   doc.text(`Email: ${email}`, margin, currentY + 8);
   doc.text(`Telefone: ${phone}`, margin, currentY + 16);
-  doc.text(`Endereço: ${address}`, margin, currentY + 24);
   
-  return currentY + 40;
+  return currentY + 32;
 };
 
 const addClientData = (doc: jsPDF, job: Job, startY: number, margin: number, pageWidth: number) => {
@@ -109,10 +107,22 @@ const addProposal = (doc: jsPDF, startY: number, margin: number, pageWidth: numb
   return currentY + (proposalText.length * 6) + 15;
 };
 
+const checkPageBreak = (doc: jsPDF, currentY: number, neededSpace: number = 30) => {
+  const pageHeight = doc.internal.pageSize.getHeight();
+  if (currentY + neededSpace > pageHeight - 20) {
+    doc.addPage();
+    return 20; // Nova posição Y no topo da nova página
+  }
+  return currentY;
+};
+
 export const generateJobPDF = async (job: Job, userData: any) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
+  
+  console.log('🔍 Gerando PDF do job:', job);
+  console.log('👤 Dados do usuário:', userData);
   
   // Header
   let currentY = addHeader(doc, 'ORÇAMENTO', userData, pageWidth, margin);
@@ -120,11 +130,20 @@ export const generateJobPDF = async (job: Job, userData: any) => {
   // Dados da empresa
   currentY = addCompanyData(doc, userData, currentY, margin, pageWidth);
   
+  // Verificar quebra de página
+  currentY = checkPageBreak(doc, currentY, 60);
+  
   // Dados do cliente
   currentY = addClientData(doc, job, currentY, margin, pageWidth);
   
+  // Verificar quebra de página
+  currentY = checkPageBreak(doc, currentY, 60);
+  
   // Nossa proposta
   currentY = addProposal(doc, currentY, margin, pageWidth);
+  
+  // Verificar quebra de página
+  currentY = checkPageBreak(doc, currentY, 100);
   
   // Detalhamento dos serviços
   currentY = addSection(doc, 'DETALHAMENTO DOS SERVIÇOS', margin, currentY, pageWidth, margin);
@@ -137,12 +156,23 @@ export const generateJobPDF = async (job: Job, userData: any) => {
   const desconto = (job.serviceValue * (job.discountValue || 0)) / 100;
   const valorComDesconto = job.serviceValue - desconto;
   
+  console.log('💰 Valores calculados:', {
+    logistics,
+    equipment,
+    assistance,
+    custoTotal,
+    serviceValue: job.serviceValue,
+    discountValue: job.discountValue,
+    desconto,
+    valorComDesconto
+  });
+  
   // Tabela de serviços
   const tableData = [
     ['Horas estimadas', `${job.estimatedHours || 0}h`, '', ''],
-    ['Logística', '', job.logistics ? job.logistics.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00', ''],
-    ['Equipamentos', '', job.equipment ? job.equipment.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00', ''],
-    ['Assistência', '', job.assistance ? job.assistance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00', ''],
+    ['Logística', '', logistics.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), ''],
+    ['Equipamentos', '', equipment.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), ''],
+    ['Assistência', '', assistance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), ''],
     ['Custo total', '', custoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), ''],
     ['Valor do serviço', '1', job.serviceValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), job.serviceValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]
   ];
@@ -154,7 +184,8 @@ export const generateJobPDF = async (job: Job, userData: any) => {
   }
   
   try {
-    (doc as any).autoTable({
+    // Usando a sintaxe correta do autoTable
+    doc.autoTable({
       startY: currentY,
       head: [['DESCRIÇÃO', 'QTD', 'PREÇO UNIT.', 'TOTAL']],
       body: tableData,
@@ -178,19 +209,28 @@ export const generateJobPDF = async (job: Job, userData: any) => {
       },
       alternateRowStyles: {
         fillColor: [245, 247, 250]
+      },
+      didDrawPage: (data: any) => {
+        // Se houver quebra de página, adicionar header novamente
+        if (data.pageNumber > 1) {
+          addHeader(doc, 'ORÇAMENTO (continuação)', userData, pageWidth, margin);
+        }
       }
     });
     
-    const finalY = (doc as any).lastAutoTable?.finalY || currentY + 100;
+    const finalY = doc.lastAutoTable?.finalY || currentY + 100;
+    
+    // Verificar se precisa de nova página para o rodapé
+    const footerY = checkPageBreak(doc, finalY, 30);
     
     // Rodapé
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
-    doc.text('Este orçamento é uma estimativa com base nas informações fornecidas.', margin, finalY + 15);
-    doc.text('Validade: 30 dias a partir da data de emissão.', margin, finalY + 22);
+    doc.text('Este orçamento é uma estimativa com base nas informações fornecidas.', margin, footerY + 15);
+    doc.text('Validade: 30 dias a partir da data de emissão.', margin, footerY + 22);
     
   } catch (error) {
-    console.error('Erro ao gerar tabela do PDF:', error);
+    console.error('❌ Erro ao gerar tabela do PDF:', error);
   }
   
   doc.save(`Orcamento_${job.client?.replace(/\s+/g, '_') || 'Cliente'}.pdf`);
@@ -201,11 +241,16 @@ export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any)
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
   
+  console.log('🔍 Gerando PDF de itens:', workItems);
+  
   // Header
   let currentY = addHeader(doc, 'RELATÓRIO DE ITENS', userData, pageWidth, margin);
   
   // Dados da empresa
   currentY = addCompanyData(doc, userData, currentY, margin, pageWidth);
+  
+  // Verificar quebra de página
+  currentY = checkPageBreak(doc, currentY, 40);
   
   // Informações do relatório
   currentY = addSection(doc, 'INFORMAÇÕES DO RELATÓRIO', margin, currentY, pageWidth, margin);
@@ -217,6 +262,9 @@ export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any)
   doc.text(`Total de itens: ${workItems.length}`, margin, currentY + 8);
   
   currentY += 25;
+  
+  // Verificar quebra de página
+  currentY = checkPageBreak(doc, currentY, 60);
   
   // Detalhamento dos itens
   currentY = addSection(doc, 'DETALHAMENTO DOS ITENS DE TRABALHO', margin, currentY, pageWidth, margin);
@@ -233,7 +281,7 @@ export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any)
   tableData.push(['VALOR TOTAL', '', totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), '']);
   
   try {
-    (doc as any).autoTable({
+    doc.autoTable({
       startY: currentY,
       head: [['DESCRIÇÃO', 'CATEGORIA', 'VALOR', 'DEPRECIAÇÃO']],
       body: tableData,
@@ -257,10 +305,15 @@ export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any)
       },
       alternateRowStyles: {
         fillColor: [245, 247, 250]
+      },
+      didDrawPage: (data: any) => {
+        if (data.pageNumber > 1) {
+          addHeader(doc, 'RELATÓRIO DE ITENS (continuação)', userData, pageWidth, margin);
+        }
       }
     });
   } catch (error) {
-    console.error('Erro ao gerar tabela:', error);
+    console.error('❌ Erro ao gerar tabela:', error);
   }
   
   doc.save(`Itens_Trabalho_${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -271,11 +324,16 @@ export const generateExpensesPDF = async (expenses: MonthlyCost[], userData: any
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
   
+  console.log('🔍 Gerando PDF de despesas:', expenses);
+  
   // Header
   let currentY = addHeader(doc, 'RELATÓRIO DE DESPESAS', userData, pageWidth, margin);
   
   // Dados da empresa
   currentY = addCompanyData(doc, userData, currentY, margin, pageWidth);
+  
+  // Verificar quebra de página
+  currentY = checkPageBreak(doc, currentY, 40);
   
   // Informações do relatório
   currentY = addSection(doc, 'INFORMAÇÕES DO RELATÓRIO', margin, currentY, pageWidth, margin);
@@ -287,6 +345,9 @@ export const generateExpensesPDF = async (expenses: MonthlyCost[], userData: any
   doc.text(`Total de despesas: ${expenses.length}`, margin, currentY + 8);
   
   currentY += 25;
+  
+  // Verificar quebra de página
+  currentY = checkPageBreak(doc, currentY, 60);
   
   // Detalhamento das despesas
   currentY = addSection(doc, 'DETALHAMENTO DAS DESPESAS MENSAIS', margin, currentY, pageWidth, margin);
@@ -303,7 +364,7 @@ export const generateExpensesPDF = async (expenses: MonthlyCost[], userData: any
   tableData.push(['TOTAL DE DESPESAS', '', totalExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), '']);
   
   try {
-    (doc as any).autoTable({
+    doc.autoTable({
       startY: currentY,
       head: [['DESCRIÇÃO', 'CATEGORIA', 'VALOR', 'MÊS/ANO']],
       body: tableData,
@@ -327,10 +388,15 @@ export const generateExpensesPDF = async (expenses: MonthlyCost[], userData: any
       },
       alternateRowStyles: {
         fillColor: [245, 247, 250]
+      },
+      didDrawPage: (data: any) => {
+        if (data.pageNumber > 1) {
+          addHeader(doc, 'RELATÓRIO DE DESPESAS (continuação)', userData, pageWidth, margin);
+        }
       }
     });
   } catch (error) {
-    console.error('Erro ao gerar tabela:', error);
+    console.error('❌ Erro ao gerar tabela:', error);
   }
   
   doc.save(`Despesas_Mensais_${new Date().toISOString().slice(0, 10)}.pdf`);
