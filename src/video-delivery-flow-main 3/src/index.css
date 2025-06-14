@@ -1,0 +1,116 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* EntregaFlow Design System */
+
+@layer base {
+  :root {
+    --background: 249 249 249; /* #F9F9F9 - brand white */
+    --foreground: 0 0% 0%; /* #000000 - brand black */
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    --primary: 0 0% 0%; /* #000000 - brand black */
+    --primary-foreground: 249 249 249; /* #F9F9F9 - brand white */
+
+    --secondary: 0 0% 20%; /* #333333 - dark gray */
+    --secondary-foreground: 249 249 249;
+
+    --muted: 0 0% 65%; /* #A7A7A7 - light gray */
+    --muted-foreground: 0 0% 39%; /* #646464 - gray */
+
+    --accent: 16 96% 48%; /* #EB5002 - brand orange */
+    --accent-foreground: 249 249 249;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 249 249 249;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 16 96% 48%; /* #EB5002 - brand orange */
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 249 249 249;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 0 0% 0%;
+    --sidebar-primary-foreground: 249 249 249;
+    --sidebar-accent: 0 0% 95%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 16 96% 48%;
+  }
+
+  .dark {
+    --background: 0 0% 0%; /* #000000 - brand black */
+    --foreground: 249 249 249; /* #F9F9F9 - brand white */
+
+    --card: 0 0% 20%; /* #333333 - dark gray */
+    --card-foreground: 249 249 249;
+
+    --popover: 0 0% 20%;
+    --popover-foreground: 249 249 249;
+
+    --primary: 249 249 249; /* #F9F9F9 - brand white */
+    --primary-foreground: 0 0% 0%; /* #000000 - brand black */
+
+    --secondary: 0 0% 39%; /* #646464 - gray */
+    --secondary-foreground: 249 249 249;
+
+    --muted: 0 0% 39%; /* #646464 - gray */
+    --muted-foreground: 0 0% 65%; /* #A7A7A7 - light gray */
+
+    --accent: 16 96% 48%; /* #EB5002 - brand orange */
+    --accent-foreground: 249 249 249;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 249 249 249;
+
+    --border: 0 0% 39%; /* #646464 - gray */
+    --input: 0 0% 39%;
+    --ring: 16 96% 48%; /* #EB5002 - brand orange */
+
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 249 249 249;
+    --sidebar-primary: 16 96% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 20%;
+    --sidebar-accent-foreground: 249 249 249;
+    --sidebar-border: 0 0% 39%;
+    --sidebar-ring: 16 96% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+}
+
+@layer utilities {
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/10 border border-white/20;
+  }
+  
+  .brand-gradient {
+    background: linear-gradient(to right, #000000, #C10801, #F16001, #D9C3AB);
+  }
+  
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
+  }
+}
