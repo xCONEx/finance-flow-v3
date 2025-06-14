@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Job, WorkItem, MonthlyCost } from '../types';
@@ -59,11 +60,10 @@ const addCompanyData = (doc: jsPDF, userData: any, startY: number, margin: numbe
   const email = userData?.email || 'contato@empresa.com';
   const phone = userData?.personalInfo?.phone || 'Telefone não informado';
   
-  doc.text(`Empresa: ${companyName}`, margin, currentY);
-  doc.text(`Email: ${email}`, margin, currentY + 8);
-  doc.text(`Telefone: ${phone}`, margin, currentY + 16);
+  doc.text(`Email: ${email}`, margin, currentY);
+  doc.text(`Telefone: ${phone}`, margin, currentY + 8);
   
-  return currentY + 32;
+  return currentY + 24;
 };
 
 const addClientData = (doc: jsPDF, job: Job, startY: number, margin: number, pageWidth: number) => {
@@ -247,13 +247,7 @@ export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any)
   // Header
   let currentY = addHeader(doc, 'RELATÓRIO DE ITENS', userData, pageWidth, margin);
   
-  // Dados da empresa
-  currentY = addCompanyData(doc, userData, currentY, margin, pageWidth);
-  
-  // Verificar quebra de página
-  currentY = checkPageBreak(doc, currentY, 40);
-  
-  // Informações do relatório
+  // Informações do relatório (sem dados da empresa)
   currentY = addSection(doc, 'INFORMAÇÕES DO RELATÓRIO', margin, currentY, pageWidth, margin);
   
   doc.setTextColor(0, 0, 0);
@@ -312,7 +306,11 @@ export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any)
       },
       didDrawPage: (data: any) => {
         if (data.pageNumber > 1) {
-          addHeader(doc, 'RELATÓRIO DE ITENS (continuação)', userData, pageWidth, margin);
+          const newY = addHeader(doc, 'RELATÓRIO DE ITENS', userData, pageWidth, margin);
+          // Ajustar startY para nova página
+          if (data.table) {
+            data.table.startY = newY;
+          }
         }
       }
     });
@@ -333,13 +331,7 @@ export const generateExpensesPDF = async (expenses: MonthlyCost[], userData: any
   // Header
   let currentY = addHeader(doc, 'RELATÓRIO DE DESPESAS', userData, pageWidth, margin);
   
-  // Dados da empresa
-  currentY = addCompanyData(doc, userData, currentY, margin, pageWidth);
-  
-  // Verificar quebra de página
-  currentY = checkPageBreak(doc, currentY, 40);
-  
-  // Informações do relatório
+  // Informações do relatório (sem dados da empresa)
   currentY = addSection(doc, 'INFORMAÇÕES DO RELATÓRIO', margin, currentY, pageWidth, margin);
   
   doc.setTextColor(0, 0, 0);
@@ -398,7 +390,11 @@ export const generateExpensesPDF = async (expenses: MonthlyCost[], userData: any
       },
       didDrawPage: (data: any) => {
         if (data.pageNumber > 1) {
-          addHeader(doc, 'RELATÓRIO DE DESPESAS (continuação)', userData, pageWidth, margin);
+          const newY = addHeader(doc, 'RELATÓRIO DE DESPESAS', userData, pageWidth, margin);
+          // Ajustar startY para nova página
+          if (data.table) {
+            data.table.startY = newY;
+          }
         }
       }
     });
