@@ -25,6 +25,7 @@ const SubscriptionPlans = () => {
       icon: Zap,
       color: 'from-gray-600 to-gray-700',
       borderColor: 'border-gray-200',
+      caktoLink: null,
       features: [
         'Calculadora de precificação',
         'Controle de custos mensais',
@@ -47,6 +48,7 @@ const SubscriptionPlans = () => {
       icon: Zap,
       color: 'from-gray-600 to-gray-700',
       borderColor: 'border-gray-200',
+      caktoLink: 'https://pay.cakto.com.br/yppzpjc',
       features: [
         'Calculadora de precificação',
         'Controle de custos mensais',
@@ -70,6 +72,7 @@ const SubscriptionPlans = () => {
       color: 'from-purple-600 to-blue-600',
       borderColor: 'border-purple-200',
       popular: true,
+      caktoLink: 'https://pay.cakto.com.br/kesq5cb',
       features: [
         'Tudo do plano Basic',
         'Jobs ilimitados',
@@ -90,6 +93,7 @@ const SubscriptionPlans = () => {
       icon: Building2,
       color: 'from-green-600 to-blue-600',
       borderColor: 'border-green-200',
+      caktoLink: 'https://pay.cakto.com.br/34p727v',
       features: [
         'Tudo do plano Premium',
         'Gestão de equipe completa',
@@ -101,26 +105,57 @@ const SubscriptionPlans = () => {
         'Suporte dedicado',
         'Treinamento da equipe'
       ]
+    },
+    {
+      id: 'enterprise-annual',
+      name: 'Enterprise Anual',
+      price: 'R$ 1.970',
+      period: '/ano',
+      description: 'Para empresas com desconto anual',
+      icon: Building2,
+      color: 'from-green-600 to-blue-600',
+      borderColor: 'border-green-200',
+      caktoLink: 'https://pay.cakto.com.br/uoxtt9o',
+      features: [
+        'Tudo do plano Premium',
+        'Gestão de equipe completa',
+        'Kanban de projetos',
+        'Convites para colaboradores',
+        'Painéis por empresa',
+        'Exportação de dados avançada',
+        'API para integrações',
+        'Suporte dedicado',
+        'Treinamento da equipe',
+        '2 meses grátis'
+      ]
     }
   ];
 
   const handleSubscribe = async (planId: string) => {
+    const plan = plans.find(p => p.id === planId);
+    
+    if (!plan || !plan.caktoLink) {
+      if (planId === 'free') {
+        alert('Você já está no plano gratuito!');
+        return;
+      }
+      alert('Link de pagamento não encontrado');
+      return;
+    }
+
     setIsLoading(planId);
     
     try {
-      // Aqui será implementada a integração com Cakto
-      console.log('Iniciando checkout para o plano:', planId);
+      console.log('Redirecionando para Cakto:', planId, plan.caktoLink);
       
-      // Simular processo de checkout
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Redirecionar para Cakto Checkout ou abrir modal de pagamento
-      alert(`Redirecionando para checkout do plano ${planId}`);
+      // Abrir o link da Cakto em uma nova aba
+      window.open(plan.caktoLink, '_blank');
       
     } catch (error) {
       console.error('Erro ao processar pagamento:', error);
     } finally {
-      setIsLoading(null);
+      // Remover loading após um tempo para permitir que o usuário tente novamente
+      setTimeout(() => setIsLoading(null), 3000);
     }
   };
 
@@ -158,7 +193,7 @@ const SubscriptionPlans = () => {
         </Card>
       )}
 
-      <div className="grid lg:grid-cols-4 gap-6">
+      <div className="grid lg:grid-cols-5 gap-6">
         {plans.map((plan) => (
           <Card 
             key={plan.id}
@@ -228,7 +263,7 @@ const SubscriptionPlans = () => {
                 onClick={() => handleSubscribe(plan.id)}
               >
                 {isLoading === plan.id ? (
-                  'Processando...'
+                  'Abrindo Pagamento...'
                 ) : currentPlan === plan.id ? (
                   'Plano Atual'
                 ) : plan.id === 'free' ? (
@@ -257,6 +292,7 @@ const SubscriptionPlans = () => {
           <p>• Todos os planos incluem 14 dias de teste gratuito</p>
           <p>• Cancele a qualquer momento</p>
           <p>• Suporte em português</p>
+          <p>• Pagamentos processados pela Cakto</p>
         </div>
       </div>
     </div>
