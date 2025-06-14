@@ -6,14 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Crown, Building2, Users, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSubscription } from '../hooks/useSubscription';
 
 const SubscriptionPlans = () => {
   const { user } = useAuth();
   const { currentTheme } = useTheme();
+  const { subscription, loading } = useSubscription();
   const [isLoading, setIsLoading] = useState<string | null>(null);
-  
-  // Simular dados de assinatura atual (substituir por dados reais da Cakto)
-  const currentPlan = 'free'; // free, basic, premium, enterprise
 
   const plans = [
     {
@@ -147,6 +146,8 @@ const SubscriptionPlans = () => {
     
     try {
       console.log('Redirecionando para Cakto:', planId, plan.caktoLink);
+      console.log('User ID:', user?.id);
+      console.log('User Email:', user?.email);
       
       // Abrir o link da Cakto em uma nova aba
       window.open(plan.caktoLink, '_blank');
@@ -158,6 +159,17 @@ const SubscriptionPlans = () => {
       setTimeout(() => setIsLoading(null), 3000);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Carregando informações da assinatura...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -171,19 +183,37 @@ const SubscriptionPlans = () => {
         </p>
       </div>
 
+      {/* Debug Info - Remover em produção */}
+      {user && (
+        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
+          <CardContent className="p-4">
+            <h3 className="font-semibold mb-2">Debug Info (remover em produção):</h3>
+            <div className="text-sm space-y-1">
+              <p><strong>User ID:</strong> {user.id}</p>
+              <p><strong>Email:</strong> {user.email}</p>
+              <p><strong>Plano Atual:</strong> {subscription.plan}</p>
+              <p><strong>Status:</strong> {subscription.status}</p>
+              <p><strong>Ativado em:</strong> {subscription.activated_at || 'N/A'}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Mostrar plano atual se não for free */}
-      {currentPlan !== 'free' && (
+      {subscription.plan !== 'free' && (
         <Card className={`bg-gradient-to-r ${currentTheme.secondary} border-${currentTheme.accent}/20`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold">Plano Atual</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Você está no plano {plans.find(p => p.id === currentPlan)?.name}
+                  Você está no plano {plans.find(p => p.id === subscription.plan)?.name}
                 </p>
               </div>
               <div className="flex gap-2">
-                <Badge className={`bg-${currentTheme.accent} text-white`}>Ativo</Badge>
+                <Badge className={`bg-${currentTheme.accent} text-white`}>
+                  {subscription.status === 'active' ? 'Ativo' : subscription.status}
+                </Badge>
                 <Button variant="outline" size="sm">
                   Gerenciar Assinatura
                 </Button>
