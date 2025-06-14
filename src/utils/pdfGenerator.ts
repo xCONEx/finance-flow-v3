@@ -184,8 +184,11 @@ export const generateJobPDF = async (job: Job, userData: any) => {
   }
   
   try {
-    // Usando a sintaxe correta do autoTable
-    doc.autoTable({
+    // Importar a extensão autoTable dinamicamente
+    const { default: autoTable } = await import('jspdf-autotable');
+    
+    // Usar a sintaxe correta do autoTable
+    autoTable(doc, {
       startY: currentY,
       head: [['DESCRIÇÃO', 'QTD', 'PREÇO UNIT.', 'TOTAL']],
       body: tableData,
@@ -218,7 +221,7 @@ export const generateJobPDF = async (job: Job, userData: any) => {
       }
     });
     
-    const finalY = doc.lastAutoTable?.finalY || currentY + 100;
+    const finalY = (doc as any).lastAutoTable?.finalY || currentY + 100;
     
     // Verificar se precisa de nova página para o rodapé
     const footerY = checkPageBreak(doc, finalY, 30);
@@ -281,7 +284,10 @@ export const generateWorkItemsPDF = async (workItems: WorkItem[], userData: any)
   tableData.push(['VALOR TOTAL', '', totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), '']);
   
   try {
-    doc.autoTable({
+    // Importar a extensão autoTable dinamicamente
+    const { default: autoTable } = await import('jspdf-autotable');
+    
+    autoTable(doc, {
       startY: currentY,
       head: [['DESCRIÇÃO', 'CATEGORIA', 'VALOR', 'DEPRECIAÇÃO']],
       body: tableData,
@@ -364,7 +370,10 @@ export const generateExpensesPDF = async (expenses: MonthlyCost[], userData: any
   tableData.push(['TOTAL DE DESPESAS', '', totalExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), '']);
   
   try {
-    doc.autoTable({
+    // Importar a extensão autoTable dinamicamente
+    const { default: autoTable } = await import('jspdf-autotable');
+    
+    autoTable(doc, {
       startY: currentY,
       head: [['DESCRIÇÃO', 'CATEGORIA', 'VALOR', 'MÊS/ANO']],
       body: tableData,
