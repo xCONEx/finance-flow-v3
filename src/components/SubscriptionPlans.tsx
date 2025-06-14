@@ -283,18 +283,18 @@ const SubscriptionPlans = () => {
 
               <Button 
                 className={`w-full ${
-                  currentPlan === plan.id 
+                  subscription.plan === plan.id 
                     ? 'bg-gray-400 cursor-not-allowed' 
                     : plan.popular 
                       ? `bg-gradient-to-r ${plan.color} hover:opacity-90` 
                       : ''
                 }`}
-                disabled={currentPlan === plan.id || isLoading === plan.id}
+                disabled={subscription.plan === plan.id || isLoading === plan.id}
                 onClick={() => handleSubscribe(plan.id)}
               >
                 {isLoading === plan.id ? (
                   'Abrindo Pagamento...'
-                ) : currentPlan === plan.id ? (
+                ) : subscription.plan === plan.id ? (
                   'Plano Atual'
                 ) : plan.id === 'free' ? (
                   'Plano Gratuito'
