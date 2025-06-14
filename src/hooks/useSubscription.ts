@@ -21,7 +21,7 @@ export const useSubscription = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.uid) {
+    if (!user?.id) {
       setSubscription({ plan: 'free', status: 'active' });
       setLoading(false);
       return;
@@ -29,7 +29,7 @@ export const useSubscription = () => {
 
     // Escutar mudanças na assinatura do usuário
     const unsubscribe = onSnapshot(
-      doc(db, 'users', user.uid),
+      doc(db, 'users', user.id),
       (doc) => {
         if (doc.exists()) {
           const userData = doc.data();
@@ -51,7 +51,7 @@ export const useSubscription = () => {
     );
 
     return () => unsubscribe();
-  }, [user?.uid]);
+  }, [user?.id]);
 
   const hasActiveSubscription = () => {
     return subscription.status === 'active' && subscription.plan !== 'free';
