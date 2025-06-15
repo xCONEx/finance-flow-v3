@@ -1,16 +1,6 @@
 
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-
-// Declaração para autoTable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-    lastAutoTable: {
-      finalY: number;
-    };
-  }
-}
+import autoTable from 'jspdf-autotable';
 
 const addHeader = (doc: jsPDF, title: string, userData: any, pageWidth: number, margin: number) => {
   // Background azul do cabeçalho
@@ -128,7 +118,7 @@ export const generateWorkItemsPDF = async (workItems: any[], userData: any) => {
   tableData.push(['VALOR TOTAL', '', totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), '']);
   
   try {
-    doc.autoTable({
+    autoTable(doc, {
       startY: currentY,
       head: [['DESCRIÇÃO', 'CATEGORIA', 'VALOR', 'DEPRECIAÇÃO']],
       body: tableData,
@@ -203,7 +193,7 @@ export const generateExpensesPDF = async (expenses: any[], userData: any) => {
   tableData.push(['TOTAL DE DESPESAS', '', totalExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), '']);
   
   try {
-    doc.autoTable({
+    autoTable(doc, {
       startY: currentY,
       head: [['DESCRIÇÃO', 'CATEGORIA', 'VALOR', 'MÊS/ANO']],
       body: tableData,

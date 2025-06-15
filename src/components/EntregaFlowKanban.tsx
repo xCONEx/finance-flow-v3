@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +18,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Scissors,
-  Eye
+  Eye,
+  Edit
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
@@ -37,6 +37,8 @@ const EntregaFlowKanban = () => {
   const [projects, setProjects] = useState<KanbanProject[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<KanbanProject | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProject, setEditingProject] = useState<KanbanProject | null>(null);
   const [loading, setLoading] = useState(true);
   const [newProject, setNewProject] = useState<Partial<KanbanProject>>({
     title: '',
@@ -247,6 +249,31 @@ const EntregaFlowKanban = () => {
     });
   };
 
+  const handleEditProject = async () => {
+    if (!editingProject) return;
+
+    const updatedProjects = projects.map(p => 
+      p.id === editingProject.id 
+        ? { ...editingProject, updatedAt: new Date().toISOString() }
+        : p
+    );
+
+    setProjects(updatedProjects);
+    await saveProjects(updatedProjects);
+    setShowEditModal(false);
+    setEditingProject(null);
+
+    toast({
+      title: "Projeto Atualizado",
+      description: `"${editingProject.title}" foi atualizado com sucesso`
+    });
+  };
+
+  const openEditModal = (project: KanbanProject) => {
+    setEditingProject({ ...project });
+    setShowEditModal(true);
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'alta': return 'bg-red-100 text-red-800';
@@ -271,7 +298,7 @@ const EntregaFlowKanban = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 pb-20 md:pb-6 overflow-x-hidden px-4">
+      <div className="space-y-6 pb-20 md:pb-6 overflow-x-hidden px-2 sm:px-4">
         <div className="text-center">
           <p>Carregando projetos...</p>
         </div>
@@ -280,34 +307,34 @@ const EntregaFlowKanban = () => {
   }
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6 overflow-x-hidden px-4">
-      {/* Header */}
+    <div className="space-y-4 sm:space-y-6 pb-20 md:pb-6 overflow-x-hidden px-2 sm:px-4">
+      {/* Header - Responsivo */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
+        <div className="w-full lg:w-auto">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
-              <Video className="text-white h-6 w-6" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+              <Video className="text-white h-4 w-4 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Projetos</h1>
-              <p className="text-sm text-gray-600">Gerenciador de Entregas</p>
+              <h1 className="text-xl sm:text-2xl font-bold">Projetos</h1>
+              <p className="text-xs sm:text-sm text-gray-600">Gerenciador de Entregas</p>
             </div>
           </div>
-          <h2 className="text-xl font-semibold">Bem-vindo ao EntregaFlow! 🎬</h2>
-          <p className="text-gray-600">Gerencie seus projetos audiovisuais de forma simples e eficiente</p>
+          <h2 className="text-lg sm:text-xl font-semibold">Bem-vindo ao EntregaFlow! 🎬</h2>
+          <p className="text-sm sm:text-base text-gray-600">Gerencie seus projetos audiovisuais de forma simples e eficiente</p>
         </div>
 
         <Button 
           onClick={() => setShowAddModal(true)}
-          className="bg-purple-600 hover:bg-purple-700"
+          className="bg-purple-600 hover:bg-purple-700 w-full lg:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
           Novo Projeto
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Stats Cards - Grid responsivo */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card className="bg-blue-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -373,11 +400,12 @@ const EntregaFlowKanban = () => {
 
       {/* Pipeline Section */}
       <div>
-        <h3 className="text-xl font-semibold mb-2">Pipeline de Projetos</h3>
-        <p className="text-gray-600 mb-4">Arraste e solte os cards para atualizar o status dos projetos</p>
+        <h3 className="text-lg sm:text-xl font-semibold mb-2">Pipeline de Projetos</h3>
+        <p className="text-sm sm:text-base text-gray-600 mb-4">Arraste e solte os cards para atualizar o status dos projetos</p>
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid lg:grid-cols-4 gap-6">
+          {/* Desktop Layout */}
+          <div className="hidden lg:grid lg:grid-cols-4 gap-6">
             {columns.map((column) => {
               const columnProjects = projects.filter(p => p.status === column.id);
               const IconComponent = column.icon;
@@ -386,7 +414,11 @@ const EntregaFlowKanban = () => {
                 <div key={column.id}>
                   {/* Column Header */}
                   <div className="flex items-center gap-2 mb-4">
-                    <div className={`w-3 h-3 rounded-full ${column.id === 'filmado' ? 'bg-blue-500' : column.id === 'edicao' ? 'bg-orange-500' : column.id === 'revisao' ? 'bg-yellow-500' : 'bg-green-500'}`} />
+                    <div className={`w-3 h-3 rounded-full ${
+                      column.id === 'filmado' ? 'bg-blue-500' : 
+                      column.id === 'edicao' ? 'bg-orange-500' : 
+                      column.id === 'revisao' ? 'bg-yellow-500' : 'bg-green-500'
+                    }`} />
                     <h4 className="font-semibold">{column.title}</h4>
                     <Badge variant="secondary">{column.count}</Badge>
                   </div>
@@ -418,10 +450,23 @@ const EntregaFlowKanban = () => {
                                 >
                                   <CardContent className="p-4">
                                     <div className="space-y-3">
-                                      {/* Priority Badge */}
-                                      <Badge className={`text-xs ${getPriorityColor(project.priority)}`}>
-                                        {project.priority === 'alta' ? 'Alta' : project.priority === 'media' ? 'Média' : 'Baixa'}
-                                      </Badge>
+                                      {/* Header com botão de edição */}
+                                      <div className="flex justify-between items-start">
+                                        <Badge className={`text-xs ${getPriorityColor(project.priority)}`}>
+                                          {project.priority === 'alta' ? 'Alta' : project.priority === 'media' ? 'Média' : 'Baixa'}
+                                        </Badge>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openEditModal(project);
+                                          }}
+                                          className="h-6 w-6 p-0"
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                      </div>
 
                                       {/* Project Title */}
                                       <h4 className="font-semibold text-sm line-clamp-2">
@@ -496,8 +541,219 @@ const EntregaFlowKanban = () => {
               );
             })}
           </div>
+
+          {/* Mobile Layout */}
+          <div className="lg:hidden space-y-6">
+            {columns.map((column) => {
+              const columnProjects = projects.filter(p => p.status === column.id);
+              const IconComponent = column.icon;
+              
+              return (
+                <Card key={column.id} className={`${column.color}`}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-center font-semibold flex items-center justify-center gap-2 text-sm sm:text-base">
+                      <IconComponent className="h-4 w-4 sm:h-5 sm:w-5" />
+                      {column.title}
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {column.count}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Droppable droppableId={column.id}>
+                      {(provided) => (
+                        <div
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                          className="space-y-3"
+                        >
+                          {columnProjects.map((project, index) => (
+                            <Draggable key={project.id} draggableId={project.id} index={index}>
+                              {(provided) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                >
+                                  <Card 
+                                    className="cursor-pointer hover:shadow-md transition-all duration-200"
+                                    onClick={() => setSelectedProject(project)}
+                                  >
+                                    <CardContent className="p-3">
+                                      <div className="space-y-2">
+                                        {/* Header com botão de edição */}
+                                        <div className="flex justify-between items-start">
+                                          <Badge className={`text-xs ${getPriorityColor(project.priority)}`}>
+                                            {project.priority === 'alta' ? 'Alta' : project.priority === 'media' ? 'Média' : 'Baixa'}
+                                          </Badge>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openEditModal(project);
+                                            }}
+                                            className="h-6 w-6 p-0"
+                                          >
+                                            <Edit className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+
+                                        <h4 className="font-semibold text-sm line-clamp-2">
+                                          {project.title}
+                                        </h4>
+
+                                        <div className="flex items-center gap-2">
+                                          <User className="h-3 w-3 text-gray-500" />
+                                          <span className="text-xs text-gray-600">{project.client}</span>
+                                        </div>
+
+                                        {/* Due Date */}
+                                        {project.dueDate && (
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="h-3 w-3 text-gray-500" />
+                                            <span className={`text-xs ${
+                                              isOverdue(project.dueDate) ? 'text-red-600 font-medium' : 'text-gray-600'
+                                            }`}>
+                                              {new Date(project.dueDate).toLocaleDateString('pt-BR')}
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {/* Overdue Badge */}
+                                        {isOverdue(project.dueDate) && project.status !== 'entregue' && (
+                                          <Badge className="bg-red-500 text-white text-xs">
+                                            {getDaysOverdue(project.dueDate)} dias atrasado
+                                          </Badge>
+                                        )}
+
+                                        {/* Links */}
+                                        {project.links.length > 0 && (
+                                          <div className="flex items-center gap-2">
+                                            <ExternalLink className="h-3 w-3 text-blue-500" />
+                                            <span className="text-xs text-blue-600">
+                                              {project.links.length} link(s)
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </DragDropContext>
       </div>
+
+      {/* Edit Project Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Projeto</DialogTitle>
+          </DialogHeader>
+          {editingProject && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-1 sm:col-span-2">
+                  <label className="text-sm font-medium mb-2 block">Título do Projeto</label>
+                  <Input
+                    value={editingProject.title}
+                    onChange={(e) => setEditingProject({...editingProject, title: e.target.value})}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Cliente</label>
+                  <Input
+                    value={editingProject.client}
+                    onChange={(e) => setEditingProject({...editingProject, client: e.target.value})}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Data de Entrega</label>
+                  <Input
+                    type="date"
+                    value={editingProject.dueDate}
+                    onChange={(e) => setEditingProject({...editingProject, dueDate: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Descrição</label>
+                <Textarea
+                  value={editingProject.description || ''}
+                  onChange={(e) => setEditingProject({...editingProject, description: e.target.value})}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Prioridade</label>
+                  <Select 
+                    value={editingProject.priority} 
+                    onValueChange={(value: 'alta' | 'media' | 'baixa') => setEditingProject({...editingProject, priority: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alta">Alta</SelectItem>
+                      <SelectItem value="media">Média</SelectItem>
+                      <SelectItem value="baixa">Baixa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Status</label>
+                  <Select 
+                    value={editingProject.status} 
+                    onValueChange={(value: KanbanProject['status']) => setEditingProject({...editingProject, status: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="filmado">Filmado</SelectItem>
+                      <SelectItem value="edicao">Em Edição</SelectItem>
+                      <SelectItem value="revisao">Revisão</SelectItem>
+                      <SelectItem value="entregue">Entregue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-4">
+            <Button 
+              onClick={handleEditProject} 
+              className="flex-1 bg-purple-600 hover:bg-purple-700"
+            >
+              Salvar Alterações
+            </Button>
+            <Button 
+              onClick={() => setShowEditModal(false)} 
+              variant="outline"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Project Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
