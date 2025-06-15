@@ -6,13 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from '@/hooks/use-toast';
-import { firestoreService } from '../services/firestore';
 
 const UserProfile = () => {
-  const { user, logout, userData, agencyData } = useAuth();
+  const { user, profile, updateProfile, signOut } = useSupabaseAuth();
   const { currentTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -25,28 +24,26 @@ const UserProfile = () => {
     company: ''
   });
 
-  // Carregar dados quando userData mudar
+  // Carregar dados quando profile mudar
   useEffect(() => {
-    if (user && userData) {
+    if (user && profile) {
       setFormData({
-        name: user.name || '',
+        name: profile.name || user.email || '',
         email: user.email || '',
-        phone: userData.personalInfo?.phone || userData.phone || '',
-        company: userData.personalInfo?.company || userData.company || ''
+        phone: profile.phone || '',
+        company: profile.company || ''
       });
     }
-  }, [user, userData]);
+  }, [user, profile]);
 
-  // Buscar foto do Google se disponível
+  // Buscar foto do perfil
   const getProfileImageUrl = () => {
-    // Prioridade: 1. Foto customizada 2. Foto do Google 3. Avatar padrão
-    if (userData?.imageuser) {
-      return userData.imageuser;
+    if (profile?.image_user) {
+      return profile.image_user;
     }
     
-    // Verificar se o usuário tem photoURL do Google
-    if (user?.photoURL) {
-      return user.photoURL;
+    if (user?.user_metadata?.avatar_url) {
+      return user.user_metadata.avatar_url;
     }
     
     return '';
@@ -57,22 +54,22 @@ const UserProfile = () => {
     
     setIsLoading(true);
     try {
-      // Salvar dados no Firebase
       const updateData: any = {};
       
-      if (formData.phone !== (userData?.personalInfo?.phone || userData?.phone)) {
+      if (formData.phone !== profile?.phone) {
         updateData.phone = formData.phone;
       }
       
-      if (formData.company !== (userData?.personalInfo?.company || userData?.company)) {
+      if (formData.company !== profile?.company) {
         updateData.company = formData.company;
       }
       
+      if (formData.name !== profile?.name) {
+        updateData.name = formData.name;
+      }
+      
       if (Object.keys(updateData).length > 0) {
-        await firestoreService.updateUserField(user.id, 'personalInfo', {
-          phone: formData.phone,
-          company: formData.company
-        });
+        await updateProfile(updateData);
       }
       
       toast({
@@ -96,7 +93,6 @@ const UserProfile = () => {
     const file = event.target.files?.[0];
     if (!file || !user?.id) return;
 
-    // Verificar tamanho do arquivo (max 3MB)
     if (file.size > 3 * 1024 * 1024) {
       toast({
         title: "Erro",
@@ -106,7 +102,6 @@ const UserProfile = () => {
       return;
     }
 
-    // Verificar tipo do arquivo
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Erro",
@@ -118,14 +113,12 @@ const UserProfile = () => {
 
     setIsLoading(true);
     try {
-      // Converter para base64
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
         
         try {
-          // Salvar no Firebase como imageuser
-          await firestoreService.updateUserField(user.id, 'imageuser', base64);
+          await updateProfile({ image_user: base64 });
           
           toast({
             title: "Foto Atualizada",
@@ -163,22 +156,17 @@ const UserProfile = () => {
 
   const handleEditToggle = () => {
     if (isEditing) {
-      // Cancelar edição - restaurar dados originais
-      if (user && userData) {
+      if (user && profile) {
         setFormData({
-          name: user.name || '',
+          name: profile.name || user.email || '',
           email: user.email || '',
-          phone: userData.personalInfo?.phone || userData.phone || '',
-          company: userData.personalInfo?.company || userData.company || ''
+          phone: profile.phone || '',
+          company: profile.company || ''
         });
       }
     }
     setIsEditing(!isEditing);
   };
-
-  // Determinar se o usuário está em uma empresa
-  const isInCompany = user?.userType === 'company_owner' || user?.userType === 'employee';
-  const companyName = agencyData?.name || 'Empresa não encontrada';
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
@@ -209,7 +197,7 @@ const UserProfile = () => {
             {/* User Photo */}
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={getProfileImageUrl()} alt={user?.name || 'User'} />
+                <AvatarImage src={getProfileImageUrl()} alt={profile?.name || 'User'} />
                 <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white text-2xl`}>
                   {formData.name?.charAt(0) || 'U'}
                 </AvatarFallback>
@@ -233,14 +221,10 @@ const UserProfile = () => {
                     {isLoading ? 'Salvando...' : 'Alterar Foto'}
                   </Button>
                   <p className="text-xs text-gray-500">JPG, PNG até 3MB</p>
-                  {user?.photoURL && !userData?.imageuser && (
-                    <p className="text-xs text-blue-600">Foto atual: Google Account</p>
-                  )}
                 </div>
               )}
             </div>
 
-            {/* User Info Form */}
             <div className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -277,21 +261,33 @@ const UserProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                 <Label>Tipo de Usuário</Label>
-                <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">
-                  {user?.userType === 'admin' && 'Administrador do Sistema'}
-                  {user?.userType === 'company_owner' && 'Dono da Empresa'}
-                  {user?.userType === 'employee' && 'Colaborador'}
-                  {user?.userType === 'individual' && 'Usuário Individual'}
-                </p>
+                  <Label htmlFor="company">Empresa</Label>
+                  {isEditing ? (
+                    <Input
+                      id="company"
+                      value={formData.company}
+                      onChange={(e) => handleInputChange('company', e.target.value)}
+                      placeholder="Nome da sua empresa"
+                    />
+                  ) : (
+                    <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">{formData.company || 'Não informado'}</p>
+                  )}
                 </div>
               </div>
 
-            
+              <div className="space-y-2">
+                <Label>Tipo de Usuário</Label>
+                <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">
+                  {profile?.user_type === 'admin' && 'Administrador do Sistema'}
+                  {profile?.user_type === 'company_owner' && 'Dono da Empresa'}
+                  {profile?.user_type === 'employee' && 'Colaborador'}
+                  {profile?.user_type === 'individual' && 'Usuário Individual'}
+                  {!profile?.user_type && 'Individual'}
+                </p>
+              </div>
             </div>
 
-            {/* Save Button */}
-            {isEditing && !isInCompany && (
+            {isEditing && (
               <div className="flex gap-2">
                 <Button 
                   onClick={handleSave}
@@ -304,16 +300,15 @@ const UserProfile = () => {
               </div>
             )}
 
-            {/* Account Actions */}
             <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center">
                 <div>
                   <h4 className="font-medium">Conta</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Membro desde {new Date(user?.createdAt || '').toLocaleDateString('pt-BR')}
+                    Membro desde {new Date(profile?.created_at || '').toLocaleDateString('pt-BR')}
                   </p>
                 </div>
-                <Button variant="outline" onClick={logout}>
+                <Button variant="outline" onClick={signOut}>
                   Sair da Conta
                 </Button>
               </div>

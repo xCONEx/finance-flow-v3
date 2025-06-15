@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, DollarSign, Edit, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,10 +6,11 @@ import { useApp } from '../contexts/AppContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { toast } from '@/hooks/use-toast';
 import ExpenseModal from './ExpenseModal';
+import { generateExpensesPDF } from '../utils/pdfGenerator';
 
 const MonthlyCosts = () => {
   const { monthlyCosts, updateMonthlyCost, deleteMonthlyCost, loading } = useApp();
-  const { user } = useSupabaseAuth();
+  const { user, profile } = useSupabaseAuth();
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingCost, setEditingCost] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -52,8 +52,7 @@ const MonthlyCosts = () => {
         return;
       }
 
-      // TODO: Implementar geração de PDF
-      console.log('Gerando PDF das despesas:', monthlyCosts);
+      await generateExpensesPDF(monthlyCosts, { name: profile?.name, email: user?.email });
       toast({
         title: "PDF Gerado",
         description: "O relatório de despesas foi gerado com sucesso.",
