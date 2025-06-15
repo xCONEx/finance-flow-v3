@@ -28,7 +28,12 @@ export const useSubscription = () => {
       
       if (data) {
         setSubscription(data.subscription || 'free');
-        setSubscriptionData(data.subscription_data || null);
+        // Verificar se subscription_data é um objeto válido antes de fazer cast
+        if (data.subscription_data && typeof data.subscription_data === 'object') {
+          setSubscriptionData(data.subscription_data as SubscriptionData);
+        } else {
+          setSubscriptionData(null);
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar assinatura:', error);

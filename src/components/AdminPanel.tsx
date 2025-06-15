@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -21,11 +22,13 @@ import {
   UserPlus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { firestoreService } from '../services/firestore';
-import { formatCurrency } from '../utils/formatters';
+import { supabase } from '@/integrations/supabase/client';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { subscriptionService } from '@/services/subscriptionService';
 
 const AdminPanel = () => {
   const { toast } = useToast();
+  const { user } = useSupabaseAuth();
 
   const [users, setUsers] = useState([]);
   const [analytics, setAnalytics] = useState(null);
@@ -34,20 +37,52 @@ const AdminPanel = () => {
   const [userTypeFilter, setUserTypeFilter] = useState('all');
   const [newAdminEmail, setNewAdminEmail] = useState('');
 
+  // Verificar se o usuário atual é admin
+  const isCurrentUserAdmin = user?.email === 'yuriadrskt@gmail.com' || user?.email === 'adm.financeflow@gmail.com';
+
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isCurrentUserAdmin) {
+      loadData();
+    }
+  }, [isCurrentUserAdmin]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [allUsers, analyticsData] = await Promise.all([
-        firestoreService.getAllUsers(),
-        firestoreService.getAnalyticsData()
-      ]);
-      setUsers(allUsers);
-      setAnalytics(analyticsData);
+      
+      // Buscar todos os usuários
+      const { data: profilesData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setUsers(profilesData || []);
+      
+      // Analytics básicos
+      const totalUsers = profilesData?.length || 0;
+      const freeUsers = profilesData?.filter(u => !u.subscription || u.subscription === 'free').length || 0;
+      const premiumUsers = profilesData?.filter(u => u.subscription === 'premium').length || 0;
+      const basicUsers = profilesData?.filter(u => u.subscription === 'basic').length || 0;
+      const enterpriseUsers = profilesData?.filter(u => u.subscription === 'enterprise' || u.subscription === 'enterprise-annual').length || 0;
+      
+      setAnalytics({
+        overview: {
+          totalUsers,
+          totalAgencias: 0, // TODO: implementar quando necessário
+          totalRevenue: 0, // TODO: implementar quando necessário
+          activeUsers: totalUsers
+        },
+        userStats: {
+          freeUsers,
+          premiumUsers,
+          basicUsers,
+          enterpriseUsers
+        }
+      });
     } catch (error) {
+      console.error('Erro ao carregar dados:', error);
       toast({
         title: 'Erro',
         description: 'Erro ao carregar dados',
@@ -60,31 +95,104 @@ const AdminPanel = () => {
 
   const handleUpdateUserField = async (userId, field, value) => {
     try {
-      await firestoreService.updateUserField(userId, field, value);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ [field]: value, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (error) throw error;
+
       setUsers(users.map(u => u.id === userId ? { ...u, [field]: value } : u));
-      toast({ title: 'Sucesso', description: 'Atualizado com sucesso' });
-    } catch {
-      toast({ title: 'Erro', description: 'Erro ao atualizar', variant: 'destructive' });
+      toast({ 
+        title: 'Sucesso', 
+        description: `Campo ${field} atualizado com sucesso` 
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar:', error);
+      toast({ 
+        title: 'Erro', 
+        description: 'Erro ao atualizar campo', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
+  const handleUpdateSubscription = async (userId, newPlan) => {
+    try {
+      // Criar dados de assinatura para o novo plano
+      const subscriptionData = {
+        plan: newPlan,
+        status: 'active',
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 dias
+        payment_provider: 'manual_admin',
+        amount: newPlan === 'basic' ? 29 : newPlan === 'premium' ? 49 : newPlan === 'enterprise' ? 99 : 0,
+        currency: 'BRL'
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          subscription: newPlan,
+          subscription_data: subscriptionData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      setUsers(users.map(u => u.id === userId ? { 
+        ...u, 
+        subscription: newPlan,
+        subscription_data: subscriptionData
+      } : u));
+      
+      toast({ 
+        title: 'Sucesso', 
+        description: `Plano atualizado para ${newPlan} manualmente` 
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar assinatura:', error);
+      toast({ 
+        title: 'Erro', 
+        description: 'Erro ao atualizar plano', 
+        variant: 'destructive' 
+      });
     }
   };
 
   const handleBanUser = async (userId, banned) => {
     try {
-      await firestoreService.banUser(userId, banned);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ banned, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (error) throw error;
+
       setUsers(users.map(u => u.id === userId ? { ...u, banned } : u));
-    } catch {
-      toast({ title: 'Erro', description: 'Erro ao banir/desbanir', variant: 'destructive' });
+      toast({ 
+        title: 'Sucesso', 
+        description: banned ? 'Usuário banido' : 'Usuário desbanido' 
+      });
+    } catch (error) {
+      console.error('Erro ao banir/desbanir:', error);
+      toast({ 
+        title: 'Erro', 
+        description: 'Erro ao banir/desbanir usuário', 
+        variant: 'destructive' 
+      });
     }
   };
 
   const handleAddAdmin = async () => {
     if (!newAdminEmail) return;
-    const user = users.find(u => u.email === newAdminEmail);
-    if (!user) {
+    const targetUser = users.find(u => u.email === newAdminEmail);
+    if (!targetUser) {
       toast({ title: 'Erro', description: 'Usuário não encontrado', variant: 'destructive' });
       return;
     }
-    await handleUpdateUserField(user.id, 'userType', 'admin');
+    await handleUpdateUserField(targetUser.id, 'user_type', 'admin');
     setNewAdminEmail('');
     loadData();
   };
@@ -92,13 +200,24 @@ const AdminPanel = () => {
   const filteredUsers = users.filter(user => {
     const email = user?.email || '';
     const matchesSearch = email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = userTypeFilter === 'all' ? true : user.userType === userTypeFilter;
+    const matchesFilter = userTypeFilter === 'all' ? true : user.user_type === userTypeFilter;
     return matchesSearch && matchesFilter;
   });
 
-  const freeUsers = users.filter(u => !u.subscription || u.subscription === 'free').length;
-  const premiumUsers = users.filter(u => u.subscription === 'premium').length;
-  const enterpriseUsers = users.filter(u => u.subscription === 'enterprise').length;
+  if (!isCurrentUserAdmin) {
+    return (
+      <div className="text-center p-8">
+        <Shield className="h-16 w-16 mx-auto text-red-500 mb-4" />
+        <h2 className="text-2xl font-bold text-red-600">Acesso Negado</h2>
+        <p className="text-gray-600">Você não tem permissão para acessar este painel.</p>
+      </div>
+    );
+  }
+
+  const freeUsers = analytics?.userStats?.freeUsers || 0;
+  const premiumUsers = analytics?.userStats?.premiumUsers || 0;
+  const basicUsers = analytics?.userStats?.basicUsers || 0;
+  const enterpriseUsers = analytics?.userStats?.enterpriseUsers || 0;
 
   return (
     <div className="space-y-6 p-4">
@@ -131,7 +250,7 @@ const AdminPanel = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <DollarSign className="h-8 w-8 mx-auto text-purple-600 mb-2" />
-            <p className="text-2xl font-bold">{formatCurrency(analytics?.overview?.totalRevenue || 0)}</p>
+            <p className="text-2xl font-bold">R$ 0,00</p>
             <p className="text-sm text-gray-600">Receita Total</p>
           </CardContent>
         </Card>
@@ -146,12 +265,20 @@ const AdminPanel = () => {
       </div>
 
       {/* Métricas por Plano */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="h-8 w-8 mx-auto text-gray-600 mb-2" />
             <p className="text-2xl font-bold text-gray-700">{freeUsers}</p>
             <p className="text-sm text-gray-600">Usuários Free</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 text-center">
+            <CheckCircle className="h-8 w-8 mx-auto text-green-600 mb-2" />
+            <p className="text-2xl font-bold text-green-700">{basicUsers}</p>
+            <p className="text-sm text-gray-600">Usuários Basic</p>
           </CardContent>
         </Card>
 
@@ -173,10 +300,9 @@ const AdminPanel = () => {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="admins">Administradores</TabsTrigger>
-          <TabsTrigger value="agencias">Agências</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -213,31 +339,33 @@ const AdminPanel = () => {
             <Card key={user.id} className="p-4 space-y-2">
               <div>
                 <p className="font-medium">{user.email}</p>
-                <p className="text-sm text-gray-600">UID: {user.uid}</p>
+                <p className="text-sm text-gray-600">UID: {user.id}</p>
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Badge variant={user.banned ? "destructive" : "secondary"}>
                   {user.banned ? "Banido" : "Ativo"}
                 </Badge>
                 <Badge variant="outline">{user.subscription || 'free'}</Badge>
-                <Badge variant="outline">{user.userType || 'individual'}</Badge>
+                <Badge variant="outline">{user.user_type || 'individual'}</Badge>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2">
-                <Select onValueChange={(value) => handleUpdateUserField(user.id, 'subscription', value)}>
+                <Select onValueChange={(value) => handleUpdateSubscription(user.id, value)}>
                   <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="Plano" />
+                    <SelectValue placeholder={`Plano: ${user.subscription || 'free'}`} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="free">Gratuito</SelectItem>
+                    <SelectItem value="basic">Basic</SelectItem>
                     <SelectItem value="premium">Premium</SelectItem>
                     <SelectItem value="enterprise">Enterprise</SelectItem>
+                    <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
                   </SelectContent>
                 </Select>
 
-                <Select onValueChange={(value) => handleUpdateUserField(user.id, 'userType', value)}>
+                <Select onValueChange={(value) => handleUpdateUserField(user.id, 'user_type', value)}>
                   <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="Tipo" />
+                    <SelectValue placeholder={`Tipo: ${user.user_type || 'individual'}`} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="individual">Individual</SelectItem>
@@ -279,7 +407,7 @@ const AdminPanel = () => {
               </div>
 
               <div className="border rounded-lg p-4 space-y-2">
-                {users.filter(u => u.userType === 'admin').map(admin => (
+                {users.filter(u => u.user_type === 'admin').map(admin => (
                   <div key={admin.id} className="flex justify-between items-center">
                     <span>{admin.email}</span>
                     <Badge>Admin</Badge>
@@ -290,127 +418,62 @@ const AdminPanel = () => {
           </Card>
         </TabsContent>
 
-        {/* ANALYTICS COMPLETO */}
+        {/* ANALYTICS SIMPLES */}
         <TabsContent value="analytics" className="space-y-4">
-          {analytics && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Taxa de Conversão</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl font-bold text-green-600">
-                      {analytics.userStats.conversionRate.toFixed(1)}%
-                    </p>
-                    <p className="text-sm text-gray-500">Free → Premium</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Aprovação de Jobs</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {analytics.businessStats.jobApprovalRate.toFixed(1)}%
-                    </p>
-                    <p className="text-sm text-gray-500">Jobs aprovados</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Produtividade</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-2xl font-bold text-purple-600">
-                      {analytics.productivity.taskCompletionRate.toFixed(1)}%
-                    </p>
-                    <p className="text-sm text-gray-600">Tarefas concluídas</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Distribuição de Usuários */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Distribuição de Usuários</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-600">{analytics.userStats.userTypes.individual}</p>
-                      <p className="text-sm text-gray-600">Individuais</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-green-600">{analytics.userStats.userTypes.company_owner}</p>
-                      <p className="text-sm text-gray-600">Donos</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-orange-600">{analytics.userStats.userTypes.employee}</p>
-                      <p className="text-sm text-gray-600">Colaboradores</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-purple-600">{analytics.userStats.userTypes.admin}</p>
-                      <p className="text-sm text-gray-600">Admins</p>
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Distribuição de Usuários</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span>Usuários Free:</span>
+                    <span className="font-bold">{freeUsers}</span>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex justify-between">
+                    <span>Usuários Basic:</span>
+                    <span className="font-bold text-green-600">{basicUsers}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Usuários Premium:</span>
+                    <span className="font-bold text-blue-600">{premiumUsers}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Usuários Enterprise:</span>
+                    <span className="font-bold text-yellow-600">{enterpriseUsers}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Estatísticas de Jobs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Estatísticas de Jobs</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span>Total de Jobs:</span>
-                      <span className="font-bold">{analytics.businessStats.totalJobs}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Jobs Aprovados:</span>
-                      <span className="font-bold text-green-600">{analytics.businessStats.approvedJobs}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Jobs Pendentes:</span>
-                      <span className="font-bold text-orange-600">{analytics.businessStats.pendingJobs}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Valor Médio por Job:</span>
-                      <span className="font-bold">{formatCurrency(analytics.businessStats.averageJobValue)}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Atividade Recente</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span>Novos Usuários (mês):</span>
-                      <span className="font-bold text-blue-600">{analytics.recentActivity.newUsersThisMonth}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Novas Empresas (mês):</span>
-                      <span className="font-bold text-green-600">{analytics.recentActivity.newCompaniesThisMonth}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Novos Jobs (mês):</span>
-                      <span className="font-bold text-purple-600">{analytics.recentActivity.newJobsThisMonth}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tasks/Usuário:</span>
-                      <span className="font-bold">{analytics.productivity.averageTasksPerUser.toFixed(1)}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </>
-          )}
+            <Card>
+              <CardHeader>
+                <CardTitle>Informações Gerais</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span>Total de Usuários:</span>
+                    <span className="font-bold">{analytics?.overview?.totalUsers || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Usuários Ativos:</span>
+                    <span className="font-bold text-green-600">{analytics?.overview?.activeUsers || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Taxa de Conversão:</span>
+                    <span className="font-bold text-blue-600">
+                      {analytics?.overview?.totalUsers > 0 
+                        ? ((premiumUsers + basicUsers + enterpriseUsers) / analytics.overview.totalUsers * 100).toFixed(1)
+                        : 0
+                      }%
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
