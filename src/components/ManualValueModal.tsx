@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DollarSign, Save } from 'lucide-react';
 import {
@@ -14,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { toast } from '@/hooks/use-toast';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { firestoreService } from '../services/firestore';
 
@@ -24,7 +23,7 @@ interface ManualValueModalProps {
 }
 
 const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
-  const { addJob } = useAppContext();
+  const { addJob } = useApp();
   const { user } = useAuth();
   
   const [formData, setFormData] = useState({

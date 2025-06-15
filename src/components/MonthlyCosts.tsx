@@ -1,16 +1,15 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, DollarSign, Edit, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { generateExpensesPDF } from '../utils/pdfGenerator';
 import ExpenseModal from './ExpenseModal';
 
 const MonthlyCosts = () => {
-  const { monthlyCosts, updateMonthlyCost, deleteMonthlyCost, loading } = useAppContext();
+  const { monthlyCosts, updateMonthlyCost, deleteMonthlyCost, loading } = useApp();
   const { userData } = useAuth();
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingCost, setEditingCost] = useState<any | null>(null);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Save } from 'lucide-react';
 import {
@@ -12,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 
 const EXPENSE_CATEGORIES = [
@@ -31,7 +30,7 @@ interface ExpenseModalProps {
 }
 
 const ExpenseModal = ({ open, onOpenChange, editingCost }: ExpenseModalProps) => {
-  const { addMonthlyCost, updateMonthlyCost } = useAppContext();
+  const { addMonthlyCost, updateMonthlyCost } = useApp();
   const [formData, setFormData] = useState({
     description: '',
     category: '',

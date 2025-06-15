@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Save } from 'lucide-react';
 import {
@@ -12,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 
 const EQUIPMENT_CATEGORIES = [
@@ -33,7 +32,7 @@ interface WorkItemModalProps {
 }
 
 const WorkItemModal = ({ open, onOpenChange, editingItem }: WorkItemModalProps) => {
-  const { addWorkItem, updateWorkItem } = useAppContext();
+  const { addWorkItem, updateWorkItem } = useApp();
   const [formData, setFormData] = useState({
     description: '',
     category: '',

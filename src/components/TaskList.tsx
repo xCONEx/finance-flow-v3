@@ -1,15 +1,14 @@
-
 import React, { useState } from 'react';
 import { CheckCircle, Circle, Plus, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import TasksModal from './TasksModal';
 import AddTaskModal from './AddTaskModal';
 import EditTaskModal from './EditTaskModal';
 
 const TaskList = () => {
-  const { tasks } = useAppContext();
+  const { tasks } = useApp();
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);

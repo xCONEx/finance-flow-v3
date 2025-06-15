@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Edit, Trash2, FileText, Calendar, DollarSign, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import JobEditor from './JobEditor';
@@ -21,7 +20,7 @@ import { toast } from '@/hooks/use-toast';
 import { generateJobPDF } from '../utils/pdfGenerator';
 
 const RecentJobs = () => {
-  const { jobs, deleteJob } = useAppContext();
+  const { jobs, deleteJob } = useApp();
   const { userData, user } = useAuth();
   const { formatValue } = usePrivacy();
   const [editingJob, setEditingJob] = useState<string | null>(null);

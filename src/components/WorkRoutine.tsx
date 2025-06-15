@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Clock, Calculator, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -14,7 +13,7 @@ import { formatCurrency } from '../utils/formatters';
 import { firestoreService } from '../services/firestore';
 
 const WorkRoutine = () => {
-  const { workRoutine, loading } = useAppContext();
+  const { workRoutine, loading } = useApp();
   const { currentTheme } = useTheme();
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);

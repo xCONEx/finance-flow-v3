@@ -1,16 +1,15 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, Briefcase, Edit, Loader2, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { generateWorkItemsPDF } from '../utils/pdfGenerator';
 import WorkItemModal from './WorkItemModal';
 
 const WorkItems = () => {
-  const { workItems, updateWorkItem, deleteWorkItem, loading } = useAppContext();
+  const { workItems, updateWorkItem, deleteWorkItem, loading } = useApp();
   const { userData } = useAuth();
   const [showItemModal, setShowItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);

@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckCircle, Circle, Calendar, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
@@ -12,7 +12,7 @@ interface TasksModalProps {
 }
 
 const TasksModal = ({ open, onOpenChange }: TasksModalProps) => {
-  const { tasks, updateTask } = useAppContext();
+  const { tasks, updateTask } = useApp();
 
   const toggleTask = async (taskId: string, completed: boolean) => {
     try {

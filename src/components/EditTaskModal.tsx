@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 
 interface EditTaskModalProps {
@@ -25,7 +24,7 @@ const taskStatuses = [
 ];
 
 const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onOpenChange, taskId }) => {
-  const { tasks, updateTask, deleteTask } = useAppContext();
+  const { tasks, updateTask, deleteTask } = useApp();
   const [formData, setFormData] = useState({
     title: '',
     description: '',

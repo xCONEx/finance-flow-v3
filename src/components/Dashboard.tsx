@@ -6,7 +6,7 @@ import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus, Tr
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import CostDistributionChart from './CostDistributionChart';
 import RecentJobs from './RecentJobs';
 import TaskList from './TaskList';
@@ -19,7 +19,7 @@ const Dashboard = () => {
   const { user, userData, agencyData } = useAuth();
   const { currentTheme } = useTheme();
   const { formatValue } = usePrivacy();
-  const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useAppContext();
+  const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useApp();
   const [showTaskModal, setShowTaskModal] = useState(false);
 
   // CORRIGIDO: Dashboard sempre usa dados pessoais do usuário
