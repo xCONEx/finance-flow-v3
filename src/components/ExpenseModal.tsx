@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,14 +12,16 @@ import { useApp } from '../contexts/AppContext';
 interface ExpenseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editingCost?: any;
 }
 
 const ExpenseModal: React.FC<ExpenseModalProps> = ({
   open,
   onOpenChange,
+  editingCost,
 }) => {
   const { user } = useSupabaseAuth();
-  const { addMonthlyCost } = useApp();
+  const { addMonthlyCost, updateMonthlyCost } = useApp();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
@@ -41,6 +43,25 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     'Outros'
   ];
 
+  // Preencher formulário quando estiver editando
+  useEffect(() => {
+    if (editingCost) {
+      setFormData({
+        description: editingCost.description || '',
+        category: editingCost.category || '',
+        value: editingCost.value || 0,
+        month: editingCost.month || new Date().toISOString().slice(0, 7),
+      });
+    } else {
+      setFormData({
+        description: '',
+        category: '',
+        value: 0,
+        month: new Date().toISOString().slice(0, 7),
+      });
+    }
+  }, [editingCost, open]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -56,12 +77,19 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     setLoading(true);
 
     try {
-      await addMonthlyCost(formData);
-
-      toast({
-        title: "Custo Adicionado",
-        description: "O custo mensal foi registrado com sucesso.",
-      });
+      if (editingCost) {
+        await updateMonthlyCost(editingCost.id, formData);
+        toast({
+          title: "Custo Atualizado",
+          description: "O custo mensal foi atualizado com sucesso.",
+        });
+      } else {
+        await addMonthlyCost(formData);
+        toast({
+          title: "Custo Adicionado",
+          description: "O custo mensal foi registrado com sucesso.",
+        });
+      }
 
       // Reset form
       setFormData({
@@ -73,10 +101,10 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
       onOpenChange(false);
     } catch (error) {
-      console.error('Erro ao adicionar custo:', error);
+      console.error('Erro ao salvar custo:', error);
       toast({
         title: "Erro",
-        description: "Erro ao adicionar custo mensal.",
+        description: "Erro ao salvar custo mensal.",
         variant: "destructive"
       });
     } finally {
@@ -88,7 +116,9 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Custo Mensal</DialogTitle>
+          <DialogTitle>
+            {editingCost ? 'Editar Custo Mensal' : 'Adicionar Custo Mensal'}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -152,7 +182,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Adicionando...' : 'Adicionar'}
+              {loading ? (editingCost ? 'Atualizando...' : 'Adicionando...') : (editingCost ? 'Atualizar' : 'Adicionar')}
             </Button>
           </div>
         </form>
