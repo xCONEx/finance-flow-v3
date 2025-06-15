@@ -30,11 +30,11 @@ const WorkRoutine = () => {
   useEffect(() => {
     if (workRoutine) {
       setFormData({
-        desiredSalary: workRoutine.desiredSalary || 0,
-        workDaysPerMonth: workRoutine.workDays || 22,
-        workHoursPerDay: workRoutine.dailyHours || 8,
-        valuePerDay: workRoutine.dalilyValue || 0,
-        valuePerHour: workRoutine.valuePerHour || 0
+        desiredSalary: workRoutine.desired_salary || 0,
+        workDaysPerMonth: workRoutine.work_days_per_month || 22,
+        workHoursPerDay: workRoutine.work_hours_per_day || 8,
+        valuePerDay: workRoutine.value_per_day || 0,
+        valuePerHour: workRoutine.value_per_hour || 0
       });
     }
   }, [workRoutine]);
