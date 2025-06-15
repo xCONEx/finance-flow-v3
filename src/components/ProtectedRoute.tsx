@@ -12,6 +12,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, loading } = useSupabaseAuth();
   const { currentTheme } = useTheme();
 
+  console.log('🔄 ProtectedRoute state:', { isAuthenticated, loading });
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 animate-fadeIn">

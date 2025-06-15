@@ -47,7 +47,6 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .single();
 
       if (error && error.code === 'PGRST116') {
-        // Profile não existe, será criado pelo trigger
         console.log('Profile will be created by trigger');
         return null;
       }
@@ -85,54 +84,88 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Configurar listener de mudanças de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state changed:', event, session?.user?.id);
         
+        if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Buscar perfil do usuário
-          const userProfile = await fetchProfile(session.user.id);
-          setProfile(userProfile);
+          // Buscar perfil do usuário usando setTimeout para evitar deadlock
+          setTimeout(async () => {
+            if (!mounted) return;
+            
+            const userProfile = await fetchProfile(session.user.id);
+            if (mounted) {
+              setProfile(userProfile);
 
-          // Se o usuário tem agência, buscar dados da agência
-          if (userProfile?.agency_id) {
-            const userAgency = await fetchAgency(userProfile.agency_id);
-            setAgency(userAgency);
-          } else {
-            setAgency(null);
-          }
+              // Se o usuário tem agência, buscar dados da agência
+              if (userProfile?.agency_id) {
+                const userAgency = await fetchAgency(userProfile.agency_id);
+                if (mounted) setAgency(userAgency);
+              } else {
+                setAgency(null);
+              }
+            }
+          }, 0);
         } else {
           setProfile(null);
           setAgency(null);
         }
 
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     );
 
     // Buscar sessão existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchProfile(session.user.id).then((userProfile) => {
-          setProfile(userProfile);
-          
-          if (userProfile?.agency_id) {
-            fetchAgency(userProfile.agency_id).then(setAgency);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+        }
+
+        if (!mounted) return;
+
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          const userProfile = await fetchProfile(session.user.id);
+          if (mounted) {
+            setProfile(userProfile);
+            
+            if (userProfile?.agency_id) {
+              const userAgency = await fetchAgency(userProfile.agency_id);
+              if (mounted) setAgency(userAgency);
+            }
           }
-        });
+        }
+        
+        if (mounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      
-      setLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
