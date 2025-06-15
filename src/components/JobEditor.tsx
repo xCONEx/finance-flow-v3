@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,13 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { PercentageInput } from '@/components/ui/percentage-input';
 import { useApp } from '../contexts/AppContext';
-import { Job } from '../types';
 import { toast } from '@/hooks/use-toast';
 
 interface JobEditorProps {
   jobId?: string;
   onClose: () => void;
-  onSaved?: () => void; // NOVO: Callback quando salvar
+  onSaved?: () => void;
 }
 
 const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
@@ -25,11 +25,11 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
     client: '',
     eventDate: '',
     estimatedHours: 0,
-    difficultyLevel: 'médio' as Job['difficultyLevel'],
+    difficultyLevel: 'médio' as 'fácil' | 'médio' | 'complicado' | 'difícil',
     logistics: 0,
     equipment: 0,
     assistance: 0,
-    status: 'pendente' as Job['status'],
+    status: 'pendente' as 'pendente' | 'aprovado',
     category: '',
     discountValue: 0,
     totalCosts: 0,
@@ -77,9 +77,6 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
       const jobData = {
         ...formData,
         eventDate: new Date(formData.eventDate + 'T00:00:00').toISOString(),
-        id: jobId || `job_${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
       };
 
       if (jobId) {
@@ -96,7 +93,7 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
         });
       }
 
-      onSaved?.(); // Chama callback se existir
+      onSaved?.();
       onClose();
     } catch (error) {
       console.error('Erro ao salvar job:', error);
@@ -161,14 +158,15 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="difficultyLevel">Nível de Dificuldade</Label>
-              <Select value={formData.difficultyLevel} onValueChange={(value) => setFormData({...formData, difficultyLevel: value as Job['difficultyLevel']})}>
+              <Select value={formData.difficultyLevel} onValueChange={(value) => setFormData({...formData, difficultyLevel: value as 'fácil' | 'médio' | 'complicado' | 'difícil'})}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="baixo">Baixo</SelectItem>
+                  <SelectItem value="fácil">Fácil</SelectItem>
                   <SelectItem value="médio">Médio</SelectItem>
-                  <SelectItem value="alto">Alto</SelectItem>
+                  <SelectItem value="complicado">Complicado</SelectItem>
+                  <SelectItem value="difícil">Difícil</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -207,14 +205,13 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as Job['status']})}>
+              <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as 'pendente' | 'aprovado'})}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pendente">Pendente</SelectItem>
                   <SelectItem value="aprovado">Aprovado</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -11,7 +11,7 @@ interface Task {
   status: 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision';
   dueDate?: string;
   createdAt: string;
-  updatedAt: string;
+  userId: string;
 }
 
 interface MonthlyCost {
@@ -20,6 +20,8 @@ interface MonthlyCost {
   category: string;
   value: number;
   month: string;
+  createdAt: string;
+  userId: string;
   companyId?: string;
 }
 
@@ -29,6 +31,8 @@ interface WorkItem {
   category: string;
   value: number;
   depreciationYears: number;
+  createdAt: string;
+  userId: string;
   companyId?: string;
 }
 
@@ -38,11 +42,11 @@ interface Job {
   client: string;
   eventDate: string;
   estimatedHours: number;
-  difficultyLevel: 'baixo' | 'médio' | 'alto';
+  difficultyLevel: 'fácil' | 'médio' | 'complicado' | 'difícil';
   logistics: number;
   equipment: number;
   assistance: number;
-  status: 'pendente' | 'aprovado' | 'cancelado';
+  status: 'pendente' | 'aprovado';
   category: string;
   discountValue: number;
   totalCosts: number;
@@ -51,6 +55,7 @@ interface Job {
   profitMargin: number;
   createdAt: string;
   updatedAt: string;
+  userId: string;
   companyId?: string;
 }
 
@@ -61,6 +66,7 @@ interface WorkRoutine {
   valuePerHour: number;
   valuePerDay: number;
   desiredSalary: number;
+  userId: string;
 }
 
 interface AppContextType {
@@ -78,22 +84,22 @@ interface AppContextType {
   loading: boolean;
   
   // Task functions
-  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   
   // Job functions
-  addJob: (job: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addJob: (job: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => Promise<void>;
   updateJob: (id: string, updates: Partial<Job>) => Promise<void>;
   deleteJob: (id: string) => Promise<void>;
   
   // Monthly cost functions
-  addMonthlyCost: (cost: Omit<MonthlyCost, 'id'>) => Promise<void>;
+  addMonthlyCost: (cost: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
   updateMonthlyCost: (id: string, updates: Partial<MonthlyCost>) => Promise<void>;
   deleteMonthlyCost: (id: string) => Promise<void>;
   
   // Work item functions
-  addWorkItem: (item: Omit<WorkItem, 'id'>) => Promise<void>;
+  addWorkItem: (item: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
   updateWorkItem: (id: string, updates: Partial<WorkItem>) => Promise<void>;
   deleteWorkItem: (id: string) => Promise<void>;
 }
@@ -128,12 +134,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [isAuthenticated]);
 
   // Task functions
-  const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
     const newTask: Task = {
       ...taskData,
       id: `task_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      userId: user?.id || '',
     };
     setTasks(prev => [...prev, newTask]);
   };
@@ -141,7 +147,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateTask = async (id: string, updates: Partial<Task>) => {
     setTasks(prev => prev.map(task => 
       task.id === id 
-        ? { ...task, ...updates, updatedAt: new Date().toISOString() }
+        ? { ...task, ...updates }
         : task
     ));
   };
@@ -151,12 +157,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Job functions
-  const addJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
     const newJob: Job = {
       ...jobData,
       id: `job_${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      userId: user?.id || '',
     };
     setJobs(prev => [...prev, newJob]);
   };
@@ -174,10 +181,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Monthly cost functions
-  const addMonthlyCost = async (costData: Omit<MonthlyCost, 'id'>) => {
+  const addMonthlyCost = async (costData: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId'>) => {
     const newCost: MonthlyCost = {
       ...costData,
       id: `cost_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      userId: user?.id || '',
     };
     setMonthlyCosts(prev => [...prev, newCost]);
   };
@@ -193,10 +202,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Work item functions
-  const addWorkItem = async (itemData: Omit<WorkItem, 'id'>) => {
+  const addWorkItem = async (itemData: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => {
     const newItem: WorkItem = {
       ...itemData,
       id: `item_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      userId: user?.id || '',
     };
     setWorkItems(prev => [...prev, newItem]);
   };
