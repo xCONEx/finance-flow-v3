@@ -103,15 +103,15 @@ export const migrationService = {
   },
 
   async migrateProfile(userData: any, supabaseUserId: string) {
-    const profileData: Partial<Tables<'profiles'>> = {
+    const profileData = {
       id: supabaseUserId,
-      email: userData.email,
-      name: userData.name,
+      email: userData.email || '',
+      name: userData.name || null,
       phone: userData.phone || null,
       company: userData.company || null,
       logo_base64: userData.logobase64 || null,
-      user_type: this.mapUserType(userData.role || userData.userType),
-      subscription: 'free', // Default
+      user_type: this.mapUserType(userData.role || userData.userType) as 'individual' | 'company_owner' | 'employee' | 'admin',
+      subscription: 'free' as const,
     };
 
     const { error } = await supabase
@@ -126,7 +126,7 @@ export const migrationService = {
 
   async migrateEquipments(equipments: any[], supabaseUserId: string) {
     for (const equipment of equipments) {
-      const equipmentData: Partial<Tables<'equipment'>> = {
+      const equipmentData = {
         user_id: supabaseUserId,
         description: equipment.description || equipment.name || 'Equipamento',
         category: equipment.category || 'Outros',
@@ -147,7 +147,7 @@ export const migrationService = {
 
   async migrateExpenses(expenses: any[], supabaseUserId: string) {
     for (const expense of expenses) {
-      const expenseData: Partial<Tables<'expenses'>> = {
+      const expenseData = {
         user_id: supabaseUserId,
         description: expense.description || expense.name || 'Despesa',
         category: expense.category || 'Outros',
@@ -168,17 +168,17 @@ export const migrationService = {
 
   async migrateJobs(jobs: any[], supabaseUserId: string) {
     for (const job of jobs) {
-      const jobData: Partial<Tables<'jobs'>> = {
+      const jobData = {
         user_id: supabaseUserId,
         description: job.description || job.name || 'Trabalho',
         client: job.client || job.clientName || 'Cliente',
         event_date: job.eventDate ? new Date(job.eventDate).toISOString() : null,
         estimated_hours: parseInt(job.estimatedHours || job.hours || '0'),
-        difficulty_level: this.mapDifficultyLevel(job.difficultyLevel),
+        difficulty_level: this.mapDifficultyLevel(job.difficultyLevel) as 'fácil' | 'médio' | 'complicado' | 'difícil',
         logistics: parseFloat(job.logistics || '0'),
         equipment: parseFloat(job.equipment || '0'),
         assistance: parseFloat(job.assistance || '0'),
-        status: job.status === 'approved' ? 'aprovado' : 'pendente',
+        status: (job.status === 'approved' ? 'aprovado' : 'pendente') as 'pendente' | 'aprovado',
         category: job.category || null,
         discount_value: parseFloat(job.discountValue || '0'),
         total_costs: parseFloat(job.totalCosts || '0'),
@@ -199,7 +199,7 @@ export const migrationService = {
   },
 
   async migrateWorkRoutine(routine: any, supabaseUserId: string) {
-    const routineData: Partial<Tables<'work_routine'>> = {
+    const routineData = {
       user_id: supabaseUserId,
       desired_salary: parseFloat(routine.desiredSalary || '0'),
       work_days_per_month: parseInt(routine.workDays || routine.daysPerMonth || '22'),
