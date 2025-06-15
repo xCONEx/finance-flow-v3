@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useTheme } from '../contexts/ThemeContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -18,12 +18,11 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
-  Edit,
   Scissors,
   Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { kanbanService, KanbanProject } from '../services/kanbanService';
 
 interface Column {
@@ -37,8 +36,6 @@ interface Column {
 const EntregaFlowKanban = () => {
   const [projects, setProjects] = useState<KanbanProject[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const { isDark, currentTheme, toggleDarkMode, changeTheme } = useTheme();
   const [selectedProject, setSelectedProject] = useState<KanbanProject | null>(null);
   const [loading, setLoading] = useState(true);
   const [newProject, setNewProject] = useState<Partial<KanbanProject>>({
@@ -52,34 +49,34 @@ const EntregaFlowKanban = () => {
   });
   const [newLink, setNewLink] = useState('');
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user } = useSupabaseAuth();
 
   const columns: Column[] = [
     {
       id: 'filmado',
       title: 'Filmado',
-      color: 'bg-blue-100 border-blue-300',
+      color: 'bg-blue-50 border-blue-200',
       icon: Video,
       count: projects.filter(p => p.status === 'filmado').length
     },
     {
       id: 'edicao',
       title: 'Em Edição',
-      color: 'bg-orange-100 border-orange-300',
+      color: 'bg-orange-50 border-orange-200',
       icon: Scissors,
       count: projects.filter(p => p.status === 'edicao').length
     },
     {
       id: 'revisao',
       title: 'Revisão',
-      color: 'bg-yellow-100 border-yellow-300',
+      color: 'bg-yellow-50 border-yellow-200',
       icon: Eye,
       count: projects.filter(p => p.status === 'revisao').length
     },
     {
       id: 'entregue',
       title: 'Entregue',
-      color: 'bg-green-100 border-green-300',
+      color: 'bg-green-50 border-green-200',
       icon: CheckCircle,
       count: projects.filter(p => p.status === 'entregue').length
     }
@@ -115,9 +112,8 @@ const EntregaFlowKanban = () => {
       setLoading(true);
       const loadedProjects = await kanbanService.loadBoard(user.id);
       setProjects(loadedProjects);
-      console.log('📦 Projetos carregados:', loadedProjects.length);
     } catch (error) {
-      console.error('❌ Erro ao carregar projetos:', error);
+      console.error('Erro ao carregar projetos:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar projetos",
@@ -133,10 +129,9 @@ const EntregaFlowKanban = () => {
     
     try {
       await kanbanService.saveBoard(user.id, projectsData);
-      // Também salva no localStorage como backup
       localStorage.setItem('entregaFlowProjects', JSON.stringify(projectsData));
     } catch (error) {
-      console.error('❌ Erro ao salvar projetos:', error);
+      console.error('Erro ao salvar projetos:', error);
       toast({
         title: "Erro",
         description: "Erro ao salvar projetos",
@@ -169,32 +164,6 @@ const EntregaFlowKanban = () => {
       });
     }
   };
-
-// Estado adicional
-const [editData, setEditData] = useState<Partial<KanbanProject> | null>(null);
-
-useEffect(() => {
-  if (selectedProject) {
-    setEditData({ ...selectedProject });
-  }
-}, [selectedProject]);
-
-const handleEditSave = async () => {
-  if (!selectedProject || !editData) return;
-
-  const updatedProjects = projects.map(p =>
-    p.id === selectedProject.id ? { ...selectedProject, ...editData, updatedAt: new Date().toISOString() } : p
-  );
-
-  setProjects(updatedProjects);
-  await saveProjects(updatedProjects);
-  toast({
-    title: "Projeto Atualizado",
-    description: `"${editData.title}" foi salvo com sucesso`
-  });
-
-  setShowEditModal(false);
-};
 
   const handleAddProject = async () => {
     if (!newProject.title || !newProject.client) {
@@ -240,21 +209,6 @@ const handleEditSave = async () => {
     });
   };
 
-  const priorityLabels: Record<string, string> = {
-  alta: "Alta",
-  media: "Média",
-  baixa: "Baixa",
-};
-
-const priorityStyles: Record<
-  string,
-  { label: string; bgColor: string; textColor?: string }
-> = {
-  alta: { label: "Alta", bgColor: "bg-red-500", textColor: "text-white" },
-  media: { label: "Média", bgColor: "bg-yellow-400", textColor: "text-black" },
-  baixa: { label: "Baixa", bgColor: "bg-green-500", textColor: "text-white" },
-};
-
   const handleDeleteProject = async (projectId: string) => {
     const projectToDelete = projects.find(p => p.id === projectId);
     const updatedProjects = projects.filter(p => p.id !== projectId);
@@ -262,7 +216,6 @@ const priorityStyles: Record<
     setProjects(updatedProjects);
     await saveProjects(updatedProjects);
     setSelectedProject(null);
-    setShowEditModal(false);
 
     toast({
       title: "Projeto Excluído",
@@ -294,7 +247,6 @@ const priorityStyles: Record<
     });
   };
 
-  // Helper functions
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'alta': return 'bg-red-100 text-red-800';
@@ -333,8 +285,8 @@ const priorityStyles: Record<
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className={`w-10 h-10 bg-gradient-to-r ${currentTheme.primary} rounded-lg flex items-center justify-center`}>
-              <Video className="text-white font-bold text-2xl"/>
+            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+              <Video className="text-white h-6 w-6" />
             </div>
             <div>
               <h1 className="text-2xl font-bold">Projetos</h1>
@@ -347,7 +299,7 @@ const priorityStyles: Record<
 
         <Button 
           onClick={() => setShowAddModal(true)}
-          className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
+          className="bg-purple-600 hover:bg-purple-700"
         >
           <Plus className="h-4 w-4 mr-2" />
           Novo Projeto
@@ -356,62 +308,62 @@ const priorityStyles: Record<
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-blue-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                 <Clock className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{activeProjects}</p>
-                <p className="text-sm text-gray-600">Projetos Ativos</p>
-                <p className="text-xs text-gray-500">Em andamento</p>
+                <p className="text-2xl font-bold text-blue-900">{activeProjects}</p>
+                <p className="text-sm text-blue-700">Projetos Ativos</p>
+                <p className="text-xs text-blue-600">Em andamento</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-green-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                 <CheckCircle className="h-4 w-4 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{completedProjects}</p>
-                <p className="text-sm text-gray-600">Entregas este mês</p>
-                <p className="text-xs text-gray-500">Projetos finalizados</p>
+                <p className="text-2xl font-bold text-green-900">{completedProjects}</p>
+                <p className="text-sm text-green-700">Entregas este mês</p>
+                <p className="text-xs text-green-600">Projetos finalizados</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-yellow-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{urgentDeadlines}</p>
-                <p className="text-sm text-gray-600">Prazos Urgentes</p>
-                <p className="text-xs text-gray-500">Vencendo em 2 dias</p>
+                <p className="text-2xl font-bold text-yellow-900">{urgentDeadlines}</p>
+                <p className="text-sm text-yellow-700">Prazos Urgentes</p>
+                <p className="text-xs text-yellow-600">Vencendo em 2 dias</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-red-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                 <Calendar className="h-4 w-4 text-red-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{overdueProject ? 'Atrasado' : '0'}</p>
-                <p className="text-sm text-gray-600">Próxima Entrega</p>
-                <p className="text-xs text-gray-500">
-                  {overdueProject ? overdueProject.client : 'Sem atrasos'}
+                <p className="text-2xl font-bold text-red-900">{overdueProject ? 'Atrasado' : 'Ro'}</p>
+                <p className="text-sm text-red-700">Próxima Entrega</p>
+                <p className="text-xs text-red-600">
+                  {overdueProject ? overdueProject.client : 'Ro'}
                 </p>
               </div>
             </div>
@@ -462,27 +414,14 @@ const priorityStyles: Record<
                                     column.id === 'edicao' ? 'border-l-orange-500' : 
                                     column.id === 'revisao' ? 'border-l-yellow-500' : 'border-l-green-500'
                                   } ${snapshot.isDragging ? 'rotate-2 shadow-xl' : ''}`}
-                                  onClick={() => {
-                                    setSelectedProject(project);
-                                    setShowEditModal(true);
-                                  }}
+                                  onClick={() => setSelectedProject(project)}
                                 >
                                   <CardContent className="p-4">
                                     <div className="space-y-3">
                                       {/* Priority Badge */}
-                                      {project.priority && (
-  <Badge
-    className={`text-white text-xs ${
-      project.priority === 'alta'
-        ? 'bg-red-500'
-        : project.priority === 'media'
-        ? 'bg-yellow-500'
-        : 'bg-green-500'
-    }`}
-  >
-    {priorityLabels[project.priority] || project.priority}
-  </Badge>
-)}
+                                      <Badge className={`text-xs ${getPriorityColor(project.priority)}`}>
+                                        {project.priority === 'alta' ? 'Alta' : project.priority === 'media' ? 'Média' : 'Baixa'}
+                                      </Badge>
 
                                       {/* Project Title */}
                                       <h4 className="font-semibold text-sm line-clamp-2">
@@ -519,7 +458,7 @@ const priorityStyles: Record<
                                         <div className="flex items-center gap-2">
                                           <ExternalLink className="h-3 w-3 text-blue-500" />
                                           <span className="text-xs text-blue-600">
-                                            Link {project.links.length > 1 ? `${project.links.length}` : '1'}
+                                            {project.links.length} link(s)
                                           </span>
                                         </div>
                                       )}
@@ -562,55 +501,75 @@ const priorityStyles: Record<
 
       {/* Add Project Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="max-w-sm sm:max-w-md md:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden px-4">
-
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Novo Projeto</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Título do Projeto</label>
-              <Input
-                placeholder="Ex: Comercial - Café Premium"
-                value={newProject.title || ''}
-                onChange={(e) => setNewProject({...newProject, title: e.target.value})}
-                className="border-orange-200 focus:border-orange-500"
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-2 block">Cliente</label>
-              <Input
-                placeholder="Nome do cliente"
-                value={newProject.client || ''}
-                onChange={(e) => setNewProject({...newProject, client: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium mb-2 block">Data de Entrega</label>
-              <Input
-                type="date"
-                value={newProject.dueDate || ''}
-                onChange={(e) => setNewProject({...newProject, dueDate: e.target.value})}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="text-sm font-medium mb-2 block">Título do Projeto</label>
+                <Input
+                  placeholder="Ex: Edição MDPROD - WavePost"
+                  value={newProject.title || ''}
+                  onChange={(e) => setNewProject({...newProject, title: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-2 block">Cliente</label>
+                <Input
+                  placeholder="Nome do cliente"
+                  value={newProject.client || ''}
+                  onChange={(e) => setNewProject({...newProject, client: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-2 block">Data de Entrega</label>
+                <Input
+                  type="date"
+                  value={newProject.dueDate || ''}
+                  onChange={(e) => setNewProject({...newProject, dueDate: e.target.value})}
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">Prioridade</label>
-              <Select 
-                value={newProject.priority || 'media'} 
-                onValueChange={(value: 'alta' | 'media' | 'baixa') => setNewProject({...newProject, priority: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="media">Média</SelectItem>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Prioridade</label>
+                <Select 
+                  value={newProject.priority || 'media'} 
+                  onValueChange={(value: 'alta' | 'media' | 'baixa') => setNewProject({...newProject, priority: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Status Inicial</label>
+                <Select 
+                  value={newProject.status || 'filmado'} 
+                  onValueChange={(value: KanbanProject['status']) => setNewProject({...newProject, status: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="filmado">Filmado</SelectItem>
+                    <SelectItem value="edicao">Em Edição</SelectItem>
+                    <SelectItem value="revisao">Revisão</SelectItem>
+                    <SelectItem value="entregue">Entregue</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div>
@@ -622,141 +581,130 @@ const priorityStyles: Record<
                 rows={3}
               />
             </div>
-
-            <div>
-  
-</div>
-
           </div>
 
           <div className="flex gap-2 pt-4">
             <Button 
-              onClick={() => setShowAddModal(false)} 
-              variant="outline"
-              className="flex-1"
+              onClick={handleAddProject} 
+              className="flex-1 bg-purple-600 hover:bg-purple-700"
             >
-              Cancelar
+              Criar Projeto
             </Button>
             <Button 
-              onClick={handleAddProject} 
-              className="flex-1 bg-black text-white hover:bg-gray-800"
+              onClick={() => setShowAddModal(false)} 
+              variant="outline"
             >
-              Salvar Projeto
+              Cancelar
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Project Modal */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-   <DialogContent className="max-w-sm sm:max-w-md md:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden px-4">
+      {/* Project Details Modal */}
+      <Dialog open={!!selectedProject} onOpenChange={() => setSelectedProject(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Video className="h-5 w-5" />
+                {selectedProject?.title}
+              </span>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => selectedProject && handleDeleteProject(selectedProject.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedProject && (
+            <div className="space-y-6">
+              {/* Informações básicas */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Cliente</label>
+                  <p className="text-sm text-gray-900">{selectedProject.client}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Prioridade</label>
+                  <Badge className={`${getPriorityColor(selectedProject.priority)} ml-2`}>
+                    {selectedProject.priority === 'alta' ? 'Alta' : selectedProject.priority === 'media' ? 'Média' : 'Baixa'}
+                  </Badge>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Prazo</label>
+                  <p className={`text-sm ${
+                    selectedProject.dueDate && isOverdue(selectedProject.dueDate) ? 'text-red-600 font-medium' : 'text-gray-900'
+                  }`}>
+                    {selectedProject.dueDate ? new Date(selectedProject.dueDate).toLocaleDateString('pt-BR') : 'Não definido'}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Status</label>
+                  <p className="text-sm text-gray-900 capitalize">{selectedProject.status}</p>
+                </div>
+              </div>
 
-    <DialogHeader>
-      <div className="flex items-center justify-between">
-        <DialogTitle className="flex items-center gap-2">
-  Editar Projeto
-  {selectedProject?.priority && (
-    <Badge
-      className={`${priorityStyles[selectedProject.priority]?.bgColor} ${
-        priorityStyles[selectedProject.priority]?.textColor || "text-white"
-      }`}
-    >
-      {priorityStyles[selectedProject.priority]?.label || selectedProject.priority}
-    </Badge>
-  )}
-  <Badge variant="outline">{selectedProject?.status}</Badge>
-</DialogTitle>
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={() => selectedProject && handleDeleteProject(selectedProject.id)}
-        className='mt-4'>
-          <Trash2 className="h-4 w-4 " />
-        </Button>
-      </div>
-    </DialogHeader>
+              {/* Descrição */}
+              {selectedProject.description && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Descrição</label>
+                  <p className="text-sm text-gray-900 mt-1">{selectedProject.description}</p>
+                </div>
+              )}
 
-  {editData && (
-  <div className="space-y-6 p-4 md:p-6 max-w-full">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label className="text-sm font-medium text-gray-700">Título</label>
-        <Input
-          className="w-full"
-          value={editData.title || ''}
-          onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-        />
-      </div>
-      <div>
-        <label className="text-sm font-medium text-gray-700">Cliente</label>
-        <Input
-          className="w-full"
-          value={editData.client || ''}
-          onChange={(e) => setEditData({ ...editData, client: e.target.value })}
-        />
-      </div>
-    </div>
+              {/* Links */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-gray-700">Links de Entrega</label>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar Link
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Adicionar Link de Entrega</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <Input
+                          placeholder="URL do arquivo de entrega"
+                          value={newLink}
+                          onChange={(e) => setNewLink(e.target.value)}
+                        />
+                        <Button onClick={handleAddLink} className="w-full">
+                          Adicionar Link
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label className="text-sm font-medium text-gray-700">Data de Entrega</label>
-        <Input
-          type="date"
-          className="w-full"
-          value={editData.dueDate || ''}
-          onChange={(e) => setEditData({ ...editData, dueDate: e.target.value })}
-        />
-      </div>
-      <div>
-        <label className="text-sm font-medium text-gray-700">Prioridade</label>
-        <Select
-          value={editData.priority || 'media'}
-          onValueChange={(value: 'alta' | 'media' | 'baixa') =>
-            setEditData({ ...editData, priority: value })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione a prioridade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="alta">Alta</SelectItem>
-            <SelectItem value="media">Média</SelectItem>
-            <SelectItem value="baixa">Baixa</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-
-    <div>
-      <label className="text-sm font-medium text-gray-700">Descrição</label>
-      <Textarea
-        rows={3}
-        className="w-full"
-        value={editData.description || ''}
-        onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-      />
-    </div>
-
-    <div className="flex flex-col sm:flex-row gap-2 pt-4">
-      <Button
-        onClick={() => setShowEditModal(false)}
-        variant="outline"
-        className="flex-1 w-full sm:w-auto"
-      >
-        Fechar
-      </Button>
-      <Button
-        onClick={handleEditSave}
-        className="flex-1 w-full sm:w-auto bg-black text-white hover:bg-gray-800"
-      >
-        Salvar Alterações
-      </Button>
-    </div>
-  </div>
-)}
-
-  </DialogContent>
-</Dialog>
+                <div className="space-y-2">
+                  {(!selectedProject.links || selectedProject.links.length === 0) ? (
+                    <p className="text-sm text-gray-500 italic">Nenhum link de entrega adicionado</p>
+                  ) : (
+                    selectedProject.links.map((link, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm text-gray-700 truncate flex-1">{link}</span>
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={link} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
