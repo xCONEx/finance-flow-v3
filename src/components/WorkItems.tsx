@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus, Trash2, Briefcase, Edit, Loader2, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -159,7 +160,7 @@ const WorkItems = () => {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold truncate">{item.description}</h3>
                   <p className="text-sm text-gray-600">Categoria: {item.category}</p>
-                  <p className="text-xs text-gray-500">Depreciação: {item.depreciation_years || 5} anos</p>
+                  <p className="text-xs text-gray-500">Depreciação: {item.depreciationYears || 5} anos</p>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <div className="text-right flex-1 sm:flex-none">

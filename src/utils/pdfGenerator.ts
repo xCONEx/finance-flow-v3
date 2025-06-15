@@ -56,6 +56,41 @@ const checkPageBreak = (doc: jsPDF, currentY: number, neededSpace: number = 30) 
   return currentY;
 };
 
+export const generateJobPDF = async (job: any, userData: any) => {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  
+  console.log('🔍 Gerando PDF do job:', job);
+  
+  // Header
+  let currentY = addHeader(doc, 'ORÇAMENTO', userData, pageWidth, margin);
+  
+  // Informações do cliente
+  currentY = addSection(doc, 'INFORMAÇÕES DO CLIENTE', margin, currentY, pageWidth, margin);
+  
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'normal');
+  doc.text(`Cliente: ${job.client || 'Não informado'}`, margin, currentY);
+  doc.text(`Descrição: ${job.description}`, margin, currentY + 8);
+  doc.text(`Data do evento: ${new Date(job.eventDate).toLocaleDateString('pt-BR')}`, margin, currentY + 16);
+  doc.text(`Status: ${job.status}`, margin, currentY + 24);
+  
+  currentY += 40;
+  currentY = checkPageBreak(doc, currentY, 60);
+  
+  // Valor do orçamento
+  currentY = addSection(doc, 'VALOR DO ORÇAMENTO', margin, currentY, pageWidth, margin);
+  
+  const jobValue = job.valueWithDiscount || job.serviceValue || 0;
+  doc.setFontSize(16);
+  doc.setFont(undefined, 'bold');
+  doc.text(`Valor Total: ${jobValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin, currentY + 5);
+  
+  doc.save(`Orcamento_${job.description.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
+};
+
 export const generateWorkItemsPDF = async (workItems: any[], userData: any) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -85,7 +120,7 @@ export const generateWorkItemsPDF = async (workItems: any[], userData: any) => {
     item.description,
     item.category,
     item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-    `${item.depreciation_years || 5} anos`
+    `${item.depreciationYears || 5} anos`
   ]);
   
   const totalValue = workItems.reduce((sum, item) => sum + item.value, 0);
