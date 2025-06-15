@@ -11,7 +11,7 @@ import Settings from './Settings';
 import UserProfile from './UserProfile';
 import AdminPanel from './AdminPanel';
 import TeamManagement from './TeamManagement';
-import ProjectKanban from './ProjectKanban';
+import EntregaFlowKanban from './EntregaFlowKanban_old';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 
 const MainApp = () => {
@@ -30,7 +30,7 @@ const MainApp = () => {
       case 'calculator':
         return <PricingCalculator />;
       case 'kanban':
-        return <ProjectKanban />;
+        return <EntregaFlowKanban />;
       case 'costs':
         return <MonthlyCosts />;
       case 'items':
