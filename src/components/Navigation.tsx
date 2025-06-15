@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Home, 
@@ -8,7 +9,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface NavigationProps {
@@ -18,10 +19,10 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTeamOption }) => {
-  const { user, agencyData, userData } = useAuth();
+  const { profile, agency } = useSupabaseAuth();
   const { currentTheme } = useTheme();
 
-  const hasEnterprisePlan = userData?.subscription === 'enterprise' || agencyData?.plan === 'enterprise';
+  const hasEnterprisePlan = profile?.subscription === 'enterprise' || agency?.plan === 'enterprise';
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },

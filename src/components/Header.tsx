@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Shield, Settings, Eye, EyeOff, Home, Calculator, Video, DollarSign, Package, Calendar, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -13,12 +14,12 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption }) => {
-  const { user, agencyData, userData } = useAuth();
+  const { user, profile, agency } = useSupabaseAuth();
   const { currentTheme } = useTheme();
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
 
-  const isAdmin = user?.userType === 'admin' || agencyData?.userRole === 'admin';
-  const hasEnterprisePlan = userData?.subscription === 'enterprise' || agencyData?.plan === 'enterprise';
+  const isAdmin = profile?.user_type === 'admin';
+  const hasEnterprisePlan = profile?.subscription === 'enterprise' || agency?.plan === 'enterprise';
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -31,8 +32,8 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
   ];
 
   const getProfileImageUrl = () => {
-    if (userData?.imageuser) return userData.imageuser;
-    if (user?.photoURL) return user.photoURL;
+    if (profile?.avatar_url) return profile.avatar_url;
+    if (user?.user_metadata?.avatar_url) return user.user_metadata.avatar_url;
     return '';
   };
 
@@ -108,9 +109,9 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
             className="p-1"
           >
             <Avatar className="h-8 w-8">
-              <AvatarImage src={getProfileImageUrl()} alt={user?.name || 'User'} />
+              <AvatarImage src={getProfileImageUrl()} alt={profile?.name || user?.email || 'User'} />
               <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white`}>
-                {user?.name?.charAt(0) || 'U'}
+                {profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
               </AvatarFallback>
             </Avatar>
           </Button>
