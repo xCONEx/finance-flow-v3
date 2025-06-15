@@ -1,29 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Save } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CurrencyInput } from '@/components/ui/currency-input';
 import { useApp } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
-
-const EQUIPMENT_CATEGORIES = [
-  'Câmera',
-  'Lente', 
-  'Hardware',
-  'Software',
-  'Iluminação',
-  'Audio',
-  'Acessórios',
-  'Outros'
-];
 
 interface WorkItemModalProps {
   open: boolean;
@@ -39,38 +22,39 @@ const WorkItemModal = ({ open, onOpenChange, editingItem }: WorkItemModalProps) 
     value: 0,
     depreciationYears: 5
   });
+  const [submitting, setSubmitting] = useState(false);
 
-  // Resetar e popular formulário quando abrir modal
   useEffect(() => {
-    if (open) {
-      if (editingItem) {
-        setFormData({
-          description: editingItem.description || '',
-          category: editingItem.category || '',
-          value: editingItem.value || 0,
-          depreciationYears: editingItem.depreciationYears || 5
-        });
-      } else {
-        setFormData({
-          description: '',
-          category: '',
-          value: 0,
-          depreciationYears: 5
-        });
-      }
+    if (editingItem) {
+      setFormData({
+        description: editingItem.description || '',
+        category: editingItem.category || '',
+        value: editingItem.value || 0,
+        depreciationYears: editingItem.depreciationYears || 5
+      });
+    } else {
+      setFormData({
+        description: '',
+        category: '',
+        value: 0,
+        depreciationYears: 5
+      });
     }
-  }, [open, editingItem]);
+  }, [editingItem, open]);
 
-  const handleSave = async () => {
-    if (!formData.description || !formData.category || formData.value <= 0) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.description || !formData.category) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos obrigatórios.",
+        description: "Preencha todos os campos obrigatórios",
         variant: "destructive"
       });
       return;
     }
 
+    setSubmitting(true);
     try {
       if (editingItem) {
         await updateWorkItem(editingItem.id, formData);
@@ -82,104 +66,107 @@ const WorkItemModal = ({ open, onOpenChange, editingItem }: WorkItemModalProps) 
         await addWorkItem(formData);
         toast({
           title: "Item Adicionado",
-          description: "O item de trabalho foi adicionado com sucesso.",
+          description: "O item foi adicionado com sucesso.",
         });
       }
-
-      setFormData({
-        description: '',
-        category: '',
-        value: 0,
-        depreciationYears: 5
-      });
       onOpenChange(false);
     } catch (error) {
       toast({
         title: "Erro",
-        description: editingItem ? "Erro ao atualizar item." : "Erro ao adicionar item.",
+        description: "Erro ao salvar item.",
         variant: "destructive"
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Briefcase className="h-5 w-5" />
-            {editingItem ? 'Editar Item' : 'Novo Item de Trabalho'}
+          <DialogTitle>
+            {editingItem ? 'Editar Item' : 'Adicionar Item'}
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="item-description">Descrição *</Label>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="description">Descrição *</Label>
             <Input
-              id="item-description"
+              id="description"
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
-              placeholder="Ex: Câmera DSLR"
+              placeholder="Ex: Câmera Canon EOS R5"
+              required
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="item-category">Categoria *</Label>
+
+          <div>
+            <Label htmlFor="category">Categoria *</Label>
             <Select
               value={formData.category}
               onValueChange={(value) => setFormData({...formData, category: value})}
             >
-              <SelectTrigger className="bg-white">
+              <SelectTrigger>
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
-              <SelectContent className="bg-white border shadow-lg z-50">
-                {EQUIPMENT_CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
+              <SelectContent>
+                <SelectItem value="Câmeras">Câmeras</SelectItem>
+                <SelectItem value="Lentes">Lentes</SelectItem>
+                <SelectItem value="Áudio">Áudio</SelectItem>
+                <SelectItem value="Iluminação">Iluminação</SelectItem>
+                <SelectItem value="Tripés e Suportes">Tripés e Suportes</SelectItem>
+                <SelectItem value="Acessórios">Acessórios</SelectItem>
+                <SelectItem value="Software">Software</SelectItem>
+                <SelectItem value="Hardware">Hardware</SelectItem>
+                <SelectItem value="Outros">Outros</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="item-value">Valor (R$) *</Label>
-              <CurrencyInput
-                id="item-value"
-                value={formData.value}
-                onChange={(value) => setFormData({...formData, value})}
-                placeholder="0,00"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="item-depreciation">Anos de Depreciação</Label>
-              <Input
-                id="item-depreciation"
-                type="number"
-                inputMode="numeric"
-                min="1"
-                max="20"
-                value={formData.depreciationYears || ""}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  const clean = raw.replace(/^0+/, "");
-                  setFormData({ ...formData, depreciationYears: Number(clean) });
-                }}
-                placeholder="5"
-              />
-            </div>
+          <div>
+            <Label htmlFor="value">Valor (R$) *</Label>
+            <Input
+              id="value"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.value}
+              onChange={(e) => setFormData({...formData, value: parseFloat(e.target.value) || 0})}
+              placeholder="0,00"
+              required
+            />
           </div>
 
-          <div className="flex flex-col md:flex-row gap-2 pt-4">
-            <Button onClick={handleSave} className="flex-1 order-1">
-              <Save className="h-4 w-4 mr-2" />
-              {editingItem ? 'Atualizar' : 'Salvar'}
+          <div>
+            <Label htmlFor="depreciationYears">Anos de Depreciação</Label>
+            <Select
+              value={formData.depreciationYears.toString()}
+              onValueChange={(value) => setFormData({...formData, depreciationYears: parseInt(value)})}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 ano</SelectItem>
+                <SelectItem value="2">2 anos</SelectItem>
+                <SelectItem value="3">3 anos</SelectItem>
+                <SelectItem value="5">5 anos</SelectItem>
+                <SelectItem value="10">10 anos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button type="submit" disabled={submitting} className="flex-1">
+              {submitting ? 'Salvando...' : editingItem ? 'Atualizar' : 'Adicionar'}
             </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="order-2 md:order-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
