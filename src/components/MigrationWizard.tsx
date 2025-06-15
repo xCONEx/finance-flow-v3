@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, AlertCircle, Loader2, Database } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, Database, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { migrationService } from '@/services/migrationService';
@@ -27,13 +27,24 @@ interface MigrationStats {
 }
 
 export const MigrationWizard: React.FC = () => {
-  const { user: firebaseUser } = useAuth();
-  const { user: supabaseUser } = useSupabaseAuth();
+  const { user: firebaseUser, isAuthenticated: firebaseAuth, loading: firebaseLoading } = useAuth();
+  const { user: supabaseUser, isAuthenticated: supabaseAuth, loading: supabaseLoading } = useSupabaseAuth();
   const [migrating, setMigrating] = useState(false);
   const [progress, setProgress] = useState<MigrationProgress | null>(null);
   const [migrationComplete, setMigrationComplete] = useState(false);
   const [migrationStats, setMigrationStats] = useState<MigrationStats | null>(null);
   const [checkingData, setCheckingData] = useState(false);
+
+  // Debug logs
+  useEffect(() => {
+    console.log('🔍 MigrationWizard Debug:');
+    console.log('Firebase User:', firebaseUser);
+    console.log('Firebase Auth:', firebaseAuth);
+    console.log('Firebase Loading:', firebaseLoading);
+    console.log('Supabase User:', supabaseUser);
+    console.log('Supabase Auth:', supabaseAuth);
+    console.log('Supabase Loading:', supabaseLoading);
+  }, [firebaseUser, firebaseAuth, firebaseLoading, supabaseUser, supabaseAuth, supabaseLoading]);
 
   const checkMigrationData = async () => {
     if (!supabaseUser) return;
@@ -128,15 +139,22 @@ export const MigrationWizard: React.FC = () => {
     }
   };
 
-  if (!firebaseUser || !supabaseUser) {
+  // Mostrar loading se ainda carregando autenticação
+  if (firebaseLoading || supabaseLoading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Migração de Dados</CardTitle>
           <CardDescription>
-            Você precisa estar logado em ambos os sistemas para realizar a migração.
+            Verificando autenticação...
           </CardDescription>
         </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+            Carregando...
+          </div>
+        </CardContent>
       </Card>
     );
   }
@@ -160,8 +178,47 @@ export const MigrationWizard: React.FC = () => {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Status dos dados atuais */}
-        {migrationStats && (
+        {/* Status de autenticação */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="font-medium mb-2 flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Status de Autenticação:
+          </h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${firebaseAuth ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span>Firebase: {firebaseAuth ? '✅ Conectado' : '❌ Não conectado'}</span>
+              {firebaseUser && <span className="text-gray-500">({firebaseUser.email})</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${supabaseAuth ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span>Supabase: {supabaseAuth ? '✅ Conectado' : '❌ Não conectado'}</span>
+              {supabaseUser && <span className="text-gray-500">({supabaseUser.email})</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Mostrar instruções se não autenticado */}
+        {(!firebaseAuth || !supabaseAuth) && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Autenticação necessária:</strong>
+              <ul className="mt-2 space-y-1 text-sm">
+                {!firebaseAuth && <li>• Faça login na aplicação (Firebase)</li>}
+                {!supabaseAuth && <li>• A autenticação Supabase será configurada automaticamente</li>}
+              </ul>
+              <div className="mt-2">
+                <Button onClick={() => window.location.href = '/login'} variant="outline" size="sm">
+                  Ir para Login
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Status dos dados atuais - só mostrar se autenticado */}
+        {supabaseAuth && migrationStats && (
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-medium mb-2 text-blue-800 flex items-center gap-2">
               <Database className="h-4 w-4" />
@@ -184,26 +241,31 @@ export const MigrationWizard: React.FC = () => {
           </div>
         )}
 
-        <div className="space-y-4">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Dados que serão migrados:</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Perfil do usuário</li>
-              <li>• Equipamentos</li>
-              <li>• Despesas mensais</li>
-              <li>• Trabalhos/Jobs</li>
-              <li>• Rotina de trabalho</li>
-            </ul>
-          </div>
+        {/* Informações sobre migração - só mostrar se ambos autenticados */}
+        {firebaseAuth && supabaseAuth && (
+          <>
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Dados que serão migrados:</h4>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• Perfil do usuário</li>
+                  <li>• Equipamentos</li>
+                  <li>• Despesas mensais</li>
+                  <li>• Trabalhos/Jobs</li>
+                  <li>• Rotina de trabalho</li>
+                </ul>
+              </div>
 
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-medium mb-2 text-blue-800">Usuários identificados:</h4>
-            <div className="text-sm space-y-1">
-              <p><strong>Firebase:</strong> {firebaseUser.email} (ID: {firebaseUser.id.substring(0, 8)}...)</p>
-              <p><strong>Supabase:</strong> {supabaseUser.email} (ID: {supabaseUser.id.substring(0, 8)}...)</p>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2 text-blue-800">Usuários identificados:</h4>
+                <div className="text-sm space-y-1">
+                  <p><strong>Firebase:</strong> {firebaseUser.email} (ID: {firebaseUser.id.substring(0, 8)}...)</p>
+                  <p><strong>Supabase:</strong> {supabaseUser.email} (ID: {supabaseUser.id.substring(0, 8)}...)</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
         {progress && (
           <div className="space-y-2">
@@ -231,10 +293,11 @@ export const MigrationWizard: React.FC = () => {
           </Alert>
         )}
 
+        {/* Botões de ação */}
         <div className="flex gap-3">
           <Button
             onClick={handleMigration}
-            disabled={migrating || migrationComplete}
+            disabled={migrating || migrationComplete || !firebaseAuth || !supabaseAuth}
             className="flex-1"
           >
             {migrating ? (
@@ -251,17 +314,19 @@ export const MigrationWizard: React.FC = () => {
             )}
           </Button>
 
-          <Button
-            onClick={checkMigrationData}
-            disabled={checkingData}
-            variant="outline"
-          >
-            {checkingData ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              'Verificar Dados'
-            )}
-          </Button>
+          {supabaseAuth && (
+            <Button
+              onClick={checkMigrationData}
+              disabled={checkingData}
+              variant="outline"
+            >
+              {checkingData ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Verificar Dados'
+              )}
+            </Button>
+          )}
         </div>
 
         {(migrationComplete || hasAnyData) && (
