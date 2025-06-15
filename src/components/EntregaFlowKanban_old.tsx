@@ -23,7 +23,7 @@ import {
   Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { kanbanService, KanbanProject } from '../services/kanbanService';
 
 interface Column {
@@ -52,7 +52,7 @@ const EntregaFlowKanban = () => {
   });
   const [newLink, setNewLink] = useState('');
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user } = useSupabaseAuth();
 
   const columns: Column[] = [
     {
