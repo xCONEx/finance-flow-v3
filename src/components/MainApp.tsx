@@ -19,7 +19,7 @@ const MainApp = () => {
   const { user, profile, agency } = useSupabaseAuth();
 
   // Verificar se é admin ou tem acesso ao team
-  const isAdmin = user?.userType === 'admin' || profile?.user_type === 'admin';
+  const isAdmin = profile?.user_type === 'admin';
   const isCompanyUser = (profile?.user_type === 'company_owner' || profile?.user_type === 'employee') && !!agency;
   const showTeamOption = isCompanyUser;
 
