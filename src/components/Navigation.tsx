@@ -22,7 +22,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTea
   const { profile, agency } = useSupabaseAuth();
   const { currentTheme } = useTheme();
 
-  const hasEnterprisePlan = profile?.subscription === 'enterprise' || agency?.plan === 'enterprise';
+  const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },

@@ -19,7 +19,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
 
   const isAdmin = profile?.user_type === 'admin';
-  const hasEnterprisePlan = profile?.subscription === 'enterprise' || agency?.plan === 'enterprise';
+  const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -32,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
   ];
 
   const getProfileImageUrl = () => {
-    if (profile?.avatar_url) return profile.avatar_url;
+    if (profile?.image_user) return profile.image_user;
     if (user?.user_metadata?.avatar_url) return user.user_metadata.avatar_url;
     return '';
   };
