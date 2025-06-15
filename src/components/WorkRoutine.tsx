@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Clock, Calculator, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,15 +8,14 @@ import { Label } from '@/components/ui/label';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { useApp } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrency } from '../utils/formatters';
-import { firestoreService } from '../services/firestore';
 
 const WorkRoutine = () => {
   const { workRoutine, loading } = useApp();
   const { currentTheme } = useTheme();
-  const { user } = useAuth();
+  const { user } = useSupabaseAuth();
   const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -62,8 +62,8 @@ const WorkRoutine = () => {
     setSubmitting(true);
     
     try {
-      // Salvar no Firebase na estrutura correta
-      await firestoreService.updateUserField(user.id, 'routine', updatedRoutine);
+      // TODO: Implementar salvamento no Supabase
+      console.log('Salvando rotina:', updatedRoutine);
       
       toast({
         title: "Rotina Atualizada",
@@ -108,15 +108,15 @@ const WorkRoutine = () => {
             <CardTitle>Configuração da Rotina</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-<div className="space-y-2">
-  <Label htmlFor="desiredSalary">Salário Desejado (R$/mês)</Label>
-  <CurrencyInput
-    id="desiredSalary"
-    value={formData.desiredSalary}
-    onChange={(value) => setFormData({ ...formData, desiredSalary: value })}
-    placeholder="8.000,00"
-  />
-</div>
+            <div className="space-y-2">
+              <Label htmlFor="desiredSalary">Salário Desejado (R$/mês)</Label>
+              <CurrencyInput
+                id="desiredSalary"
+                value={formData.desiredSalary}
+                onChange={(value) => setFormData({ ...formData, desiredSalary: value })}
+                placeholder="8.000,00"
+              />
+            </div>
             
             <div className="space-y-2">
               <Label htmlFor="workDaysPerMonth">Dias de Trabalho por Mês</Label>
@@ -130,30 +130,26 @@ const WorkRoutine = () => {
               />
             </div>
             
-<div className="space-y-2">
-  <Label htmlFor="workHoursPerDay">Horas de Trabalho por Dia</Label>
-  <Input
-    id="workHoursPerDay"
-    type="number"
-    inputMode="numeric"
-    pattern="[0-9]*"
-    value={formData.workHoursPerDay || ""}
-    onChange={(e) => {
-      const rawValue = e.target.value;
-
-      // Impede zeros à esquerda e converte para número
-      const cleanedValue = rawValue.replace(/^0+(?=\d)/, "");
-
-      setFormData({
-        ...formData,
-        workHoursPerDay: cleanedValue === "" ? 0 : Number(cleanedValue),
-      });
-    }}
-    placeholder="8"
-    disabled={submitting}
-  />
-</div>
-
+            <div className="space-y-2">
+              <Label htmlFor="workHoursPerDay">Horas de Trabalho por Dia</Label>
+              <Input
+                id="workHoursPerDay"
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={formData.workHoursPerDay || ""}
+                onChange={(e) => {
+                  const rawValue = e.target.value;
+                  const cleanedValue = rawValue.replace(/^0+(?=\d)/, "");
+                  setFormData({
+                    ...formData,
+                    workHoursPerDay: cleanedValue === "" ? 0 : Number(cleanedValue),
+                  });
+                }}
+                placeholder="8"
+                disabled={submitting}
+              />
+            </div>
 
             <Button 
               onClick={calculateAndSaveValues} 

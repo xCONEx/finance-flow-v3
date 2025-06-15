@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Calculator, DollarSign, Clock, TrendingUp, Save, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

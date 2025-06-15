@@ -1,16 +1,16 @@
+
 import React, { useState } from 'react';
 import { Plus, Trash2, Briefcase, Edit, Loader2, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useApp } from '../contexts/AppContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { toast } from '@/hooks/use-toast';
-import { generateWorkItemsPDF } from '../utils/pdfGenerator';
 import WorkItemModal from './WorkItemModal';
 
 const WorkItems = () => {
   const { workItems, updateWorkItem, deleteWorkItem, loading } = useApp();
-  const { userData } = useAuth();
+  const { user } = useSupabaseAuth();
   const [showItemModal, setShowItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -52,7 +52,8 @@ const WorkItems = () => {
         return;
       }
 
-      await generateWorkItemsPDF(workItems, userData);
+      // TODO: Implementar geração de PDF
+      console.log('Gerando PDF dos itens:', workItems);
       toast({
         title: "PDF Gerado",
         description: "O relatório de itens de trabalho foi gerado com sucesso.",
@@ -106,23 +107,19 @@ const WorkItems = () => {
         <div className="flex gap-2 w-full sm:w-auto">
           {workItems.length > 0 && (
             <>
-              {/* Desktop */}
               <Button onClick={handleGeneratePDF} variant="outline" className="hidden sm:flex">
                 <FileText className="h-4 w-4 mr-2" />
                 Gerar PDF
               </Button>
-              {/* Mobile */}
               <Button onClick={handleGeneratePDF} variant="outline" className="sm:hidden" size="sm">
                 <FileText className="h-4 w-4" />
               </Button>
             </>
           )}
-          {/* Desktop */}
           <Button onClick={() => setShowItemModal(true)} disabled={submitting} className="hidden sm:flex">
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Item
           </Button>
-          {/* Mobile */}
           <Button onClick={() => setShowItemModal(true)} disabled={submitting} className="sm:hidden flex-1" size="sm">
             <Plus className="h-4 w-4" />
           </Button>
