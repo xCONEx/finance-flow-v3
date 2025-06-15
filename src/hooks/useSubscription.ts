@@ -28,9 +28,15 @@ export const useSubscription = () => {
       
       if (data) {
         setSubscription(data.subscription || 'free');
-        // Verificar se subscription_data é um objeto válido antes de fazer cast
-        if (data.subscription_data && typeof data.subscription_data === 'object') {
-          setSubscriptionData(data.subscription_data as SubscriptionData);
+        // Verificação mais segura do tipo subscription_data
+        if (data.subscription_data && typeof data.subscription_data === 'object' && !Array.isArray(data.subscription_data)) {
+          const subscriptionDataObj = data.subscription_data as unknown as SubscriptionData;
+          // Verificar se tem as propriedades mínimas necessárias
+          if (subscriptionDataObj && typeof subscriptionDataObj === 'object') {
+            setSubscriptionData(subscriptionDataObj);
+          } else {
+            setSubscriptionData(null);
+          }
         } else {
           setSubscriptionData(null);
         }
