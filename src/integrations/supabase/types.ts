@@ -331,6 +331,7 @@ export type Database = {
           phone: string | null
           role: Database["public"]["Enums"]["agency_role"] | null
           subscription: Database["public"]["Enums"]["subscription_type"] | null
+          subscription_data: Json | null
           updated_at: string | null
           user_type: Database["public"]["Enums"]["user_type"] | null
         }
@@ -347,6 +348,7 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["agency_role"] | null
           subscription?: Database["public"]["Enums"]["subscription_type"] | null
+          subscription_data?: Json | null
           updated_at?: string | null
           user_type?: Database["public"]["Enums"]["user_type"] | null
         }
@@ -363,6 +365,7 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["agency_role"] | null
           subscription?: Database["public"]["Enums"]["subscription_type"] | null
+          subscription_data?: Json | null
           updated_at?: string | null
           user_type?: Database["public"]["Enums"]["user_type"] | null
         }
@@ -423,7 +426,12 @@ export type Database = {
       agency_role: "owner" | "editor" | "viewer"
       difficulty_level: "fácil" | "médio" | "complicado" | "difícil"
       job_status: "pendente" | "aprovado"
-      subscription_type: "free" | "premium" | "enterprise"
+      subscription_type:
+        | "free"
+        | "premium"
+        | "enterprise"
+        | "basic"
+        | "enterprise-annual"
       user_type: "individual" | "company_owner" | "employee" | "admin"
     }
     CompositeTypes: {
@@ -543,7 +551,13 @@ export const Constants = {
       agency_role: ["owner", "editor", "viewer"],
       difficulty_level: ["fácil", "médio", "complicado", "difícil"],
       job_status: ["pendente", "aprovado"],
-      subscription_type: ["free", "premium", "enterprise"],
+      subscription_type: [
+        "free",
+        "premium",
+        "enterprise",
+        "basic",
+        "enterprise-annual",
+      ],
       user_type: ["individual", "company_owner", "employee", "admin"],
     },
   },
