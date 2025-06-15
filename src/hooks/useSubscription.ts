@@ -1,83 +1,74 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../services/firebase';
-
-export interface SubscriptionData {
-  plan: 'free' | 'basic' | 'premium' | 'enterprise' | 'enterprise-annual';
-  status: 'active' | 'cancelled' | 'expired';
-  activated_at?: string;
-  cancelled_at?: string;
-  expires_at?: string;
-}
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { subscriptionService, SubscriptionData } from '@/services/subscriptionService';
 
 export const useSubscription = () => {
-  const { user } = useAuth();
-  const [subscription, setSubscription] = useState<SubscriptionData>({
-    plan: 'free',
-    status: 'active'
-  });
+  const { user } = useSupabaseAuth();
+  const [subscription, setSubscription] = useState<string>('free');
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) {
-      setSubscription({ plan: 'free', status: 'active' });
+    if (user) {
+      loadSubscription();
+    } else {
+      setSubscription('free');
+      setSubscriptionData(null);
       setLoading(false);
-      return;
     }
+  }, [user]);
 
-    // Escutar mudanças na assinatura do usuário
-    const unsubscribe = onSnapshot(
-      doc(db, 'users', user.id),
-      (doc) => {
-        if (doc.exists()) {
-          const userData = doc.data();
-          const userSubscription = userData.subscription;
-          
-          if (userSubscription) {
-            setSubscription(userSubscription);
-          } else {
-            setSubscription({ plan: 'free', status: 'active' });
-          }
-        }
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Erro ao carregar assinatura:', error);
-        setSubscription({ plan: 'free', status: 'active' });
-        setLoading(false);
+  const loadSubscription = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const data = await subscriptionService.getUserSubscription(user.id);
+      
+      if (data) {
+        setSubscription(data.subscription || 'free');
+        setSubscriptionData(data.subscription_data || null);
       }
-    );
-
-    return () => unsubscribe();
-  }, [user?.id]);
-
-  const hasActiveSubscription = () => {
-    return subscription.status === 'active' && subscription.plan !== 'free';
+    } catch (error) {
+      console.error('Erro ao carregar assinatura:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const canAccessFeature = (requiredPlan: string) => {
-    const planHierarchy = {
-      'free': 0,
-      'basic': 1,
-      'premium': 2,
-      'enterprise': 3,
-      'enterprise-annual': 3
-    };
+  const hasFeatureAccess = (feature: string): boolean => {
+    return subscriptionService.hasFeatureAccess(subscription, feature);
+  };
 
-    const userPlanLevel = planHierarchy[subscription.plan] || 0;
-    const requiredPlanLevel = planHierarchy[requiredPlan] || 0;
+  const getPlanLimits = () => {
+    return subscriptionService.getPlanLimits(subscription);
+  };
 
-    return subscription.status === 'active' && userPlanLevel >= requiredPlanLevel;
+  const isActive = (): boolean => {
+    return subscriptionService.isSubscriptionActive(subscriptionData);
+  };
+
+  const updateSubscription = async (newSubscriptionData: Partial<SubscriptionData>) => {
+    if (!user) return { error: 'Usuário não autenticado' };
+
+    const result = await subscriptionService.updateUserSubscription(user.id, newSubscriptionData);
+    
+    if (!result.error) {
+      await loadSubscription(); // Recarregar dados
+    }
+    
+    return result;
   };
 
   return {
     subscription,
+    subscriptionData,
     loading,
-    hasActiveSubscription,
-    canAccessFeature,
-    currentPlan: subscription.plan,
-    isActive: subscription.status === 'active'
+    hasFeatureAccess,
+    getPlanLimits,
+    isActive,
+    updateSubscription,
+    refreshSubscription: loadSubscription
   };
 };

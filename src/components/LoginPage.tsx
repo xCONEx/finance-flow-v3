@@ -6,15 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
-  const { login, loginWithGoogle, register } = useAuth();
-  const { signInWithGoogle: supabaseGoogleLogin, isAuthenticated: supabaseAuth } = useSupabaseAuth();
+  const { signIn, signUp, signInWithGoogle, isAuthenticated } = useSupabaseAuth();
   const { currentTheme } = useTheme();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
@@ -26,12 +24,12 @@ const LoginPage = () => {
     name: ''
   });
 
-  // Redirecionar se já autenticado no Supabase
+  // Redirecionar se já autenticado
   useEffect(() => {
-    if (supabaseAuth) {
+    if (isAuthenticated) {
       navigate('/');
     }
-  }, [supabaseAuth, navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,22 +37,26 @@ const LoginPage = () => {
 
     try {
       if (isLogin) {
-        await login(formData.email, formData.password);
+        const { error } = await signIn(formData.email, formData.password);
+        if (error) throw error;
+        
         toast({
           title: "Login realizado!",
           description: "Bem-vindo ao FinanceFlow",
         });
       } else {
-        await register(formData.email, formData.password, formData.name);
+        const { error } = await signUp(formData.email, formData.password, formData.name);
+        if (error) throw error;
+        
         toast({
           title: "Conta criada!",
           description: "Bem-vindo ao FinanceFlow",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Erro",
-        description: "Erro ao fazer login/cadastro",
+        description: error.message || "Erro ao fazer login/cadastro",
         variant: "destructive"
       });
     } finally {
@@ -65,26 +67,18 @@ const LoginPage = () => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      console.log('🔐 Iniciando login com Google...');
-      
-      // Fazer login no Firebase primeiro
-      await loginWithGoogle();
-      
-      // Depois fazer login no Supabase
-      await supabaseGoogleLogin();
+      const { error } = await signInWithGoogle();
+      if (error) throw error;
       
       toast({
         title: "Login realizado!",
-        description: "Conectado em ambos os sistemas",
+        description: "Conectado com sucesso",
       });
-      
-      // Navegar para a página principal
-      navigate('/');
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro no login com Google:', error);
       toast({
         title: "Erro",
-        description: "Erro ao fazer login com Google",
+        description: error.message || "Erro ao fazer login com Google",
         variant: "destructive"
       });
     } finally {

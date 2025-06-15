@@ -1,329 +1,222 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Crown, Building2, Users, Zap } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { useSubscription } from '../hooks/useSubscription';
+import { Check, Crown, Zap, Building } from 'lucide-react';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 
-const SubscriptionPlans = () => {
-  const { user } = useAuth();
-  const { currentTheme } = useTheme();
+const plans = [
+  {
+    id: 'free',
+    name: 'Gratuito',
+    price: 'R$ 0',
+    period: 'para sempre',
+    description: 'Ideal para começar',
+    icon: <Check className="h-5 w-5" />,
+    features: [
+      'Até 5 jobs por mês',
+      'Dashboard básico',
+      'Relatórios simples',
+      'Suporte por email'
+    ],
+    caktoUrl: null,
+    popular: false
+  },
+  {
+    id: 'basic',
+    name: 'Básico',
+    price: 'R$ 29',
+    period: '/mês',
+    description: 'Para freelancers',
+    icon: <Zap className="h-5 w-5" />,
+    features: [
+      'Jobs ilimitados',
+      'Dashboard completo',
+      'Relatórios avançados',
+      'Calculadora de preços',
+      'Suporte prioritário'
+    ],
+    caktoUrl: 'https://pay.cakto.com.br/yppzpjc',
+    popular: true
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    price: 'R$ 59',
+    period: '/mês',
+    description: 'Para pequenos estúdios',
+    icon: <Crown className="h-5 w-5" />,
+    features: [
+      'Tudo do Básico',
+      'Até 10 membros da equipe',
+      'Colaboração em tempo real',
+      'API de integração',
+      'Relatórios personalizados',
+      'Backup automático'
+    ],
+    caktoUrl: 'https://pay.cakto.com.br/kesq5cb',
+    popular: false
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    price: 'R$ 199',
+    period: '/mês',
+    description: 'Para grandes estúdios',
+    icon: <Building className="h-5 w-5" />,
+    features: [
+      'Tudo do Premium',
+      'Equipe ilimitada',
+      'Suporte 24/7',
+      'Onboarding dedicado',
+      'SLA garantido',
+      'Customizações'
+    ],
+    caktoUrl: 'https://pay.cakto.com.br/34p727v',
+    popular: false
+  },
+  {
+    id: 'enterprise-annual',
+    name: 'Enterprise Anual',
+    price: 'R$ 1.990',
+    period: '/ano',
+    description: 'Economia de 20%',
+    icon: <Building className="h-5 w-5" />,
+    features: [
+      'Tudo do Enterprise',
+      '2 meses grátis',
+      'Desconto de 20%',
+      'Consultoria inclusa',
+      'Treinamento da equipe'
+    ],
+    caktoUrl: 'https://pay.cakto.com.br/uoxtt9o',
+    popular: false,
+    badge: 'ECONOMIA'
+  }
+];
+
+export const SubscriptionPlans: React.FC = () => {
+  const { user } = useSupabaseAuth();
   const { subscription, loading } = useSubscription();
-  const [isLoading, setIsLoading] = useState<string | null>(null);
 
-  const plans = [
-    {
-      id: 'free',
-      name: 'Free',
-      price: 'R$ 0',
-      period: '/mês',
-      description: 'Para começar a organizar suas finanças',
-      icon: Zap,
-      color: 'from-gray-600 to-gray-700',
-      borderColor: 'border-gray-200',
-      caktoLink: null,
-      features: [
-        'Calculadora de precificação',
-        'Controle de custos mensais',
-        'Gestão de equipamentos',
-        'Relatórios básicos',
-        'Suporte por email'
-      ],
-      limitations: [
-        'Máximo 10 jobs por mês',
-        'Sem backup em nuvem',
-        'Sem recursos de equipe'
-      ]
-    },
-    {
-      id: 'basic',
-      name: 'Basic',
-      price: 'R$ 29,90',
-      period: '/mês',
-      description: 'Para começar a organizar suas finanças',
-      icon: Zap,
-      color: 'from-gray-600 to-gray-700',
-      borderColor: 'border-gray-200',
-      caktoLink: 'https://pay.cakto.com.br/yppzpjc',
-      features: [
-        'Calculadora de precificação',
-        'Controle de custos mensais',
-        'Gestão de equipamentos',
-        'Relatórios básicos',
-        'Suporte por email'
-      ],
-      limitations: [
-        'Máximo 10 jobs por mês',
-        'Sem backup em nuvem',
-        'Sem recursos de equipe'
-      ]
-    },
-    {
-      id: 'premium',
-      name: 'Premium',
-      price: 'R$ 97',
-      period: '/mês',
-      description: 'Para profissionais que querem mais controle',
-      icon: Crown,
-      color: 'from-purple-600 to-blue-600',
-      borderColor: 'border-purple-200',
-      popular: true,
-      caktoLink: 'https://pay.cakto.com.br/kesq5cb',
-      features: [
-        'Tudo do plano Basic',
-        'Jobs ilimitados',
-        'Relatórios avançados com gráficos',
-        'Geração de PDF com logo personalizável',
-        'Backup automático em nuvem',
-        'Suporte prioritário',
-        'Templates personalizados',
-        'Importação de planilhas'
-      ]
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: 'R$ 197',
-      period: '/mês',
-      description: 'Para empresas e equipes',
-      icon: Building2,
-      color: 'from-green-600 to-blue-600',
-      borderColor: 'border-green-200',
-      caktoLink: 'https://pay.cakto.com.br/34p727v',
-      features: [
-        'Tudo do plano Premium',
-        'Gestão de equipe completa',
-        'Kanban de projetos',
-        'Convites para colaboradores',
-        'Painéis por empresa',
-        'Exportação de dados avançada',
-        'API para integrações',
-        'Suporte dedicado',
-        'Treinamento da equipe'
-      ]
-    },
-    {
-      id: 'enterprise-annual',
-      name: 'Enterprise Anual',
-      price: 'R$ 1.970',
-      period: '/ano',
-      description: 'Para empresas com desconto anual',
-      icon: Building2,
-      color: 'from-green-600 to-blue-600',
-      borderColor: 'border-green-200',
-      caktoLink: 'https://pay.cakto.com.br/uoxtt9o',
-      features: [
-        'Tudo do plano Premium',
-        'Gestão de equipe completa',
-        'Kanban de projetos',
-        'Convites para colaboradores',
-        'Painéis por empresa',
-        'Exportação de dados avançada',
-        'API para integrações',
-        'Suporte dedicado',
-        'Treinamento da equipe',
-        '2 meses grátis'
-      ]
-    }
-  ];
-
-  const handleSubscribe = async (planId: string) => {
-    const plan = plans.find(p => p.id === planId);
+  const handlePlanSelect = (plan: typeof plans[0]) => {
+    if (!plan.caktoUrl) return;
     
-    if (!plan || !plan.caktoLink) {
-      if (planId === 'free') {
-        alert('Você já está no plano gratuito!');
-        return;
-      }
-      alert('Link de pagamento não encontrado');
+    if (!user) {
+      alert('Faça login para assinar um plano');
       return;
     }
 
-    setIsLoading(planId);
+    // Adicionar email do usuário à URL da Cakto
+    const url = new URL(plan.caktoUrl);
+    url.searchParams.set('customer_email', user.email || '');
+    url.searchParams.set('customer_name', user.user_metadata?.name || user.email?.split('@')[0] || '');
     
-    try {
-      console.log('Redirecionando para Cakto:', planId, plan.caktoLink);
-      console.log('User ID:', user?.id);
-      console.log('User Email:', user?.email);
-      
-      // Abrir o link da Cakto em uma nova aba
-      window.open(plan.caktoLink, '_blank');
-      
-    } catch (error) {
-      console.error('Erro ao processar pagamento:', error);
-    } finally {
-      // Remover loading após um tempo para permitir que o usuário tente novamente
-      setTimeout(() => setIsLoading(null), 3000);
-    }
+    window.open(url.toString(), '_blank');
+  };
+
+  const isCurrentPlan = (planId: string) => {
+    return subscription === planId;
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Carregando informações da assinatura...</p>
-        </div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
-          <Crown className={`text-${currentTheme.accent}`} />
-          Planos e Assinatura
-        </h2>
+    <div className="container mx-auto px-4 py-8">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-4">Escolha seu plano</h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Escolha o plano ideal para suas necessidades
+          Selecione o plano ideal para seu negócio
         </p>
       </div>
 
-      {/* Debug Info - Remover em produção */}
-      {user && (
-        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-2">Debug Info (remover em produção):</h3>
-            <div className="text-sm space-y-1">
-              <p><strong>User ID:</strong> {user.id}</p>
-              <p><strong>Email:</strong> {user.email}</p>
-              <p><strong>Plano Atual:</strong> {subscription.plan}</p>
-              <p><strong>Status:</strong> {subscription.status}</p>
-              <p><strong>Ativado em:</strong> {subscription.activated_at || 'N/A'}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Mostrar plano atual se não for free */}
-      {subscription.plan !== 'free' && (
-        <Card className={`bg-gradient-to-r ${currentTheme.secondary} border-${currentTheme.accent}/20`}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold">Plano Atual</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Você está no plano {plans.find(p => p.id === subscription.plan)?.name}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Badge className={`bg-${currentTheme.accent} text-white`}>
-                  {subscription.status === 'active' ? 'Ativo' : subscription.status}
-                </Badge>
-                <Button variant="outline" size="sm">
-                  Gerenciar Assinatura
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid lg:grid-cols-5 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {plans.map((plan) => (
           <Card 
-            key={plan.id}
-            className={`relative ${plan.popular ? `border-2 ${plan.borderColor} ring-2 ring-purple-100` : 'border border-gray-200 dark:border-gray-700'} hover:shadow-lg transition-all duration-300`}
+            key={plan.id} 
+            className={`relative ${plan.popular ? 'border-primary shadow-lg scale-105' : ''} ${
+              isCurrentPlan(plan.id) ? 'bg-primary/5 border-primary' : ''
+            }`}
           >
-            {plan.popular && (
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <Badge className={`bg-gradient-to-r ${plan.color} text-white px-4 py-1`}>
-                  Mais Popular
-                </Badge>
-              </div>
+            {plan.badge && (
+              <Badge 
+                className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white"
+              >
+                {plan.badge}
+              </Badge>
             )}
             
+            {plan.popular && (
+              <Badge 
+                className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-primary text-white"
+              >
+                POPULAR
+              </Badge>
+            )}
+
             <CardHeader className="text-center pb-4">
-              <div className={`w-16 h-16 bg-gradient-to-r ${plan.color} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
-                <plan.icon className="h-8 w-8 text-white" />
+              <div className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-2 ${
+                plan.popular ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {plan.icon}
               </div>
               
               <CardTitle className="text-xl">{plan.name}</CardTitle>
-              <div className="space-y-1">
-                <div className="text-3xl font-bold">
-                  {plan.price}
-                  <span className="text-lg font-normal text-gray-600 dark:text-gray-400">
-                    {plan.period}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {plan.description}
-                </p>
+              <CardDescription>{plan.description}</CardDescription>
+              
+              <div className="mt-4">
+                <span className="text-3xl font-bold">{plan.price}</span>
+                <span className="text-gray-500">{plan.period}</span>
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
+            <CardContent className="space-y-4">
+              <ul className="space-y-2">
                 {plan.features.map((feature, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">{feature}</span>
-                  </div>
+                  <li key={index} className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>{feature}</span>
+                  </li>
                 ))}
-                
-                {plan.limitations && (
-                  <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                    {plan.limitations.map((limitation, index) => (
-                      <div key={index} className="flex items-start gap-3">
-                        <div className="h-5 w-5 mt-0.5 flex-shrink-0 flex items-center justify-center">
-                          <div className="h-2 w-2 bg-gray-400 rounded-full" />
-                        </div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {limitation}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              </ul>
 
-              <Button 
-                className={`w-full ${
-                  subscription.plan === plan.id 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : plan.popular 
-                      ? `bg-gradient-to-r ${plan.color} hover:opacity-90` 
-                      : ''
-                }`}
-                disabled={subscription.plan === plan.id || isLoading === plan.id}
-                onClick={() => handleSubscribe(plan.id)}
-              >
-                {isLoading === plan.id ? (
-                  'Abrindo Pagamento...'
-                ) : subscription.plan === plan.id ? (
-                  'Plano Atual'
-                ) : plan.id === 'free' ? (
-                  'Plano Gratuito'
-                ) : (
-                  `Assinar ${plan.name}`
-                )}
-              </Button>
+              {isCurrentPlan(plan.id) ? (
+                <Button className="w-full" disabled>
+                  Plano Atual
+                </Button>
+              ) : plan.id === 'free' ? (
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  disabled
+                >
+                  Plano Gratuito
+                </Button>
+              ) : (
+                <Button 
+                  className="w-full"
+                  onClick={() => handlePlanSelect(plan)}
+                  variant={plan.popular ? 'default' : 'outline'}
+                >
+                  Assinar Agora
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="text-center space-y-4">
-        <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
-          <h3 className="font-semibold mb-2">Precisa de algo personalizado?</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Entre em contato conosco para planos customizados para sua empresa
-          </p>
-          <Button variant="outline">
-            Falar com Vendas
-          </Button>
-        </div>
-        
-        <div className="text-xs text-gray-500 space-y-1">
-          <p>• Todos os planos incluem 14 dias de teste gratuito</p>
-          <p>• Cancele a qualquer momento</p>
-          <p>• Suporte em português</p>
-          <p>• Pagamentos processados pela Cakto</p>
-        </div>
+      <div className="mt-8 text-center text-sm text-gray-500">
+        <p>Todos os planos incluem 7 dias de teste grátis</p>
+        <p>Cancele a qualquer momento, sem compromisso</p>
       </div>
     </div>
   );
