@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Settings as SettingsIcon, Palette, Database, Crown, Moon, Sun, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,11 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '../contexts/ThemeContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 
 const Settings = () => {
   const { isDark, currentTheme, toggleDarkMode, changeTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, profile } = useSupabaseAuth();
 
   const themes = [
     { id: 'purple-blue', name: 'Roxo & Azul', colors: 'from-purple-600 to-blue-600' },
@@ -19,7 +20,7 @@ const Settings = () => {
     { id: 'orange-red', name: 'Laranja & Vermelho', colors: 'from-orange-600 to-red-600' }
   ];
 
-  const isCompanyUser = user?.userType === 'company_owner' || user?.userType === 'employee';
+  const isCompanyUser = profile?.user_type === 'company_owner' || profile?.user_type === 'employee';
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">

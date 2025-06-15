@@ -11,6 +11,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrency } from '../utils/formatters';
+import { supabase } from '@/integrations/supabase/client';
 
 const WorkRoutine = () => {
   const { workRoutine, loading } = useApp();
@@ -28,7 +29,13 @@ const WorkRoutine = () => {
 
   useEffect(() => {
     if (workRoutine) {
-      setFormData(workRoutine);
+      setFormData({
+        desiredSalary: workRoutine.desiredSalary || 0,
+        workDaysPerMonth: workRoutine.workDays || 22,
+        workHoursPerDay: workRoutine.dailyHours || 8,
+        valuePerDay: workRoutine.dalilyValue || 0,
+        valuePerHour: workRoutine.valuePerHour || 0
+      });
     }
   }, [workRoutine]);
 
@@ -45,25 +52,47 @@ const WorkRoutine = () => {
     const valuePerDay = formData.desiredSalary / formData.workDaysPerMonth;
     const valuePerHour = valuePerDay / formData.workHoursPerDay;
     
-    const updatedRoutine = {
-      desiredSalary: formData.desiredSalary,
-      workDays: formData.workDaysPerMonth,
-      dailyHours: formData.workHoursPerDay,
-      dalilyValue: valuePerDay,
-      valuePerHour: valuePerHour
-    };
-    
-    setFormData({
+    const updatedFormData = {
       ...formData,
       valuePerDay,
       valuePerHour
-    });
+    };
     
+    setFormData(updatedFormData);
     setSubmitting(true);
     
     try {
-      // TODO: Implementar salvamento no Supabase
-      console.log('Salvando rotina:', updatedRoutine);
+      console.log('💾 Salvando rotina de trabalho no Supabase:', {
+        user_id: user.id,
+        desired_salary: formData.desiredSalary,
+        work_days_per_month: formData.workDaysPerMonth,
+        work_hours_per_day: formData.workHoursPerDay,
+        value_per_day: valuePerDay,
+        value_per_hour: valuePerHour
+      });
+
+      const { data, error } = await supabase
+        .from('work_routine')
+        .upsert({
+          user_id: user.id,
+          desired_salary: formData.desiredSalary,
+          work_days_per_month: formData.workDaysPerMonth,
+          work_hours_per_day: formData.workHoursPerDay,
+          value_per_day: valuePerDay,
+          value_per_hour: valuePerHour,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Erro ao salvar rotina:', error);
+        throw error;
+      }
+
+      console.log('✅ Rotina salva com sucesso:', data);
       
       toast({
         title: "Rotina Atualizada",
