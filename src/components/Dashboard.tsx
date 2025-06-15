@@ -21,23 +21,21 @@ const Dashboard = () => {
   const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useApp();
   const [showTaskModal, setShowTaskModal] = useState(false);
 
-  // CORRIGIDO: Dashboard sempre usa dados pessoais do usuário
-  // Apenas Kanban e Equipe são compartilhados com a empresa
-  const isCompanyUser = (user && (profile?.role === 'company_owner' || profile?.role === 'employee')) && !!agency;
+  // Dashboard sempre usa dados pessoais do usuário
+  const isCompanyUser = (user && (profile?.user_type === 'company_owner' || profile?.user_type === 'employee')) && !!agency;
   
   // Dashboard sempre mostra dados pessoais
   const currentData = profile;
 
-  // CORRIGIDO: Modal para adicionar valor manual
   const [showManualModal, setShowManualModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
 
-  // CORRIGIDO: Filtrar apenas jobs pessoais (sem companyId)
+  // Filtrar apenas jobs pessoais (sem companyId)
   const filteredJobs = jobs.filter(job => !job.companyId);
   const filteredMonthlyCosts = monthlyCosts.filter(cost => !cost.companyId);
   const filteredWorkItems = workItems.filter(item => !item.companyId);
 
-  // CORRIGIDO: Calcular apenas jobs aprovados pessoais
+  // Calcular apenas jobs aprovados pessoais
   const approvedJobs = filteredJobs.filter(job => job.status === 'aprovado');
   const totalJobs = approvedJobs.length;
   const totalJobsValue = approvedJobs.reduce((sum, job) => {
