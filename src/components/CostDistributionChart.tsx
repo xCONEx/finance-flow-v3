@@ -57,7 +57,7 @@ const CostDistributionChart = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: any) => formatValue(Number(value))} />
+              <Tooltip formatter={(value: number) => formatValue(value)} />
             </PieChart>
           </ResponsiveContainer>
         </div>
