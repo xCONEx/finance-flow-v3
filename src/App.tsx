@@ -8,7 +8,7 @@ import { SupabaseAuthProvider } from "./contexts/SupabaseAuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { PrivacyProvider } from "./contexts/PrivacyContext";
 import { AppProvider } from "./contexts/AppContext";
-import Index from "./pages/Index";
+import MainApp from "./components/MainApp";
 import LoginPage from "./components/LoginPage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -27,9 +27,9 @@ const App = () => (
               <BrowserRouter>
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
-                  <Route path="/" element={
+                  <Route path="/*" element={
                     <ProtectedRoute>
-                      <Index />
+                      <MainApp />
                     </ProtectedRoute>
                   } />
                   <Route path="*" element={<NotFound />} />
