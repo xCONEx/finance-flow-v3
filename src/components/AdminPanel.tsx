@@ -83,24 +83,26 @@ const AdminPanel = () => {
       console.log('🔑 ID do usuário:', user?.id);
       console.log('⚡ Role do usuário:', user?.role);
       
-      // Primeiro, vamos verificar se conseguimos acessar informações básicas
-      console.log('📊 Testando acesso básico ao Supabase...');
+      // Verificar JWT token e claims
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🎫 JWT Claims:', session?.access_token ? JSON.stringify(session.user) : 'No session');
       
-      // Tentar primeiro uma consulta simples para verificar conexão
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      console.log('🔐 Auth data:', authData);
+      // Verificar políticas RLS existentes
+      console.log('🔒 Verificando políticas RLS...');
+      const { data: policies, error: policiesError } = await supabase
+        .from('information_schema.policies')
+        .select('*')
+        .eq('schemaname', 'public')
+        .eq('tablename', 'profiles');
       
-      if (authError) {
-        console.error('❌ Erro de autenticação:', authError);
-      }
+      console.log('📋 Políticas RLS encontradas:', policies);
+      if (policiesError) console.error('❌ Erro ao buscar políticas:', policiesError);
 
-      // Tentar consulta aos profiles com diferentes abordagens
-      console.log('🔍 Tentando consulta direta aos profiles...');
-      
       let profilesData: UserProfile[] = [];
       let queryError = null;
 
-      // Primeira tentativa: consulta normal
+      // Tentar consulta com diferentes abordagens
+      console.log('🔍 Tentativa 1: Consulta normal com RLS...');
       const { data: normalData, error: normalError } = await supabase
         .from('profiles')
         .select(`
@@ -114,43 +116,30 @@ const AdminPanel = () => {
           updated_at,
           subscription_data
         `)
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .order('created_at', { ascending: false });
 
       if (normalError) {
         console.error('❌ Erro consulta normal:', normalError);
         queryError = normalError;
         
-        // Segunda tentativa: consulta só do próprio usuário
-        console.log('🔄 Tentando consulta do próprio usuário...');
-        const { data: selfData, error: selfError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user?.id)
-          .single();
-
-        if (selfError) {
-          console.error('❌ Erro consulta próprio usuário:', selfError);
+        // Tentar com RPC que pode contornar RLS
+        console.log('🔄 Tentativa 2: Usando função RPC...');
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc('get_all_profiles_admin', { admin_email: user?.email });
+        
+        if (rpcError) {
+          console.error('❌ Erro RPC:', rpcError);
+          console.log('📝 Tentando criar função RPC...');
         } else {
-          console.log('✅ Dados do próprio usuário:', selfData);
-          profilesData = [selfData];
+          console.log('✅ RPC funcionou:', rpcData);
+          profilesData = rpcData || [];
         }
-
-        // Terceira tentativa: verificar se a tabela existe
-        console.log('🔄 Verificando estrutura da tabela...');
-        const { data: tableInfo, error: tableError } = await supabase
-          .from('profiles')
-          .select('id')
-          .limit(1);
-
-        console.log('📋 Info da tabela:', { tableInfo, tableError });
-
       } else {
         console.log('✅ Consulta normal bem-sucedida:', normalData?.length, 'registros');
         profilesData = normalData || [];
       }
 
-      // Definir informações de debug
+      // Definir informações de debug detalhadas
       setDebugInfo({
         userEmail: user?.email,
         userId: user?.id,
@@ -158,25 +147,28 @@ const AdminPanel = () => {
         isAuthorized: isCurrentUserAdmin,
         queryError: queryError?.message,
         profilesCount: profilesData.length,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        jwtClaims: session?.user || null,
+        policiesCount: policies?.length || 0
       });
 
       console.log('📈 Dados carregados:', profilesData?.length || 0, 'usuários');
       setUsers(profilesData || []);
       
-      // Analytics
+      // Analytics incluindo enterprise-annual
       const totalUsers = profilesData?.length || 0;
       const freeUsers = profilesData?.filter(u => !u.subscription || u.subscription === 'free').length || 0;
       const premiumUsers = profilesData?.filter(u => u.subscription === 'premium').length || 0;
       const basicUsers = profilesData?.filter(u => u.subscription === 'basic').length || 0;
-      const enterpriseUsers = profilesData?.filter(u => u.subscription === 'enterprise' || u.subscription === 'enterprise-annual').length || 0;
+      const enterpriseUsers = profilesData?.filter(u => u.subscription === 'enterprise').length || 0;
+      const enterpriseAnnualUsers = profilesData?.filter(u => u.subscription === 'enterprise-annual').length || 0;
       const bannedUsers = profilesData?.filter(u => u.banned).length || 0;
       
       setAnalytics({
         overview: {
           totalUsers,
           totalAgencias: 0,
-          totalRevenue: (basicUsers * 29) + (premiumUsers * 49) + (enterpriseUsers * 99),
+          totalRevenue: (basicUsers * 29) + (premiumUsers * 59.90) + (enterpriseUsers * 199) + (enterpriseAnnualUsers * 1990),
           activeUsers: totalUsers - bannedUsers
         },
         userStats: {
@@ -184,6 +176,7 @@ const AdminPanel = () => {
           premiumUsers,
           basicUsers,
           enterpriseUsers,
+          enterpriseAnnualUsers,
           bannedUsers
         }
       });
@@ -197,15 +190,16 @@ const AdminPanel = () => {
           premiumUsers,
           basicUsers,
           enterpriseUsers,
+          enterpriseAnnualUsers,
           bannedUsers
         });
       }
 
       // Se temos poucos dados, mostrar aviso
-      if (profilesData.length === 0 && isCurrentUserAdmin) {
+      if (profilesData.length <= 1 && isCurrentUserAdmin) {
         toast({
-          title: 'Aviso de Acesso',
-          description: 'Não foi possível carregar dados dos usuários. Verifique as políticas RLS no Supabase.',
+          title: 'Aviso de Acesso RLS',
+          description: 'Políticas RLS podem estar bloqueando acesso. Verifique as políticas no Supabase.',
           variant: 'default'
         });
       }
@@ -269,7 +263,7 @@ const AdminPanel = () => {
         current_period_start: new Date().toISOString(),
         current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         payment_provider: 'manual_admin',
-        amount: validPlan === 'basic' ? 29 : validPlan === 'premium' ? 49 : validPlan === 'enterprise' ? 99 : 0,
+        amount: validPlan === 'basic' ? 29 : validPlan === 'premium' ? 59.90 : validPlan === 'enterprise' ? 199 : validPlan === 'enterprise-annual' ? 1990 : 0,
         currency: 'BRL'
       };
 
@@ -373,7 +367,7 @@ const AdminPanel = () => {
     );
   }
 
-  const { freeUsers = 0, premiumUsers = 0, basicUsers = 0, enterpriseUsers = 0, bannedUsers = 0 } = analytics?.userStats || {};
+  const { freeUsers = 0, premiumUsers = 0, basicUsers = 0, enterpriseUsers = 0, enterpriseAnnualUsers = 0, bannedUsers = 0 } = analytics?.userStats || {};
 
   return (
     <div className="space-y-4 md:space-y-6 p-2 md:p-4">
@@ -394,7 +388,7 @@ const AdminPanel = () => {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              Informações de Debug
+              Informações de Debug RLS
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -403,6 +397,7 @@ const AdminPanel = () => {
               <p><strong>User ID:</strong> {debugInfo.userId}</p>
               <p><strong>É Admin Autorizado:</strong> {debugInfo.isAuthorized ? 'Sim' : 'Não'}</p>
               <p><strong>Usuários Carregados:</strong> {debugInfo.profilesCount}</p>
+              <p><strong>Políticas RLS Encontradas:</strong> {debugInfo.policiesCount || 'N/A'}</p>
               {debugInfo.queryError && (
                 <p><strong>Erro de Consulta:</strong> <span className="text-red-600">{debugInfo.queryError}</span></p>
               )}
@@ -450,8 +445,8 @@ const AdminPanel = () => {
         </Card>
       </div>
 
-      {/* Planos - Grid responsivo */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+      {/* Planos - Grid responsivo com Enterprise Anual */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
         <Card>
           <CardContent className="p-3 md:p-4 text-center">
             <Users className="h-6 w-6 md:h-8 md:w-8 mx-auto text-gray-600 mb-2" />
@@ -481,6 +476,14 @@ const AdminPanel = () => {
             <TrendingUp className="h-6 w-6 md:h-8 md:w-8 mx-auto text-yellow-600 mb-2" />
             <p className="text-lg md:text-2xl font-bold text-yellow-700">{enterpriseUsers}</p>
             <p className="text-xs md:text-sm text-gray-600">Enterprise</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-3 md:p-4 text-center">
+            <Building2 className="h-6 w-6 md:h-8 md:w-8 mx-auto text-purple-600 mb-2" />
+            <p className="text-lg md:text-2xl font-bold text-purple-700">{enterpriseAnnualUsers}</p>
+            <p className="text-xs md:text-sm text-gray-600">Enterprise Anual</p>
           </CardContent>
         </Card>
       </div>
@@ -528,6 +531,7 @@ const AdminPanel = () => {
                     <SelectItem value="basic">Basic</SelectItem>
                     <SelectItem value="premium">Premium</SelectItem>
                     <SelectItem value="enterprise">Enterprise</SelectItem>
+                    <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -578,6 +582,7 @@ const AdminPanel = () => {
                               <SelectItem value="basic">Basic</SelectItem>
                               <SelectItem value="premium">Premium</SelectItem>
                               <SelectItem value="enterprise">Enterprise</SelectItem>
+                              <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -711,6 +716,10 @@ const AdminPanel = () => {
                     <span className="font-bold text-yellow-600">{enterpriseUsers}</span>
                   </div>
                   <div className="flex justify-between text-sm">
+                    <span>Usuários Enterprise Anual:</span>
+                    <span className="font-bold text-purple-600">{enterpriseAnnualUsers}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
                     <span>Usuários Banidos:</span>
                     <span className="font-bold text-red-600">{bannedUsers}</span>
                   </div>
@@ -736,7 +745,7 @@ const AdminPanel = () => {
                     <span>Taxa de Conversão:</span>
                     <span className="font-bold text-blue-600">
                       {analytics?.overview?.totalUsers > 0 
-                        ? ((premiumUsers + basicUsers + enterpriseUsers) / analytics.overview.totalUsers * 100).toFixed(1)
+                        ? ((premiumUsers + basicUsers + enterpriseUsers + enterpriseAnnualUsers) / analytics.overview.totalUsers * 100).toFixed(1)
                         : 0
                       }%
                     </span>
@@ -744,7 +753,7 @@ const AdminPanel = () => {
                   <div className="flex justify-between text-sm">
                     <span>Receita Estimada:</span>
                     <span className="font-bold text-purple-600">
-                      R$ {((basicUsers * 29) + (premiumUsers * 49) + (enterpriseUsers * 99)).toLocaleString('pt-BR')}
+                      R$ {((basicUsers * 29) + (premiumUsers * 59.90) + (enterpriseUsers * 199) + (enterpriseAnnualUsers * 1990)).toLocaleString('pt-BR')}
                     </span>
                   </div>
                 </div>
