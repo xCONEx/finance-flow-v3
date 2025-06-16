@@ -74,30 +74,17 @@ const AdminPanel = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Carregando dados do admin...');
+      console.log('🔍 Carregando dados do admin via RPC...');
       
-      // Buscar todos os usuários com dados básicos disponíveis
-      const { data: profilesData, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          email,
-          name,
-          subscription,
-          user_type,
-          banned,
-          created_at,
-          updated_at,
-          subscription_data
-        `)
-        .order('created_at', { ascending: false });
+      // Usar a função RPC para buscar todos os usuários
+      const { data: profilesData, error } = await supabase.rpc('get_all_profiles_for_admin');
 
       if (error) {
-        console.error('❌ Erro ao buscar perfis:', error);
+        console.error('❌ Erro ao buscar perfis via RPC:', error);
         throw error;
       }
 
-      console.log('✅ Dados carregados:', profilesData?.length || 0, 'usuários');
+      console.log('✅ Dados carregados via RPC:', profilesData?.length || 0, 'usuários');
       setUsers(profilesData || []);
       
       // Analytics
@@ -127,10 +114,9 @@ const AdminPanel = () => {
       console.error('❌ Erro ao carregar dados:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao carregar dados dos usuários',
+        description: 'Erro ao carregar dados dos usuários: ' + (error?.message || 'Erro desconhecido'),
         variant: 'destructive'
       });
-      // Set empty array on error to prevent further issues
       setUsers([]);
     } finally {
       setLoading(false);
@@ -141,16 +127,19 @@ const AdminPanel = () => {
     try {
       console.log(`🔄 Atualizando ${field} para usuário ${userId}:`, value);
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({ [field]: value, updated_at: new Date().toISOString() })
-        .eq('id', userId);
+      // Usar a função RPC para atualizar
+      const updateData = { [field]: value };
+      const { data, error } = await supabase.rpc('admin_update_profile', {
+        target_user_id: userId,
+        update_data: updateData
+      });
 
       if (error) {
-        console.error('❌ Erro ao atualizar:', error);
+        console.error('❌ Erro ao atualizar via RPC:', error);
         throw error;
       }
 
+      // Atualizar o estado local
       setUsers(users.map(u => u.id === userId ? { ...u, [field]: value } : u));
       toast({ 
         title: 'Sucesso', 
@@ -160,7 +149,7 @@ const AdminPanel = () => {
       console.error('❌ Erro ao atualizar:', error);
       toast({ 
         title: 'Erro', 
-        description: 'Erro ao atualizar campo', 
+        description: 'Erro ao atualizar campo: ' + (error?.message || 'Erro desconhecido'), 
         variant: 'destructive' 
       });
     }
@@ -178,17 +167,20 @@ const AdminPanel = () => {
         currency: 'BRL'
       };
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          subscription: newPlan,
-          subscription_data: subscriptionData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
+      // Usar a função RPC para atualizar
+      const updateData = { 
+        subscription: newPlan,
+        subscription_data: subscriptionData
+      };
+      
+      const { data, error } = await supabase.rpc('admin_update_profile', {
+        target_user_id: userId,
+        update_data: updateData
+      });
 
       if (error) throw error;
 
+      // Atualizar o estado local
       setUsers(users.map(u => u.id === userId ? { 
         ...u, 
         subscription: newPlan,
@@ -204,7 +196,7 @@ const AdminPanel = () => {
       console.error('❌ Erro ao atualizar assinatura:', error);
       toast({ 
         title: 'Erro', 
-        description: 'Erro ao atualizar plano', 
+        description: 'Erro ao atualizar plano: ' + (error?.message || 'Erro desconhecido'), 
         variant: 'destructive' 
       });
     }
@@ -212,10 +204,12 @@ const AdminPanel = () => {
 
   const handleBanUser = async (userId: string, banned: boolean) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ banned, updated_at: new Date().toISOString() })
-        .eq('id', userId);
+      // Usar a função RPC para atualizar
+      const updateData = { banned };
+      const { data, error } = await supabase.rpc('admin_update_profile', {
+        target_user_id: userId,
+        update_data: updateData
+      });
 
       if (error) throw error;
 
@@ -229,7 +223,7 @@ const AdminPanel = () => {
       console.error('❌ Erro ao banir/desbanir:', error);
       toast({ 
         title: 'Erro', 
-        description: 'Erro ao banir/desbanir usuário', 
+        description: 'Erro ao banir/desbanir usuário: ' + (error?.message || 'Erro desconhecido'), 
         variant: 'destructive' 
       });
     }
