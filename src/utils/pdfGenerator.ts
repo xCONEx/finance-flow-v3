@@ -46,6 +46,23 @@ const checkPageBreak = (doc: jsPDF, currentY: number, neededSpace: number = 30) 
   return currentY;
 };
 
+const addCompanyData = (doc: jsPDF, userData: any, margin: number, currentY: number, pageWidth: number) => {
+  // Seção DADOS DA EMPRESA
+  currentY = addSection(doc, 'DADOS DA EMPRESA', margin, currentY, pageWidth, margin);
+  
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'normal');
+  
+  const companyName = userData?.companyName || userData?.name || 'Nome da empresa não informado';
+  const email = userData?.email || 'Email não informado';
+  
+  doc.text(`Empresa: ${companyName}`, margin, currentY);
+  doc.text(`Email: ${email}`, margin, currentY + 8);
+  
+  return currentY + 25;
+};
+
 export const generateJobPDF = async (job: any, userData: any) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -56,8 +73,12 @@ export const generateJobPDF = async (job: any, userData: any) => {
   // Header
   let currentY = addHeader(doc, 'ORÇAMENTO', userData, pageWidth, margin);
   
-  // Informações do cliente
-  currentY = addSection(doc, 'INFORMAÇÕES DO CLIENTE', margin, currentY, pageWidth, margin);
+  // Dados da empresa
+  currentY = addCompanyData(doc, userData, margin, currentY, pageWidth);
+  currentY = checkPageBreak(doc, currentY, 60);
+  
+  // Dados do cliente
+  currentY = addSection(doc, 'DADOS DO CLIENTE', margin, currentY, pageWidth, margin);
   
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(11);
@@ -66,17 +87,122 @@ export const generateJobPDF = async (job: any, userData: any) => {
   doc.text(`Descrição: ${job.description}`, margin, currentY + 8);
   doc.text(`Data do evento: ${new Date(job.eventDate).toLocaleDateString('pt-BR')}`, margin, currentY + 16);
   doc.text(`Status: ${job.status}`, margin, currentY + 24);
+  if (job.category) {
+    doc.text(`Categoria: ${job.category}`, margin, currentY + 32);
+    currentY += 8;
+  }
   
-  currentY += 40;
-  currentY = checkPageBreak(doc, currentY, 60);
+  currentY += 48;
+  currentY = checkPageBreak(doc, currentY, 80);
   
-  // Valor do orçamento
-  currentY = addSection(doc, 'VALOR DO ORÇAMENTO', margin, currentY, pageWidth, margin);
+  // Itens do orçamento
+  currentY = addSection(doc, 'ITENS DO ORÇAMENTO', margin, currentY, pageWidth, margin);
   
-  const jobValue = job.valueWithDiscount || job.serviceValue || 0;
-  doc.setFontSize(16);
-  doc.setFont(undefined, 'bold');
-  doc.text(`Valor Total: ${jobValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, margin, currentY + 5);
+  const tableData = [];
+  
+  // Adicionar linha do serviço principal
+  const serviceDescription = job.description || 'Serviço de vídeo';
+  const quantity = job.estimatedHours || 1;
+  const unitPrice = job.serviceValue / quantity || job.serviceValue || 0;
+  const total = job.serviceValue || 0;
+  
+  tableData.push([
+    serviceDescription,
+    quantity.toString(),
+    unitPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+    total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  ]);
+  
+  // Adicionar custos extras se existirem
+  if (job.logistics > 0) {
+    tableData.push([
+      'Logística',
+      '1',
+      job.logistics.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      job.logistics.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    ]);
+  }
+  
+  if (job.equipment > 0) {
+    tableData.push([
+      'Equipamentos',
+      '1',
+      job.equipment.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      job.equipment.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    ]);
+  }
+  
+  if (job.assistance > 0) {
+    tableData.push([
+      'Assistência',
+      '1',
+      job.assistance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      job.assistance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    ]);
+  }
+  
+  const subtotal = job.totalCosts || job.serviceValue || 0;
+  const finalValue = job.valueWithDiscount || job.totalCosts || job.serviceValue || 0;
+  
+  // Linha de subtotal
+  tableData.push(['', '', '', '']);
+  tableData.push(['', '', 'Subtotal:', subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
+  
+  // Desconto se houver
+  if (job.discountValue > 0) {
+    tableData.push(['', '', 'Desconto:', `-${job.discountValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`]);
+  }
+  
+  // Total final
+  tableData.push(['', '', 'TOTAL FINAL:', finalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })]);
+  
+  try {
+    autoTable(doc, {
+      startY: currentY,
+      head: [['DESCRIÇÃO', 'QTD', 'PREÇO UNIT.', 'TOTAL']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [69, 123, 248],
+        textColor: 255,
+        fontSize: 12,
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      bodyStyles: {
+        fontSize: 10,
+        cellPadding: 3
+      },
+      columnStyles: {
+        0: { halign: 'left', cellWidth: 70 },
+        1: { halign: 'center', cellWidth: 20 },
+        2: { halign: 'right', cellWidth: 40 },
+        3: { halign: 'right', cellWidth: 40 }
+      },
+      alternateRowStyles: {
+        fillColor: [245, 247, 250]
+      },
+      didDrawPage: (data: any) => {
+        if (data.pageNumber > 1) {
+          addHeader(doc, 'ORÇAMENTO', userData, pageWidth, margin);
+        }
+      }
+    });
+    
+    // Condições especiais
+    const finalY = (doc as any).lastAutoTable.finalY + 20;
+    let conditionsY = checkPageBreak(doc, finalY, 40);
+    
+    conditionsY = addSection(doc, 'CONDIÇÕES ESPECIAIS', margin, conditionsY, pageWidth, margin);
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    doc.text('Pagamento em até 30 dias após aprovação do orçamento.', margin, conditionsY);
+    
+  } catch (error) {
+    console.error('❌ Erro ao gerar tabela:', error);
+  }
   
   doc.save(`Orcamento_${job.description.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
 };
@@ -90,6 +216,10 @@ export const generateWorkItemsPDF = async (workItems: any[], userData: any) => {
   
   // Header
   let currentY = addHeader(doc, 'RELATÓRIO DE ITENS', userData, pageWidth, margin);
+  
+  // Dados da empresa
+  currentY = addCompanyData(doc, userData, margin, currentY, pageWidth);
+  currentY = checkPageBreak(doc, currentY, 60);
   
   // Informações do relatório
   currentY = addSection(doc, 'INFORMAÇÕES DO RELATÓRIO', margin, currentY, pageWidth, margin);
@@ -165,6 +295,10 @@ export const generateExpensesPDF = async (expenses: any[], userData: any) => {
   
   // Header
   let currentY = addHeader(doc, 'RELATÓRIO DE DESPESAS', userData, pageWidth, margin);
+  
+  // Dados da empresa
+  currentY = addCompanyData(doc, userData, margin, currentY, pageWidth);
+  currentY = checkPageBreak(doc, currentY, 60);
   
   // Informações do relatório
   currentY = addSection(doc, 'INFORMAÇÕES DO RELATÓRIO', margin, currentY, pageWidth, margin);
