@@ -22,14 +22,17 @@ export const subscriptionService = {
 
       if (error) throw error;
 
+      // Safe type casting for subscription_data JSON
+      const subscriptionData = data.subscription_data as any;
+
       return {
         plan: data.subscription || 'free',
-        status: data.subscription_data?.status || 'inactive',
-        current_period_start: data.subscription_data?.current_period_start,
-        current_period_end: data.subscription_data?.current_period_end,
-        payment_provider: data.subscription_data?.payment_provider,
-        amount: data.subscription_data?.amount,
-        currency: data.subscription_data?.currency || 'BRL'
+        status: subscriptionData?.status || 'inactive',
+        current_period_start: subscriptionData?.current_period_start,
+        current_period_end: subscriptionData?.current_period_end,
+        payment_provider: subscriptionData?.payment_provider,
+        amount: subscriptionData?.amount,
+        currency: subscriptionData?.currency || 'BRL'
       };
     } catch (error) {
       console.error('Erro ao buscar assinatura:', error);
