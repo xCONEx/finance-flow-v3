@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Mail, Building2, UserCheck, X, Crown, Edit, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
-import { supabase } from '@/integrations/supabase/client';
 
 const InviteAcceptance = () => {
   const [pendingInvites, setPendingInvites] = useState([]);
@@ -15,216 +14,19 @@ const InviteAcceptance = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadUserInvites();
+    // Simplified - no invites functionality for now since agency tables don't exist
+    setLoading(false);
   }, [user]);
 
-  const loadUserInvites = async () => {
-    if (!user?.email) return;
-    
-    try {
-      console.log('Carregando convites para:', user.email);
-      setLoading(true);
-      
-      // Buscar convites no Supabase
-      const { data, error } = await supabase
-        .from('agency_invites')
-        .select(`
-          *,
-          agencies:agency_id (
-            name
-          )
-        `)
-        .eq('email', user.email)
-        .eq('status', 'pending');
-
-      if (error) throw error;
-
-      const invites = (data || []).map(invite => ({
-        id: invite.id,
-        agencyId: invite.agency_id,
-        agencyName: invite.agencies?.name || 'Agência',
-        role: invite.role,
-        invitedBy: invite.invited_by_email,
-        sentAt: invite.created_at
-      }));
-
-      setPendingInvites(invites);
-    } catch (error) {
-      console.error('Erro ao carregar convites:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAcceptInvite = async (inviteId: string, agencyId: string) => {
-    try {
-      console.log('Aceitando convite:', inviteId, agencyId);
-      
-      // Aceitar convite no Supabase
-      const { error: updateError } = await supabase
-        .from('agency_invites')
-        .update({ 
-          status: 'accepted',
-          accepted_at: new Date().toISOString()
-        })
-        .eq('id', inviteId);
-
-      if (updateError) throw updateError;
-
-      // Atualizar perfil do usuário
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ 
-          agency_id: agencyId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user?.id);
-
-      if (profileError) throw profileError;
-      
-      setPendingInvites(pendingInvites.filter(invite => invite.id !== inviteId));
-      
-      toast({
-        title: "Sucesso!",
-        description: "Você agora faz parte da equipe da agência!"
-      });
-      
-      // Recarregar dados do usuário
-      window.location.reload();
-    } catch (error) {
-      console.error('Erro ao aceitar convite:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao aceitar convite",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDeclineInvite = async (inviteId: string) => {
-    try {
-      console.log('Recusando convite:', inviteId);
-      
-      // Atualizar status do convite para recusado
-      const { error } = await supabase
-        .from('agency_invites')
-        .update({ 
-          status: 'declined',
-          declined_at: new Date().toISOString()
-        })
-        .eq('id', inviteId);
-
-      if (error) throw error;
-
-      setPendingInvites(pendingInvites.filter(invite => invite.id !== inviteId));
-      
-      toast({
-        title: "Convite recusado",
-        description: "O convite foi recusado com sucesso"
-      });
-    } catch (error) {
-      console.error('Erro ao recusar convite:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao recusar convite",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'owner': return 'Proprietário';
-      case 'editor': return 'Editor';
-      case 'viewer': return 'Visualizador';
-      default: return 'Colaborador';
-    }
-  };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'owner': return <Crown className="h-4 w-4 text-yellow-600" />;
-      case 'editor': return <Edit className="h-4 w-4 text-blue-600" />;
-      case 'viewer': return <Eye className="h-4 w-4 text-gray-600" />;
-      default: return <UserCheck className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-      </div>
-    );
-  }
-
-  if (pendingInvites.length === 0) {
-    return null; // Não mostrar nada se não há convites
-  }
-
+  // Simplified component since agency invite tables don't exist in current schema
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold flex items-center gap-2">
-        <Mail className="h-5 w-5" />
-        Convites Pendentes
-      </h3>
-      
-      {pendingInvites.map((invite) => (
-        <Card key={invite.id} className="border-blue-200 bg-blue-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Building2 className="h-5 w-5 text-blue-600" />
-              Convite para {invite.agencyName}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm">
-                <strong>Convidado por:</strong> {invite.invitedBy}
-              </p>
-              <p className="text-sm">
-                <strong>Função:</strong> 
-                <Badge variant="outline" className="ml-2 flex items-center gap-1 w-fit">
-                  {getRoleIcon(invite.role)}
-                  {getRoleLabel(invite.role)}
-                </Badge>
-              </p>
-              <p className="text-sm">
-                <strong>Data do convite:</strong> {new Date(invite.sentAt).toLocaleDateString()}
-              </p>
-              {invite.role === 'editor' && (
-                <p className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
-                  Como Editor, você poderá criar e editar projetos, tarefas e acessar o dashboard da agência.
-                </p>
-              )}
-              {invite.role === 'viewer' && (
-                <p className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
-                  Como Visualizador, você poderá ver projetos e tarefas, mas não editá-los.
-                </p>
-              )}
-            </div>
-            
-            <div className="flex gap-3">
-              <Button 
-                onClick={() => handleAcceptInvite(invite.id, invite.agencyId)}
-                className="flex-1"
-              >
-                <UserCheck className="h-4 w-4 mr-2" />
-                Aceitar Convite
-              </Button>
-              
-              <Button 
-                variant="outline"
-                onClick={() => handleDeclineInvite(invite.id)}
-                className="flex-1"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Recusar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      {/* No invites to show since agency functionality is not implemented yet */}
+      {loading && (
+        <div className="flex items-center justify-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -24,7 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
-import { subscriptionService } from '@/services/subscriptionService';
+import { subscriptionService } from '@/services/supabaseSubscriptionService';
 
 const AdminPanel = () => {
   const { toast } = useToast();

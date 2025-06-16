@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
-import { kanbanService, KanbanProject } from '../services/kanbanService';
+import { supabaseKanbanService, KanbanProject } from '../services/supabaseKanbanService';
 
 interface Column {
   id: string;
@@ -112,7 +111,7 @@ const EntregaFlowKanban = () => {
     
     try {
       setLoading(true);
-      const loadedProjects = await kanbanService.loadBoard(user.id);
+      const loadedProjects = await supabaseKanbanService.loadBoard(user.id);
       setProjects(loadedProjects);
       console.log('📦 Projetos carregados:', loadedProjects.length);
     } catch (error) {
@@ -131,8 +130,7 @@ const EntregaFlowKanban = () => {
     if (!user?.id) return;
     
     try {
-      await kanbanService.saveBoard(user.id, projectsData);
-      // Também salva no localStorage como backup
+      await supabaseKanbanService.saveBoard(user.id, projectsData);
       localStorage.setItem('entregaFlowProjects', JSON.stringify(projectsData));
     } catch (error) {
       console.error('❌ Erro ao salvar projetos:', error);
