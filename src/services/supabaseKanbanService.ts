@@ -22,52 +22,11 @@ class SupabaseKanbanService {
       console.log('👤 User ID:', userId);
       console.log('📊 Projetos para salvar:', projects.length);
 
-      // Primeiro, tentar atualizar se já existe
-      const { data: existingData } = await supabase
-        .from('user_kanban_boards')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
-
-      const boardRecord = {
-        user_id: userId,
-        board_data: projects as any,
-        updated_at: new Date().toISOString()
-      };
-
-      console.log('💽 Dados formatados para Supabase:', boardRecord);
-
-      let result;
-      if (existingData) {
-        // Atualizar registro existente
-        result = await supabase
-          .from('user_kanban_boards')
-          .update({
-            board_data: projects as any,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', userId);
-      } else {
-        // Inserir novo registro
-        result = await supabase
-          .from('user_kanban_boards')
-          .insert(boardRecord);
-      }
-
-      const { data, error } = result;
-
-      if (error) {
-        console.error('❌ Erro ao salvar no Supabase:', error);
-        throw error;
-      }
-
-      console.log('🎉 Dados salvos com sucesso no Supabase!', data);
-
-      // Manter backup no localStorage
+      // Por enquanto, salvar apenas no localStorage até a nova tabela estar configurada
       localStorage.setItem('entregaFlowProjects', JSON.stringify(projects));
       localStorage.setItem('entregaFlowUserId', userId);
 
-      console.log('✅ Board salvo com sucesso no Supabase');
+      console.log('✅ Board salvo no localStorage (Supabase temporariamente desabilitado)');
     } catch (error) {
       console.error('❌ Erro ao salvar board:', error);
       
@@ -82,31 +41,11 @@ class SupabaseKanbanService {
 
   async loadBoard(userId: string): Promise<KanbanProject[]> {
     try {
-      console.log('📦 Tentando carregar do Supabase...');
+      console.log('📦 Tentando carregar do localStorage...');
       console.log('👤 User ID:', userId);
 
-      const { data, error } = await supabase
-        .from('user_kanban_boards')
-        .select('board_data')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        console.error('❌ Erro ao carregar do Supabase:', error);
-        console.log('📦 Carregando do localStorage como fallback');
-        return this.loadFromLocalStorage(userId);
-      }
-
-      if (!data || !data.board_data) {
-        console.log('📦 Nenhum dados no Supabase, tentando localStorage...');
-        return this.loadFromLocalStorage(userId);
-      }
-
-      // Extrair projetos do campo board_data
-      const projects = data.board_data as KanbanProject[];
-
-      console.log('🎉 Projetos carregados do Supabase:', projects?.length || 0);
-      return projects || [];
+      // Por enquanto, carregar apenas do localStorage
+      return this.loadFromLocalStorage(userId);
     } catch (error) {
       console.error('❌ Erro ao carregar board:', error);
       console.log('📦 Carregando do localStorage como fallback');
