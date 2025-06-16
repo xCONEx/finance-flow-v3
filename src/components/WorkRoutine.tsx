@@ -14,7 +14,7 @@ import { formatCurrency } from '../utils/formatters';
 import { supabase } from '@/integrations/supabase/client';
 
 const WorkRoutine = () => {
-  const { workRoutine, loading } = useApp();
+  const { workRoutine, loading, refreshWorkRoutine } = useApp();
   const { currentTheme } = useTheme();
   const { user } = useSupabaseAuth();
   const [submitting, setSubmitting] = useState(false);
@@ -94,9 +94,12 @@ const WorkRoutine = () => {
 
       console.log('✅ Rotina salva com sucesso:', data);
       
+      // Atualizar o contexto imediatamente após salvar
+      await refreshWorkRoutine();
+      
       toast({
-        title: "Rotina Atualizada",
-        description: "Os valores foram calculados e salvos com sucesso.",
+        title: "Rotina Atualizada com Sucesso!",
+        description: "Os valores foram calculados, salvos e atualizados automaticamente.",
       });
     } catch (error) {
       console.error('❌ Erro ao salvar rotina:', error);
