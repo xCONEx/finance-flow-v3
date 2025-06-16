@@ -12,6 +12,7 @@ import UserProfile from './UserProfile';
 import AdminPanel from './AdminPanel';
 import TeamManagement from './TeamManagement';
 import EntregaFlowKanban from './EntregaFlowKanban_old';
+import SubscriptionPlans from './SubscriptionPlans';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 
 const MainApp = () => {
@@ -43,6 +44,8 @@ const MainApp = () => {
         return <Settings />;
       case 'profile':
         return <UserProfile />;
+      case 'subscription':
+        return <SubscriptionPlans />;
       case 'admin':
         return isAdmin ? <AdminPanel /> : <Dashboard />;
       default:
