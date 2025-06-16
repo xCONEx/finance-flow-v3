@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Save, Upload, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,11 +26,30 @@ const UserProfile = () => {
     company: ''
   });
 
+  // Get the correct user name from Google or profile
+  const getUserDisplayName = () => {
+    if (profile?.name) {
+      return profile.name;
+    }
+    
+    // Check Google metadata for full_name first, then name
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name;
+    }
+    
+    if (user?.user_metadata?.name) {
+      return user.user_metadata.name;
+    }
+    
+    // Fallback to email prefix
+    return user?.email?.split('@')[0] || '';
+  };
+
   // Carregar dados quando profile mudar
   useEffect(() => {
     if (user && profile) {
       setFormData({
-        name: profile.name || user.user_metadata?.name || user.email?.split('@')[0] || '',
+        name: getUserDisplayName(),
         email: user.email || '',
         phone: profile.phone || '',
         company: profile.company || ''
@@ -209,7 +227,7 @@ const UserProfile = () => {
             <Avatar className="h-24 w-24">
               <AvatarImage src={getProfileImageUrl()} alt="Profile" />
               <AvatarFallback className={`text-white text-xl bg-gradient-to-r ${currentTheme.primary}`}>
-                {formData.name ? formData.name.charAt(0).toUpperCase() : 'U'}
+                {getUserDisplayName() ? getUserDisplayName().charAt(0).toUpperCase() : 'U'}
               </AvatarFallback>
             </Avatar>
             
@@ -326,7 +344,7 @@ const UserProfile = () => {
                     // Reset form data
                     if (user && profile) {
                       setFormData({
-                        name: profile.name || user.user_metadata?.name || user.email?.split('@')[0] || '',
+                        name: getUserDisplayName(),
                         email: user.email || '',
                         phone: profile.phone || '',
                         company: profile.company || ''
