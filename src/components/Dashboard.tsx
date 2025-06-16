@@ -7,18 +7,23 @@ import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import { useApp } from '../contexts/AppContext';
+import { useSubscriptionPermissions } from '../hooks/useSubscriptionPermissions';
 import CostDistributionChart from './CostDistributionChart';
 import RecentJobs from './RecentJobs';
 import TaskList from './TaskList';
 import AddTaskModal from './AddTaskModal';
 import ManualValueModal from '@/components/ManualValueModal';
 import ExpenseModal from '@/components/ExpenseModal';
+import { UsageLimitWarning } from './UsageLimitWarning';
+import { SubscriptionStatus } from './SubscriptionStatus';
+import PremiumFeatureBlock from './PremiumFeatureBlock';
 
 const Dashboard = () => {
   const { user, profile, agency } = useSupabaseAuth();
   const { currentTheme } = useTheme();
   const { formatValue } = usePrivacy();
   const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useApp();
+  const { limits, canCreateJob, isFreePlan } = useSubscriptionPermissions();
   const [showTaskModal, setShowTaskModal] = useState(false);
 
   // Dashboard sempre usa dados pessoais do usuário
@@ -95,6 +100,11 @@ const Dashboard = () => {
   };
 
   const handleExportReport = () => {
+    if (!limits.canUseAdvancedReports) {
+      alert('Relatórios avançados disponíveis apenas nos planos pagos!');
+      return;
+    }
+
     // Generate a simple report
     const report = {
       data: new Date().toISOString(),
@@ -145,6 +155,12 @@ const Dashboard = () => {
         </p>
       </div>
 
+      {/* Avisos de limite de uso */}
+      <div className="space-y-4">
+        <UsageLimitWarning type="jobs" />
+        <UsageLimitWarning type="projects" />
+      </div>
+
       {/* Metrics Cards with Hover Effects */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((metric, index) => (
@@ -168,17 +184,28 @@ const Dashboard = () => {
         ))}
       </div>
 
+      {/* Status da Assinatura */}
+      <SubscriptionStatus />
+
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Cost Distribution Chart */}
-        <Card className="lg:col-span-1 transition-all duration-300 hover:shadow-lg">
-          <CardHeader>
-            <CardTitle>Distribuição de Custos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CostDistributionChart />
-          </CardContent>
-        </Card>
+        {limits.canUseAdvancedReports ? (
+          <Card className="lg:col-span-1 transition-all duration-300 hover:shadow-lg">
+            <CardHeader>
+              <CardTitle>Distribuição de Custos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CostDistributionChart />
+            </CardContent>
+          </Card>
+        ) : (
+          <PremiumFeatureBlock
+            feature="Gráfico de Distribuição de Custos"
+            requiredPlan="basic"
+            className="lg:col-span-1"
+          />
+        )}
 
         {/* Recent Jobs */}
         <Card className="lg:col-span-2 transition-all duration-300 hover:shadow-lg">
@@ -219,10 +246,18 @@ const Dashboard = () => {
           <CardContent className="space-y-3">
             <Button
               className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
-              onClick={() => setShowManualModal(true)}
+              onClick={() => {
+                if (!canCreateJob) {
+                  alert('Você atingiu o limite de jobs do seu plano!');
+                  return;
+                }
+                setShowManualModal(true);
+              }}
+              disabled={!canCreateJob}
             >
               <Calculator className="mr-2 h-4 w-4" />
               Adicionar Valor Manual
+              {!canCreateJob && ' (Limite atingido)'}
             </Button>
 
             <Button
@@ -238,9 +273,10 @@ const Dashboard = () => {
               variant="outline"
               className="w-full transition-all duration-300 hover:scale-105"
               onClick={handleExportReport}
+              disabled={!limits.canUseAdvancedReports}
             >
               <TrendingUp className="mr-2 h-4 w-4" />
-              Exportar Relatório
+              {limits.canUseAdvancedReports ? 'Exportar Relatório' : 'Relatório (Premium)'}
             </Button>
 
             {/* Summary Stats */}
