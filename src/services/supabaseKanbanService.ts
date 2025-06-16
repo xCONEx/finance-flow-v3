@@ -22,35 +22,42 @@ class SupabaseKanbanService {
       console.log('👤 User ID:', userId);
       console.log('📊 Projetos para salvar:', projects.length);
 
-      // Create a temporary agency ID using the user ID as reference
-      const tempAgencyId = `user_${userId}`;
+      // Primeiro, tentar atualizar se já existe
+      const { data: existingData } = await supabase
+        .from('user_kanban_boards')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
 
-      // Deletar registros existentes para este usuário
-      const { error: deleteError } = await supabase
-        .from('kanban_boards')
-        .delete()
-        .eq('agency_id', tempAgencyId);
-
-      if (deleteError) {
-        console.error('❌ Erro ao deletar registros antigos:', deleteError);
-        // Continue tentando salvar mesmo com erro de delete
-      }
-
-      // Salvar projetos como JSON no campo board_data
       const boardRecord = {
-        agency_id: tempAgencyId,
+        user_id: userId,
         board_data: projects as any,
         updated_at: new Date().toISOString()
       };
 
       console.log('💽 Dados formatados para Supabase:', boardRecord);
 
-      const { data, error } = await supabase
-        .from('kanban_boards')
-        .insert(boardRecord);
+      let result;
+      if (existingData) {
+        // Atualizar registro existente
+        result = await supabase
+          .from('user_kanban_boards')
+          .update({
+            board_data: projects as any,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+      } else {
+        // Inserir novo registro
+        result = await supabase
+          .from('user_kanban_boards')
+          .insert(boardRecord);
+      }
+
+      const { data, error } = result;
 
       if (error) {
-        console.error('❌ Erro ao inserir no Supabase:', error);
+        console.error('❌ Erro ao salvar no Supabase:', error);
         throw error;
       }
 
@@ -78,15 +85,11 @@ class SupabaseKanbanService {
       console.log('📦 Tentando carregar do Supabase...');
       console.log('👤 User ID:', userId);
 
-      // Use the same temporary agency ID pattern
-      const tempAgencyId = `user_${userId}`;
-
       const { data, error } = await supabase
-        .from('kanban_boards')
-        .select('*')
-        .eq('agency_id', tempAgencyId)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .from('user_kanban_boards')
+        .select('board_data')
+        .eq('user_id', userId)
+        .single();
 
       if (error) {
         console.error('❌ Erro ao carregar do Supabase:', error);
@@ -94,14 +97,13 @@ class SupabaseKanbanService {
         return this.loadFromLocalStorage(userId);
       }
 
-      if (!data || data.length === 0) {
+      if (!data || !data.board_data) {
         console.log('📦 Nenhum dados no Supabase, tentando localStorage...');
         return this.loadFromLocalStorage(userId);
       }
 
       // Extrair projetos do campo board_data
-      const boardData = data[0];
-      const projects = (boardData.board_data as unknown) as KanbanProject[];
+      const projects = data.board_data as KanbanProject[];
 
       console.log('🎉 Projetos carregados do Supabase:', projects?.length || 0);
       return projects || [];
