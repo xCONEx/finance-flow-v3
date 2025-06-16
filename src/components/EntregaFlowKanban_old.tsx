@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +53,15 @@ const EntregaFlowKanban = () => {
   const [newLink, setNewLink] = useState('');
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
+
+  // Função para gerar UUID válido
+  const generateUUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
 
   const columns: Column[] = [
     {
@@ -182,7 +190,7 @@ const EntregaFlowKanban = () => {
     }
 
     const project: KanbanProject = {
-      id: `project_${Date.now()}`,
+      id: generateUUID(), // Usar UUID válido em vez de timestamp
       title: newProject.title!,
       client: newProject.client!,
       dueDate: newProject.dueDate || '',
