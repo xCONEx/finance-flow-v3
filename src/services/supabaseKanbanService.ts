@@ -22,39 +22,72 @@ class SupabaseKanbanService {
       console.log('👤 User ID:', userId);
       console.log('📊 Projetos para salvar:', projects.length);
 
-      // Verificar se a tabela existe
-      const { data: tableCheck, error: checkError } = await supabase
-        .from('kanban_boards')
-        .select('id')
-        .limit(1);
+      // First check if we have any agencies for this user
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('agency_id')
+        .eq('id', userId)
+        .single();
 
-      if (checkError) {
-        console.error('❌ Erro ao verificar tabela kanban_boards:', checkError);
-        console.log('💾 Salvando no localStorage (tabela kanban_boards não disponível)');
-        
+      if (profileError) {
+        console.error('❌ Erro ao buscar perfil do usuário:', profileError);
+        console.log('💾 Salvando no localStorage (erro no perfil)');
         localStorage.setItem('entregaFlowProjects', JSON.stringify(projects));
         localStorage.setItem('entregaFlowUserId', userId);
-        console.log('✅ Board salvo com sucesso no localStorage');
         return;
       }
 
-      console.log('✅ Tabela kanban_boards encontrada!');
+      // If user doesn't have an agency, create one
+      let agencyId = userProfile.agency_id;
+      
+      if (!agencyId) {
+        console.log('🏢 Usuário não tem agência, criando uma...');
+        
+        const { data: newAgency, error: agencyError } = await supabase
+          .from('agencies')
+          .insert({
+            name: 'Minha Agência',
+            owner_uid: userId
+          })
+          .select('id')
+          .single();
 
-      // Deletar registros existentes do usuário
+        if (agencyError) {
+          console.error('❌ Erro ao criar agência:', agencyError);
+          console.log('💾 Salvando no localStorage (erro ao criar agência)');
+          localStorage.setItem('entregaFlowProjects', JSON.stringify(projects));
+          localStorage.setItem('entregaFlowUserId', userId);
+          return;
+        }
+
+        agencyId = newAgency.id;
+
+        // Update user profile with agency_id
+        await supabase
+          .from('profiles')
+          .update({ agency_id: agencyId })
+          .eq('id', userId);
+
+        console.log('✅ Agência criada com ID:', agencyId);
+      }
+
+      console.log('🏢 Usando agência ID:', agencyId);
+
+      // Delete existing records for this agency
       const { error: deleteError } = await supabase
         .from('kanban_boards')
         .delete()
-        .eq('agency_id', userId);
+        .eq('agency_id', agencyId);
 
       if (deleteError) {
         console.error('❌ Erro ao deletar registros antigos:', deleteError);
-        // Não fazer throw, continuar tentando salvar
+        // Continue trying to save
       }
 
-      // Salvar projetos como JSON no campo board_data - cast to Json type
+      // Save projects as JSON in board_data field
       const boardRecord = {
-        agency_id: userId,
-        board_data: projects as any, // Cast to any first to satisfy Json type
+        agency_id: agencyId,
+        board_data: projects as any,
         updated_at: new Date().toISOString()
       };
 
@@ -79,7 +112,7 @@ class SupabaseKanbanService {
     } catch (error) {
       console.error('❌ Erro ao salvar board:', error);
       
-      // Fallback para localStorage
+      // Fallback to localStorage
       console.log('💾 Salvando no localStorage como fallback');
       localStorage.setItem('entregaFlowProjects', JSON.stringify(projects));
       localStorage.setItem('entregaFlowUserId', userId);
@@ -93,24 +126,25 @@ class SupabaseKanbanService {
       console.log('📦 Tentando carregar do Supabase...');
       console.log('👤 User ID:', userId);
 
-      // Verificar se a tabela existe
-      const { data: tableCheck, error: checkError } = await supabase
-        .from('kanban_boards')
-        .select('id')
-        .limit(1);
+      // Get user's agency_id
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('agency_id')
+        .eq('id', userId)
+        .single();
 
-      if (checkError) {
-        console.error('❌ Erro ao verificar tabela:', checkError);
-        console.log('📦 Carregando do localStorage (tabela não disponível)');
+      if (profileError || !userProfile.agency_id) {
+        console.log('❌ Usuário não tem agência, carregando do localStorage');
         return this.loadFromLocalStorage(userId);
       }
 
-      console.log('✅ Tabela encontrada, carregando dados...');
+      const agencyId = userProfile.agency_id;
+      console.log('🏢 Carregando dados da agência:', agencyId);
 
       const { data, error } = await supabase
         .from('kanban_boards')
         .select('*')
-        .eq('agency_id', userId)
+        .eq('agency_id', agencyId)
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -125,7 +159,7 @@ class SupabaseKanbanService {
         return this.loadFromLocalStorage(userId);
       }
 
-      // Extrair projetos do campo board_data - safe type casting
+      // Extract projects from board_data field
       const boardData = data[0];
       const projects = (boardData.board_data as unknown) as KanbanProject[];
 
