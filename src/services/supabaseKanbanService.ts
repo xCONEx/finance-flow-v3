@@ -22,11 +22,14 @@ class SupabaseKanbanService {
       console.log('👤 User ID:', userId);
       console.log('📊 Projetos para salvar:', projects.length);
 
+      // Create a temporary agency ID using the user ID as reference
+      const tempAgencyId = `user_${userId}`;
+
       // Deletar registros existentes para este usuário
       const { error: deleteError } = await supabase
         .from('kanban_boards')
         .delete()
-        .eq('user_id', userId);
+        .eq('agency_id', tempAgencyId);
 
       if (deleteError) {
         console.error('❌ Erro ao deletar registros antigos:', deleteError);
@@ -35,7 +38,7 @@ class SupabaseKanbanService {
 
       // Salvar projetos como JSON no campo board_data
       const boardRecord = {
-        user_id: userId,
+        agency_id: tempAgencyId,
         board_data: projects as any,
         updated_at: new Date().toISOString()
       };
@@ -75,10 +78,13 @@ class SupabaseKanbanService {
       console.log('📦 Tentando carregar do Supabase...');
       console.log('👤 User ID:', userId);
 
+      // Use the same temporary agency ID pattern
+      const tempAgencyId = `user_${userId}`;
+
       const { data, error } = await supabase
         .from('kanban_boards')
         .select('*')
-        .eq('user_id', userId)
+        .eq('agency_id', tempAgencyId)
         .order('created_at', { ascending: false })
         .limit(1);
 
