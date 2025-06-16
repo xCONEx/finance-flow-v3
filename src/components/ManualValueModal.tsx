@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { toast } from '@/hooks/use-toast';
 import { useAppContext } from '../contexts/AppContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { firestoreService } from '../services/firestore';
 
 interface ManualValueModalProps {
@@ -25,7 +25,7 @@ interface ManualValueModalProps {
 
 const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
   const { addJob } = useAppContext();
-  const { user } = useAuth();
+  const { user } = useSupabaseAuth();
   
   const [formData, setFormData] = useState({
     description: '',

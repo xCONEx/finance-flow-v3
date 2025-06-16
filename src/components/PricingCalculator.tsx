@@ -11,7 +11,7 @@ import { PercentageInput } from '@/components/ui/percentage-input';
 import { toast } from '@/hooks/use-toast';
 import { useAppContext } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { formatCurrency } from '../utils/formatters';
 import { firestoreService } from '../services/firestore';
 import ManualValueModal from './ManualValueModal';
@@ -19,7 +19,7 @@ import ManualValueModal from './ManualValueModal';
 const PricingCalculator = () => {
   const { addJob, workRoutine } = useAppContext();
   const { currentTheme } = useTheme();
-  const { user } = useAuth();
+  const { user } = useSupabaseAuth();
   const [showManualValue, setShowManualValue] = useState(false);
   
   const [formData, setFormData] = useState({
