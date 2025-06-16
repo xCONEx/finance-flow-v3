@@ -42,6 +42,8 @@ interface UserProfile {
   id: string;
   email: string;
   name?: string | null;
+  phone?: string | null;
+  company?: string | null;
   subscription?: SubscriptionPlan | null;
   user_type?: string | null;
   banned?: boolean | null;
@@ -78,81 +80,40 @@ const AdminPanel = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Admin carregando dados do sistema...');
+      console.log('🔍 Admin carregando dados usando função RPC...');
       console.log('👤 Usuário atual:', user?.email);
-      console.log('🔑 ID do usuário:', user?.id);
-      console.log('⚡ Role do usuário:', user?.role);
       
-      // Verificar JWT token e claims
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('🎫 JWT Claims:', session?.access_token ? JSON.stringify(session.user) : 'No session');
+      // Usar a função RPC para buscar todos os profiles
+      const { data: profilesData, error } = await (supabase as any)
+        .rpc('get_all_profiles_for_admin');
 
-      let profilesData: UserProfile[] = [];
-      let queryError = null;
-
-      // Tentar consulta com diferentes abordagens
-      console.log('🔍 Tentativa 1: Consulta normal com RLS...');
-      const { data: normalData, error: normalError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          email,
-          name,
-          subscription,
-          user_type,
-          banned,
-          created_at,
-          updated_at,
-          subscription_data
-        `)
-        .order('created_at', { ascending: false });
-
-      if (normalError) {
-        console.error('❌ Erro consulta normal:', normalError);
-        queryError = normalError;
-        
-        // Tentar consulta apenas do próprio usuário como fallback
-        console.log('🔄 Tentativa 2: Consultando apenas dados próprios...');
-        const { data: selfData, error: selfError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user?.id)
-          .single();
-
-        if (selfError) {
-          console.error('❌ Erro consulta próprio usuário:', selfError);
-        } else {
-          console.log('✅ Dados do próprio usuário carregados:', selfData);
-          profilesData = [selfData];
-        }
-      } else {
-        console.log('✅ Consulta normal bem-sucedida:', normalData?.length, 'registros');
-        profilesData = normalData || [];
+      if (error) {
+        console.error('❌ Erro ao buscar profiles via RPC:', error);
+        throw error;
       }
 
-      // Definir informações de debug detalhadas
+      console.log('✅ Dados carregados via RPC:', profilesData?.length || 0, 'usuários');
+      const users = profilesData || [];
+      setUsers(users);
+
+      // Definir informações de debug
       setDebugInfo({
         userEmail: user?.email,
         userId: user?.id,
-        userRole: user?.role,
         isAuthorized: isCurrentUserAdmin,
-        queryError: queryError?.message,
-        profilesCount: profilesData.length,
+        profilesCount: users.length,
         timestamp: new Date().toISOString(),
-        jwtClaims: session?.user || null
+        method: 'RPC Function'
       });
 
-      console.log('📈 Dados carregados:', profilesData?.length || 0, 'usuários');
-      setUsers(profilesData || []);
-      
-      // Analytics incluindo enterprise-annual
-      const totalUsers = profilesData?.length || 0;
-      const freeUsers = profilesData?.filter(u => !u.subscription || u.subscription === 'free').length || 0;
-      const premiumUsers = profilesData?.filter(u => u.subscription === 'premium').length || 0;
-      const basicUsers = profilesData?.filter(u => u.subscription === 'basic').length || 0;
-      const enterpriseUsers = profilesData?.filter(u => u.subscription === 'enterprise').length || 0;
-      const enterpriseAnnualUsers = profilesData?.filter(u => u.subscription === 'enterprise-annual').length || 0;
-      const bannedUsers = profilesData?.filter(u => u.banned).length || 0;
+      // Calcular analytics incluindo enterprise-annual
+      const totalUsers = users.length;
+      const freeUsers = users.filter(u => !u.subscription || u.subscription === 'free').length;
+      const premiumUsers = users.filter(u => u.subscription === 'premium').length;
+      const basicUsers = users.filter(u => u.subscription === 'basic').length;
+      const enterpriseUsers = users.filter(u => u.subscription === 'enterprise').length;
+      const enterpriseAnnualUsers = users.filter(u => u.subscription === 'enterprise-annual').length;
+      const bannedUsers = users.filter(u => u.banned).length;
       
       setAnalytics({
         overview: {
@@ -171,30 +132,17 @@ const AdminPanel = () => {
         }
       });
 
-      // Log especial para admin autorizado
-      if (user?.email === 'yuriadrskt@gmail.com') {
-        console.log('👑 Admin yuriadrskt@gmail.com conectado com acesso total');
-        console.log('📊 Analytics:', {
-          totalUsers,
-          freeUsers,
-          premiumUsers,
-          basicUsers,
-          enterpriseUsers,
-          enterpriseAnnualUsers,
-          bannedUsers
-        });
-      }
+      console.log('📊 Analytics calculados:', {
+        totalUsers,
+        freeUsers,
+        premiumUsers,
+        basicUsers,
+        enterpriseUsers,
+        enterpriseAnnualUsers,
+        bannedUsers
+      });
 
-      // Se temos poucos dados, mostrar aviso
-      if (profilesData.length <= 1 && isCurrentUserAdmin) {
-        toast({
-          title: 'Aviso de Acesso RLS',
-          description: 'Políticas RLS podem estar bloqueando acesso. Verifique as políticas no Supabase.',
-          variant: 'default'
-        });
-      }
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro crítico ao carregar dados:', error);
       setDebugInfo({
         userEmail: user?.email,
@@ -218,13 +166,16 @@ const AdminPanel = () => {
     try {
       console.log(`🔄 Atualizando ${field} para usuário ${userId}:`, value);
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({ [field]: value, updated_at: new Date().toISOString() })
-        .eq('id', userId);
+      const updateData = { [field]: value };
+      
+      const { error } = await (supabase as any)
+        .rpc('admin_update_profile', {
+          target_user_id: userId,
+          update_data: updateData
+        });
 
       if (error) {
-        console.error('❌ Erro ao atualizar:', error);
+        console.error('❌ Erro ao atualizar via RPC:', error);
         throw error;
       }
 
@@ -233,7 +184,7 @@ const AdminPanel = () => {
         title: 'Sucesso', 
         description: `${field} atualizado com sucesso` 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao atualizar:', error);
       toast({ 
         title: 'Erro', 
@@ -257,14 +208,16 @@ const AdminPanel = () => {
         currency: 'BRL'
       };
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          subscription: validPlan,
-          subscription_data: subscriptionData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
+      const updateData = {
+        subscription: validPlan,
+        subscription_data: subscriptionData
+      };
+
+      const { error } = await (supabase as any)
+        .rpc('admin_update_profile', {
+          target_user_id: userId,
+          update_data: updateData
+        });
 
       if (error) throw error;
 
@@ -279,7 +232,7 @@ const AdminPanel = () => {
         description: `Plano atualizado para ${validPlan}` 
       });
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao atualizar assinatura:', error);
       toast({ 
         title: 'Erro', 
@@ -291,10 +244,13 @@ const AdminPanel = () => {
 
   const handleBanUser = async (userId: string, banned: boolean) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ banned, updated_at: new Date().toISOString() })
-        .eq('id', userId);
+      const updateData = { banned };
+
+      const { error } = await (supabase as any)
+        .rpc('admin_update_profile', {
+          target_user_id: userId,
+          update_data: updateData
+        });
 
       if (error) throw error;
 
@@ -304,7 +260,7 @@ const AdminPanel = () => {
         description: banned ? 'Usuário banido' : 'Usuário desbanido' 
       });
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao banir/desbanir:', error);
       toast({ 
         title: 'Erro', 
@@ -374,11 +330,11 @@ const AdminPanel = () => {
 
       {/* Debug Info Card */}
       {debugInfo && (
-        <Card className="border-yellow-200 bg-yellow-50">
+        <Card className="border-green-200 bg-green-50">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              Informações de Debug RLS
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Status do Sistema - RPC Ativo
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -387,12 +343,7 @@ const AdminPanel = () => {
               <p><strong>User ID:</strong> {debugInfo.userId}</p>
               <p><strong>É Admin Autorizado:</strong> {debugInfo.isAuthorized ? 'Sim' : 'Não'}</p>
               <p><strong>Usuários Carregados:</strong> {debugInfo.profilesCount}</p>
-              {debugInfo.queryError && (
-                <p><strong>Erro de Consulta:</strong> <span className="text-red-600">{debugInfo.queryError}</span></p>
-              )}
-              {debugInfo.criticalError && (
-                <p><strong>Erro Crítico:</strong> <span className="text-red-600">{debugInfo.criticalError}</span></p>
-              )}
+              <p><strong>Método:</strong> <span className="text-green-600">{debugInfo.method}</span></p>
               <p><strong>Timestamp:</strong> {new Date(debugInfo.timestamp).toLocaleString('pt-BR')}</p>
             </div>
           </CardContent>
