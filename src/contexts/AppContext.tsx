@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useSupabaseAuth } from './SupabaseAuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -119,6 +120,7 @@ interface AppContextType {
   addJob: (job: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => Promise<void>;
   updateJob: (id: string, updates: Partial<Job>) => Promise<void>;
   deleteJob: (id: string) => Promise<void>;
+  refreshJobs: () => Promise<void>;
   
   // Monthly cost functions
   addMonthlyCost: (cost: Omit<MonthlyCost, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
@@ -129,6 +131,9 @@ interface AppContextType {
   addWorkItem: (item: Omit<WorkItem, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
   updateWorkItem: (id: string, updates: Partial<WorkItem>) => Promise<void>;
   deleteWorkItem: (id: string) => Promise<void>;
+
+  // Work routine functions
+  refreshWorkRoutine: () => Promise<void>;
 
   // Project functions
   addProject: (project: VideoProject) => Promise<void>;
@@ -314,34 +319,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTasks(loadedTasks);
 
       // Load jobs
-      const { data: jobsData } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (jobsData) {
-        setJobs(jobsData.map(job => ({
-          id: job.id,
-          description: job.description,
-          client: job.client,
-          eventDate: job.event_date || '',
-          estimatedHours: job.estimated_hours || 0,
-          difficultyLevel: job.difficulty_level || 'médio',
-          logistics: job.logistics || 0,
-          equipment: job.equipment || 0,
-          assistance: job.assistance || 0,
-          status: job.status || 'pendente',
-          category: job.category || '',
-          discountValue: job.discount_value || 0,
-          totalCosts: job.total_costs || 0,
-          serviceValue: job.service_value || 0,
-          valueWithDiscount: job.value_with_discount || 0,
-          profitMargin: job.profit_margin || 30,
-          createdAt: job.created_at,
-          updatedAt: job.updated_at,
-          userId: job.user_id
-        })));
-      }
+      await refreshJobs();
 
       // Load equipment (work items)
       const { data: equipmentData } = await supabase
@@ -380,6 +358,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // Load work routine
+      await refreshWorkRoutine();
+
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Refresh functions
+  const refreshJobs = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: jobsData } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      if (jobsData) {
+        setJobs(jobsData.map(job => ({
+          id: job.id,
+          description: job.description,
+          client: job.client,
+          eventDate: job.event_date || '',
+          estimatedHours: job.estimated_hours || 0,
+          difficultyLevel: job.difficulty_level || 'médio',
+          logistics: job.logistics || 0,
+          equipment: job.equipment || 0,
+          assistance: job.assistance || 0,
+          status: job.status || 'pendente',
+          category: job.category || '',
+          discountValue: job.discount_value || 0,
+          totalCosts: job.total_costs || 0,
+          serviceValue: job.service_value || 0,
+          valueWithDiscount: job.value_with_discount || 0,
+          profitMargin: job.profit_margin || 30,
+          createdAt: job.created_at,
+          updatedAt: job.updated_at,
+          userId: job.user_id
+        })));
+      }
+    } catch (error) {
+      console.error('Erro ao carregar jobs:', error);
+    }
+  };
+
+  const refreshWorkRoutine = async () => {
+    if (!user) return;
+    
+    try {
       const { data: routineData } = await supabase
         .from('work_routine')
         .select('*')
@@ -397,11 +426,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           userId: routineData.user_id
         });
       }
-
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-    } finally {
-      setLoading(false);
+      console.error('Erro ao carregar rotina de trabalho:', error);
     }
   };
 
@@ -679,12 +705,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addJob,
       updateJob,
       deleteJob,
+      refreshJobs,
       addMonthlyCost,
       updateMonthlyCost,
       deleteMonthlyCost,
       addWorkItem,
       updateWorkItem,
       deleteWorkItem,
+      refreshWorkRoutine,
       addProject,
       updateProject,
       deleteProject,
