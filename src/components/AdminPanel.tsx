@@ -61,8 +61,11 @@ const AdminPanel = () => {
   const [subscriptionFilter, setSubscriptionFilter] = useState('all');
   const [newAdminEmail, setNewAdminEmail] = useState('');
 
-  // Verificar se o usuário atual é admin
-  const isCurrentUserAdmin = user?.email === 'yuriadrskt@gmail.com' || user?.email === 'adm.financeflow@gmail.com';
+  // Lista de admins autorizados
+  const authorizedAdmins = ['yuriadrskt@gmail.com', 'adm.financeflow@gmail.com'];
+  
+  // Verificar se o usuário atual é admin autorizado
+  const isCurrentUserAdmin = user?.email && authorizedAdmins.includes(user.email);
 
   useEffect(() => {
     if (isCurrentUserAdmin) {
@@ -73,10 +76,10 @@ const AdminPanel = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Carregando dados do admin...');
+      console.log('🔍 Admin carregando dados do sistema...');
       
-      // Buscar todos os usuários com dados básicos disponíveis
-      const { data: profilesData, error } = await supabase
+      // Consulta simplificada para buscar perfis
+      let { data: profilesData, error } = await supabase
         .from('profiles')
         .select(`
           id,
@@ -93,7 +96,30 @@ const AdminPanel = () => {
 
       if (error) {
         console.error('❌ Erro ao buscar perfis:', error);
-        throw error;
+        
+        // Para o email autorizado, vamos mostrar pelo menos alguns dados básicos
+        if (isCurrentUserAdmin) {
+          toast({
+            title: 'Aviso',
+            description: 'Acesso limitado aos dados. Entre em contato com o suporte técnico.',
+            variant: 'default'
+          });
+          
+          // Definir dados mínimos para o admin conseguir trabalhar
+          profilesData = [{
+            id: user?.id || '',
+            email: user?.email || '',
+            name: user?.user_metadata?.name || null,
+            subscription: 'premium',
+            user_type: 'admin',
+            banned: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            subscription_data: null
+          }];
+        } else {
+          throw error;
+        }
       }
 
       console.log('✅ Dados carregados:', profilesData?.length || 0, 'usuários');
@@ -111,7 +137,7 @@ const AdminPanel = () => {
         overview: {
           totalUsers,
           totalAgencias: 0,
-          totalRevenue: 0,
+          totalRevenue: (basicUsers * 29) + (premiumUsers * 49) + (enterpriseUsers * 99),
           activeUsers: totalUsers - bannedUsers
         },
         userStats: {
@@ -122,11 +148,25 @@ const AdminPanel = () => {
           bannedUsers
         }
       });
+
+      // Log especial para admin autorizado
+      if (user?.email === 'yuriadrskt@gmail.com') {
+        console.log('👑 Admin yuriadrskt@gmail.com conectado com acesso total');
+        console.log('📊 Analytics:', {
+          totalUsers,
+          freeUsers,
+          premiumUsers,
+          basicUsers,
+          enterpriseUsers,
+          bannedUsers
+        });
+      }
+
     } catch (error) {
       console.error('❌ Erro ao carregar dados:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao carregar dados dos usuários',
+        description: 'Erro ao carregar dados dos usuários. Verifique suas permissões.',
         variant: 'destructive'
       });
       // Set empty array on error to prevent further issues
@@ -266,6 +306,7 @@ const AdminPanel = () => {
         <Shield className="h-12 w-12 md:h-16 md:w-16 mx-auto text-red-500 mb-4" />
         <h2 className="text-xl md:text-2xl font-bold text-red-600">Acesso Negado</h2>
         <p className="text-sm md:text-base text-gray-600">Você não tem permissão para acessar este painel.</p>
+        <p className="text-xs text-gray-500 mt-2">Apenas emails autorizados podem acessar esta área.</p>
       </div>
     );
   }
@@ -289,6 +330,9 @@ const AdminPanel = () => {
           Painel Administrativo
         </h2>
         <p className="text-sm md:text-base text-gray-600">Gestão completa da plataforma</p>
+        {user?.email === 'yuriadrskt@gmail.com' && (
+          <p className="text-xs text-green-600 font-medium">👑 Acesso de Super Admin Ativo</p>
+        )}
       </div>
 
       {/* Analytics Cards - Responsivo */}
@@ -311,17 +355,17 @@ const AdminPanel = () => {
 
         <Card>
           <CardContent className="p-3 md:p-4 text-center">
-            <Ban className="h-6 w-6 md:h-8 md:w-8 mx-auto text-red-600 mb-2" />
-            <p className="text-lg md:text-2xl font-bold">{bannedUsers}</p>
-            <p className="text-xs md:text-sm text-gray-600">Banidos</p>
+            <DollarSign className="h-6 w-6 md:h-8 md:w-8 mx-auto text-green-600 mb-2" />
+            <p className="text-lg md:text-2xl font-bold">R$ {analytics?.overview?.totalRevenue || 0}</p>
+            <p className="text-xs md:text-sm text-gray-600">Receita</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-3 md:p-4 text-center">
-            <CheckCircle className="h-6 w-6 md:h-8 md:w-8 mx-auto text-purple-600 mb-2" />
-            <p className="text-lg md:text-2xl font-bold">{premiumUsers + basicUsers + enterpriseUsers}</p>
-            <p className="text-xs md:text-sm text-gray-600">Pagantes</p>
+            <Ban className="h-6 w-6 md:h-8 md:w-8 mx-auto text-red-600 mb-2" />
+            <p className="text-lg md:text-2xl font-bold">{bannedUsers}</p>
+            <p className="text-xs md:text-sm text-gray-600">Banidos</p>
           </CardContent>
         </Card>
       </div>
@@ -546,6 +590,16 @@ const AdminPanel = () => {
                 {users.filter(u => u.user_type === 'admin').length === 0 && (
                   <p className="text-gray-500 text-sm">Nenhum administrador encontrado</p>
                 )}
+              </div>
+
+              <div className="border rounded-lg p-4 space-y-2">
+                <h4 className="font-semibold text-sm md:text-base text-green-600">Super Admins Autorizados:</h4>
+                {authorizedAdmins.map(email => (
+                  <div key={email} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                    <span className="text-sm font-medium">{email}</span>
+                    <Badge variant="outline" className="text-green-600 border-green-600">Super Admin</Badge>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
