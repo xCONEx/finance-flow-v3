@@ -14,9 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { toast } from '@/hooks/use-toast';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
-import { firestoreService } from '../services/firestore';
 
 interface ManualValueModalProps {
   open: boolean;
@@ -24,7 +23,7 @@ interface ManualValueModalProps {
 }
 
 const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
-  const { addJob } = useAppContext();
+  const { addJob } = useApp();
   const { user } = useSupabaseAuth();
   
   const [formData, setFormData] = useState({
@@ -86,19 +85,12 @@ const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       userId: user.id,
-      isManual: true // Identificador para jobs manuais
+      isManual: true
     };
 
     try {
-      // Adicionar ao estado local
-      addJob(newJob);
-
-      // Salvar no Firebase
-      const currentData = await firestoreService.getUserData(user.id);
-      const existingJobs = (currentData && 'jobs' in currentData && currentData.jobs) ? currentData.jobs : [];
-      const updatedJobs = [...existingJobs, newJob];
-      
-      await firestoreService.updateField('usuarios', user.id, 'jobs', updatedJobs);
+      // Adicionar ao estado local usando o método do contexto
+      await addJob(newJob);
 
       toast({
         title: "Job Manual Salvo!",

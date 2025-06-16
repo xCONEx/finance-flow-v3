@@ -9,15 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { PercentageInput } from '@/components/ui/percentage-input';
 import { toast } from '@/hooks/use-toast';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { formatCurrency } from '../utils/formatters';
-import { firestoreService } from '../services/firestore';
 import ManualValueModal from './ManualValueModal';
 
 const PricingCalculator = () => {
-  const { addJob, workRoutine } = useAppContext();
+  const { addJob, workRoutine } = useApp();
   const { currentTheme } = useTheme();
   const { user } = useSupabaseAuth();
   const [showManualValue, setShowManualValue] = useState(false);
@@ -165,15 +164,8 @@ const PricingCalculator = () => {
     };
 
     try {
-      // Adicionar ao estado local
-      addJob(newJob);
-
-      // Salvar no Firebase
-      const currentData = await firestoreService.getUserData(user.id);
-      const existingJobs = (currentData && 'jobs' in currentData && currentData.jobs) ? currentData.jobs : [];
-      const updatedJobs = [...existingJobs, newJob];
-      
-      await firestoreService.updateField('usuarios', user.id, 'jobs', updatedJobs);
+      // Adicionar ao estado local usando o método do contexto
+      await addJob(newJob);
 
       toast({
         title: "Job Salvo!",
@@ -205,7 +197,7 @@ const PricingCalculator = () => {
       console.error('❌ Erro ao salvar job:', error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar job no Firebase.",
+        description: "Erro ao salvar job.",
         variant: "destructive"
       });
     }
