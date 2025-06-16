@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -76,8 +77,8 @@ const AdminPanel = () => {
       setLoading(true);
       console.log('🔍 Carregando dados do admin via RPC...');
       
-      // Usar a função RPC para buscar todos os usuários
-      const { data: profilesData, error } = await supabase.rpc('get_all_profiles_for_admin');
+      // Usar a função RPC para buscar todos os usuários com type assertion
+      const { data: profilesData, error } = await (supabase as any).rpc('get_all_profiles_for_admin');
 
       if (error) {
         console.error('❌ Erro ao buscar perfis via RPC:', error);
@@ -87,13 +88,14 @@ const AdminPanel = () => {
       console.log('✅ Dados carregados via RPC:', profilesData?.length || 0, 'usuários');
       setUsers(profilesData || []);
       
-      // Analytics
-      const totalUsers = profilesData?.length || 0;
-      const freeUsers = profilesData?.filter(u => !u.subscription || u.subscription === 'free').length || 0;
-      const premiumUsers = profilesData?.filter(u => u.subscription === 'premium').length || 0;
-      const basicUsers = profilesData?.filter(u => u.subscription === 'basic').length || 0;
-      const enterpriseUsers = profilesData?.filter(u => u.subscription === 'enterprise' || u.subscription === 'enterprise-annual').length || 0;
-      const bannedUsers = profilesData?.filter(u => u.banned).length || 0;
+      // Analytics - com verificações de null safety
+      const profiles = profilesData || [];
+      const totalUsers = profiles.length;
+      const freeUsers = profiles.filter((u: any) => !u.subscription || u.subscription === 'free').length;
+      const premiumUsers = profiles.filter((u: any) => u.subscription === 'premium').length;
+      const basicUsers = profiles.filter((u: any) => u.subscription === 'basic').length;
+      const enterpriseUsers = profiles.filter((u: any) => u.subscription === 'enterprise' || u.subscription === 'enterprise-annual').length;
+      const bannedUsers = profiles.filter((u: any) => u.banned).length;
       
       setAnalytics({
         overview: {
@@ -127,9 +129,9 @@ const AdminPanel = () => {
     try {
       console.log(`🔄 Atualizando ${field} para usuário ${userId}:`, value);
       
-      // Usar a função RPC para atualizar
+      // Usar a função RPC para atualizar com type assertion
       const updateData = { [field]: value };
-      const { data, error } = await supabase.rpc('admin_update_profile', {
+      const { data, error } = await (supabase as any).rpc('admin_update_profile', {
         target_user_id: userId,
         update_data: updateData
       });
@@ -145,7 +147,7 @@ const AdminPanel = () => {
         title: 'Sucesso', 
         description: `${field} atualizado com sucesso` 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao atualizar:', error);
       toast({ 
         title: 'Erro', 
@@ -167,13 +169,13 @@ const AdminPanel = () => {
         currency: 'BRL'
       };
 
-      // Usar a função RPC para atualizar
+      // Usar a função RPC para atualizar com type assertion
       const updateData = { 
         subscription: newPlan,
         subscription_data: subscriptionData
       };
       
-      const { data, error } = await supabase.rpc('admin_update_profile', {
+      const { data, error } = await (supabase as any).rpc('admin_update_profile', {
         target_user_id: userId,
         update_data: updateData
       });
@@ -192,7 +194,7 @@ const AdminPanel = () => {
         description: `Plano atualizado para ${newPlan}` 
       });
       await loadData(); // Recarregar analytics
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao atualizar assinatura:', error);
       toast({ 
         title: 'Erro', 
@@ -204,9 +206,9 @@ const AdminPanel = () => {
 
   const handleBanUser = async (userId: string, banned: boolean) => {
     try {
-      // Usar a função RPC para atualizar
+      // Usar a função RPC para atualizar com type assertion
       const updateData = { banned };
-      const { data, error } = await supabase.rpc('admin_update_profile', {
+      const { data, error } = await (supabase as any).rpc('admin_update_profile', {
         target_user_id: userId,
         update_data: updateData
       });
@@ -219,7 +221,7 @@ const AdminPanel = () => {
         description: banned ? 'Usuário banido' : 'Usuário desbanido' 
       });
       await loadData(); // Recarregar analytics
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao banir/desbanir:', error);
       toast({ 
         title: 'Erro', 
