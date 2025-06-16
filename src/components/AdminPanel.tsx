@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -66,18 +65,14 @@ const AdminPanel = () => {
   // Verificar se o usuário atual é admin
   const isCurrentUserAdmin = user?.email === 'yuriadrskt@gmail.com' || user?.email === 'adm.financeflow@gmail.com';
 
-  useEffect(() => {
-    if (isCurrentUserAdmin) {
-      loadData();
-    }
-  }, [isCurrentUserAdmin]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!isCurrentUserAdmin) return;
+    
     try {
       setLoading(true);
       console.log('🔍 Carregando dados do admin via RPC...');
       
-      // Usar a função RPC para buscar todos os usuários com type assertion
+      // Usar a função RPC para buscar todos os usuários
       const { data: profilesData, error } = await (supabase as any).rpc('get_all_profiles_for_admin');
 
       if (error) {
@@ -123,13 +118,19 @@ const AdminPanel = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isCurrentUserAdmin, toast]);
+
+  useEffect(() => {
+    if (isCurrentUserAdmin) {
+      loadData();
+    }
+  }, [loadData]);
 
   const handleUpdateUserField = async (userId: string, field: string, value: any) => {
     try {
       console.log(`🔄 Atualizando ${field} para usuário ${userId}:`, value);
       
-      // Usar a função RPC para atualizar com type assertion
+      // Usar a função RPC para atualizar
       const updateData = { [field]: value };
       const { data, error } = await (supabase as any).rpc('admin_update_profile', {
         target_user_id: userId,
@@ -169,7 +170,7 @@ const AdminPanel = () => {
         currency: 'BRL'
       };
 
-      // Usar a função RPC para atualizar com type assertion
+      // Usar a função RPC para atualizar
       const updateData = { 
         subscription: newPlan,
         subscription_data: subscriptionData
@@ -193,7 +194,31 @@ const AdminPanel = () => {
         title: 'Sucesso', 
         description: `Plano atualizado para ${newPlan}` 
       });
-      await loadData(); // Recarregar analytics
+      
+      // Recarregar analytics sem chamadas excessivas
+      const profiles = users.map(u => u.id === userId ? { ...u, subscription: newPlan } : u);
+      const totalUsers = profiles.length;
+      const freeUsers = profiles.filter((u: any) => !u.subscription || u.subscription === 'free').length;
+      const premiumUsers = profiles.filter((u: any) => u.subscription === 'premium').length;
+      const basicUsers = profiles.filter((u: any) => u.subscription === 'basic').length;
+      const enterpriseUsers = profiles.filter((u: any) => u.subscription === 'enterprise' || u.subscription === 'enterprise-annual').length;
+      const bannedUsers = profiles.filter((u: any) => u.banned).length;
+      
+      setAnalytics({
+        overview: {
+          totalUsers,
+          totalAgencias: 0,
+          totalRevenue: 0,
+          activeUsers: totalUsers - bannedUsers
+        },
+        userStats: {
+          freeUsers,
+          premiumUsers,
+          basicUsers,
+          enterpriseUsers,
+          bannedUsers
+        }
+      });
     } catch (error: any) {
       console.error('❌ Erro ao atualizar assinatura:', error);
       toast({ 
@@ -206,7 +231,7 @@ const AdminPanel = () => {
 
   const handleBanUser = async (userId: string, banned: boolean) => {
     try {
-      // Usar a função RPC para atualizar com type assertion
+      // Usar a função RPC para atualizar
       const updateData = { banned };
       const { data, error } = await (supabase as any).rpc('admin_update_profile', {
         target_user_id: userId,
@@ -220,7 +245,6 @@ const AdminPanel = () => {
         title: 'Sucesso', 
         description: banned ? 'Usuário banido' : 'Usuário desbanido' 
       });
-      await loadData(); // Recarregar analytics
     } catch (error: any) {
       console.error('❌ Erro ao banir/desbanir:', error);
       toast({ 
@@ -240,7 +264,6 @@ const AdminPanel = () => {
     }
     await handleUpdateUserField(targetUser.id, 'user_type', 'admin');
     setNewAdminEmail('');
-    await loadData();
   };
 
   const filteredUsers = users.filter(user => {
@@ -506,7 +529,7 @@ const AdminPanel = () => {
           </Card>
         </TabsContent>
 
-        {/* ... keep existing code (admins and analytics tabs) */}
+        {/* ADMINS */}
         <TabsContent value="admins" className="space-y-4">
           <Card>
             <CardHeader>
