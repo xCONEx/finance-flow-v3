@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -65,7 +64,7 @@ const AdminPanel = () => {
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [debugInfo, setDebugInfo] = useState<any>(null);
 
-  // Lista de admins autorizados
+  // Lista de admins autorizados - HARD CODED para garantir acesso
   const authorizedAdmins = ['yuriadrskt@gmail.com', 'adm.financeflow@gmail.com'];
   
   // Verificar se o usuário atual é admin autorizado
@@ -80,19 +79,36 @@ const AdminPanel = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Admin carregando dados usando função RPC...');
+      console.log('🔍 Admin carregando dados diretamente da tabela profiles...');
       console.log('👤 Usuário atual:', user?.email);
       
-      // Usar a função RPC para buscar todos os profiles
-      const { data: profilesData, error } = await (supabase as any)
-        .rpc('get_all_profiles_for_admin');
+      // Tentar buscar profiles diretamente da tabela
+      const { data: profilesData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Erro ao buscar profiles via RPC:', error);
+        console.error('❌ Erro ao buscar profiles diretamente:', error);
+        
+        // Se falhar, tentar buscar pelo menos o próprio usuário
+        if (user?.id) {
+          const { data: ownProfile, error: ownError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (!ownError && ownProfile) {
+            setUsers([ownProfile]);
+            console.log('✅ Carregado perfil próprio apenas');
+          }
+        }
+        
         throw error;
       }
 
-      console.log('✅ Dados carregados via RPC:', profilesData?.length || 0, 'usuários');
+      console.log('✅ Dados carregados diretamente:', profilesData?.length || 0, 'usuários');
       const users = profilesData || [];
       setUsers(users);
 
@@ -103,10 +119,10 @@ const AdminPanel = () => {
         isAuthorized: isCurrentUserAdmin,
         profilesCount: users.length,
         timestamp: new Date().toISOString(),
-        method: 'RPC Function'
+        method: 'Direct Table Access'
       });
 
-      // Calcular analytics incluindo enterprise-annual
+      // Calcular analytics
       const totalUsers = users.length;
       const freeUsers = users.filter(u => !u.subscription || u.subscription === 'free').length;
       const premiumUsers = users.filter(u => u.subscription === 'premium').length;
@@ -143,20 +159,20 @@ const AdminPanel = () => {
       });
 
     } catch (error: any) {
-      console.error('❌ Erro crítico ao carregar dados:', error);
+      console.error('❌ Erro ao carregar dados:', error);
       setDebugInfo({
         userEmail: user?.email,
         userId: user?.id,
-        criticalError: error.message,
-        timestamp: new Date().toISOString()
+        error: error.message,
+        timestamp: new Date().toISOString(),
+        method: 'Failed Direct Access'
       });
       
       toast({
-        title: 'Erro Crítico',
-        description: 'Erro ao carregar dados dos usuários. Verifique as configurações do Supabase.',
+        title: 'Erro ao carregar dados',
+        description: 'Tentando acesso direto à tabela profiles. Verifique as permissões.',
         variant: 'destructive'
       });
-      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -168,14 +184,13 @@ const AdminPanel = () => {
       
       const updateData = { [field]: value };
       
-      const { error } = await (supabase as any)
-        .rpc('admin_update_profile', {
-          target_user_id: userId,
-          update_data: updateData
-        });
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', userId);
 
       if (error) {
-        console.error('❌ Erro ao atualizar via RPC:', error);
+        console.error('❌ Erro ao atualizar via update direto:', error);
         throw error;
       }
 
@@ -213,11 +228,10 @@ const AdminPanel = () => {
         subscription_data: subscriptionData
       };
 
-      const { error } = await (supabase as any)
-        .rpc('admin_update_profile', {
-          target_user_id: userId,
-          update_data: updateData
-        });
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', userId);
 
       if (error) throw error;
 
@@ -244,13 +258,10 @@ const AdminPanel = () => {
 
   const handleBanUser = async (userId: string, banned: boolean) => {
     try {
-      const updateData = { banned };
-
-      const { error } = await (supabase as any)
-        .rpc('admin_update_profile', {
-          target_user_id: userId,
-          update_data: updateData
-        });
+      const { error } = await supabase
+        .from('profiles')
+        .update({ banned })
+        .eq('id', userId);
 
       if (error) throw error;
 
@@ -300,6 +311,7 @@ const AdminPanel = () => {
         <h2 className="text-xl md:text-2xl font-bold text-red-600">Acesso Negado</h2>
         <p className="text-sm md:text-base text-gray-600">Você não tem permissão para acessar este painel.</p>
         <p className="text-xs text-gray-500 mt-2">Apenas emails autorizados podem acessar esta área.</p>
+        <p className="text-xs text-blue-500 mt-2">Email atual: {user?.email}</p>
       </div>
     );
   }
@@ -330,11 +342,20 @@ const AdminPanel = () => {
 
       {/* Debug Info Card */}
       {debugInfo && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className={debugInfo.error ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              Status do Sistema - RPC Ativo
+              {debugInfo.error ? (
+                <>
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  Status do Sistema - Acesso Direto
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Status do Sistema - Funcionando
+                </>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -343,7 +364,10 @@ const AdminPanel = () => {
               <p><strong>User ID:</strong> {debugInfo.userId}</p>
               <p><strong>É Admin Autorizado:</strong> {debugInfo.isAuthorized ? 'Sim' : 'Não'}</p>
               <p><strong>Usuários Carregados:</strong> {debugInfo.profilesCount}</p>
-              <p><strong>Método:</strong> <span className="text-green-600">{debugInfo.method}</span></p>
+              <p><strong>Método:</strong> <span className={debugInfo.error ? "text-red-600" : "text-green-600"}>{debugInfo.method}</span></p>
+              {debugInfo.error && (
+                <p><strong>Erro:</strong> <span className="text-red-600">{debugInfo.error}</span></p>
+              )}
               <p><strong>Timestamp:</strong> {new Date(debugInfo.timestamp).toLocaleString('pt-BR')}</p>
             </div>
           </CardContent>
@@ -385,7 +409,7 @@ const AdminPanel = () => {
         </Card>
       </div>
 
-      {/* Planos - Grid responsivo com Enterprise Anual */}
+      {/* Planos - Grid responsivo */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
         <Card>
           <CardContent className="p-3 md:p-4 text-center">
