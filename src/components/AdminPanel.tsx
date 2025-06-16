@@ -29,7 +29,8 @@ import {
   UserPlus,
   Edit,
   Ban,
-  UserCheck
+  UserCheck,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -60,6 +61,7 @@ const AdminPanel = () => {
   const [userTypeFilter, setUserTypeFilter] = useState('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState('all');
   const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   // Lista de admins autorizados
   const authorizedAdmins = ['yuriadrskt@gmail.com', 'adm.financeflow@gmail.com'];
@@ -77,9 +79,29 @@ const AdminPanel = () => {
     try {
       setLoading(true);
       console.log('🔍 Admin carregando dados do sistema...');
+      console.log('👤 Usuário atual:', user?.email);
+      console.log('🔑 ID do usuário:', user?.id);
+      console.log('⚡ Role do usuário:', user?.role);
       
-      // Consulta simplificada para buscar perfis
-      let { data: profilesData, error } = await supabase
+      // Primeiro, vamos verificar se conseguimos acessar informações básicas
+      console.log('📊 Testando acesso básico ao Supabase...');
+      
+      // Tentar primeiro uma consulta simples para verificar conexão
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      console.log('🔐 Auth data:', authData);
+      
+      if (authError) {
+        console.error('❌ Erro de autenticação:', authError);
+      }
+
+      // Tentar consulta aos profiles com diferentes abordagens
+      console.log('🔍 Tentando consulta direta aos profiles...');
+      
+      let profilesData: UserProfile[] = [];
+      let queryError = null;
+
+      // Primeira tentativa: consulta normal
+      const { data: normalData, error: normalError } = await supabase
         .from('profiles')
         .select(`
           id,
@@ -92,37 +114,54 @@ const AdminPanel = () => {
           updated_at,
           subscription_data
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-      if (error) {
-        console.error('❌ Erro ao buscar perfis:', error);
+      if (normalError) {
+        console.error('❌ Erro consulta normal:', normalError);
+        queryError = normalError;
         
-        // Para o email autorizado, vamos mostrar pelo menos alguns dados básicos
-        if (isCurrentUserAdmin) {
-          toast({
-            title: 'Aviso',
-            description: 'Acesso limitado aos dados. Entre em contato com o suporte técnico.',
-            variant: 'default'
-          });
-          
-          // Definir dados mínimos para o admin conseguir trabalhar
-          profilesData = [{
-            id: user?.id || '',
-            email: user?.email || '',
-            name: user?.user_metadata?.name || null,
-            subscription: 'premium',
-            user_type: 'admin',
-            banned: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            subscription_data: null
-          }];
+        // Segunda tentativa: consulta só do próprio usuário
+        console.log('🔄 Tentando consulta do próprio usuário...');
+        const { data: selfData, error: selfError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user?.id)
+          .single();
+
+        if (selfError) {
+          console.error('❌ Erro consulta próprio usuário:', selfError);
         } else {
-          throw error;
+          console.log('✅ Dados do próprio usuário:', selfData);
+          profilesData = [selfData];
         }
+
+        // Terceira tentativa: verificar se a tabela existe
+        console.log('🔄 Verificando estrutura da tabela...');
+        const { data: tableInfo, error: tableError } = await supabase
+          .from('profiles')
+          .select('id')
+          .limit(1);
+
+        console.log('📋 Info da tabela:', { tableInfo, tableError });
+
+      } else {
+        console.log('✅ Consulta normal bem-sucedida:', normalData?.length, 'registros');
+        profilesData = normalData || [];
       }
 
-      console.log('✅ Dados carregados:', profilesData?.length || 0, 'usuários');
+      // Definir informações de debug
+      setDebugInfo({
+        userEmail: user?.email,
+        userId: user?.id,
+        userRole: user?.role,
+        isAuthorized: isCurrentUserAdmin,
+        queryError: queryError?.message,
+        profilesCount: profilesData.length,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log('📈 Dados carregados:', profilesData?.length || 0, 'usuários');
       setUsers(profilesData || []);
       
       // Analytics
@@ -162,14 +201,29 @@ const AdminPanel = () => {
         });
       }
 
+      // Se temos poucos dados, mostrar aviso
+      if (profilesData.length === 0 && isCurrentUserAdmin) {
+        toast({
+          title: 'Aviso de Acesso',
+          description: 'Não foi possível carregar dados dos usuários. Verifique as políticas RLS no Supabase.',
+          variant: 'default'
+        });
+      }
+
     } catch (error) {
-      console.error('❌ Erro ao carregar dados:', error);
+      console.error('❌ Erro crítico ao carregar dados:', error);
+      setDebugInfo({
+        userEmail: user?.email,
+        userId: user?.id,
+        criticalError: error.message,
+        timestamp: new Date().toISOString()
+      });
+      
       toast({
-        title: 'Erro',
-        description: 'Erro ao carregar dados dos usuários. Verifique suas permissões.',
+        title: 'Erro Crítico',
+        description: 'Erro ao carregar dados dos usuários. Verifique as configurações do Supabase.',
         variant: 'destructive'
       });
-      // Set empty array on error to prevent further issues
       setUsers([]);
     } finally {
       setLoading(false);
@@ -207,7 +261,6 @@ const AdminPanel = () => {
 
   const handleUpdateSubscription = async (userId: string, newPlan: string) => {
     try {
-      // Ensure the plan is a valid subscription type
       const validPlan = newPlan as SubscriptionPlan;
       
       const subscriptionData = {
@@ -241,7 +294,7 @@ const AdminPanel = () => {
         title: 'Sucesso', 
         description: `Plano atualizado para ${validPlan}` 
       });
-      await loadData(); // Recarregar analytics
+      await loadData();
     } catch (error) {
       console.error('❌ Erro ao atualizar assinatura:', error);
       toast({ 
@@ -266,7 +319,7 @@ const AdminPanel = () => {
         title: 'Sucesso', 
         description: banned ? 'Usuário banido' : 'Usuário desbanido' 
       });
-      await loadData(); // Recarregar analytics
+      await loadData();
     } catch (error) {
       console.error('❌ Erro ao banir/desbanir:', error);
       toast({ 
@@ -334,6 +387,33 @@ const AdminPanel = () => {
           <p className="text-xs text-green-600 font-medium">👑 Acesso de Super Admin Ativo</p>
         )}
       </div>
+
+      {/* Debug Info Card */}
+      {debugInfo && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Informações de Debug
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm space-y-1">
+              <p><strong>Email:</strong> {debugInfo.userEmail}</p>
+              <p><strong>User ID:</strong> {debugInfo.userId}</p>
+              <p><strong>É Admin Autorizado:</strong> {debugInfo.isAuthorized ? 'Sim' : 'Não'}</p>
+              <p><strong>Usuários Carregados:</strong> {debugInfo.profilesCount}</p>
+              {debugInfo.queryError && (
+                <p><strong>Erro de Consulta:</strong> <span className="text-red-600">{debugInfo.queryError}</span></p>
+              )}
+              {debugInfo.criticalError && (
+                <p><strong>Erro Crítico:</strong> <span className="text-red-600">{debugInfo.criticalError}</span></p>
+              )}
+              <p><strong>Timestamp:</strong> {new Date(debugInfo.timestamp).toLocaleString('pt-BR')}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Analytics Cards - Responsivo */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
