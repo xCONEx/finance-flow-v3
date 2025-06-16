@@ -22,7 +22,7 @@ class SupabaseKanbanService {
       console.log('👤 User ID:', userId);
       console.log('📊 Projetos para salvar:', projects.length);
 
-      // Verificar se a tabela existe tentando fazer uma query simples
+      // Verificar se a tabela existe
       const { data: tableCheck, error: checkError } = await supabase
         .from('kanban_boards')
         .select('id')
@@ -44,42 +44,32 @@ class SupabaseKanbanService {
       const { error: deleteError } = await supabase
         .from('kanban_boards')
         .delete()
-        .eq('user_id', userId);
+        .eq('agency_id', userId);
 
       if (deleteError) {
         console.error('❌ Erro ao deletar registros antigos:', deleteError);
-        throw deleteError;
+        // Não fazer throw, continuar tentando salvar
       }
 
-      // Salvar novos projetos
-      if (projects.length > 0) {
-        const projectsToSave = projects.map(project => ({
-          id: project.id,
-          title: project.title,
-          client: project.client,
-          due_date: project.dueDate,
-          priority: project.priority,
-          status: project.status,
-          description: project.description,
-          links: project.links,
-          created_at: project.createdAt,
-          updated_at: project.updatedAt,
-          user_id: project.user_id
-        }));
+      // Salvar projetos como JSON no campo board_data
+      const boardRecord = {
+        agency_id: userId,
+        board_data: projects,
+        updated_at: new Date().toISOString()
+      };
 
-        console.log('💽 Dados formatados para Supabase:', projectsToSave);
+      console.log('💽 Dados formatados para Supabase:', boardRecord);
 
-        const { data, error } = await supabase
-          .from('kanban_boards')
-          .insert(projectsToSave);
+      const { data, error } = await supabase
+        .from('kanban_boards')
+        .insert(boardRecord);
 
-        if (error) {
-          console.error('❌ Erro ao inserir no Supabase:', error);
-          throw error;
-        }
-
-        console.log('🎉 Dados salvos com sucesso no Supabase!', data);
+      if (error) {
+        console.error('❌ Erro ao inserir no Supabase:', error);
+        throw error;
       }
+
+      console.log('🎉 Dados salvos com sucesso no Supabase!', data);
 
       // Manter backup no localStorage
       localStorage.setItem('entregaFlowProjects', JSON.stringify(projects));
@@ -120,8 +110,9 @@ class SupabaseKanbanService {
       const { data, error } = await supabase
         .from('kanban_boards')
         .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .eq('agency_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (error) {
         console.error('❌ Erro ao carregar do Supabase:', error);
@@ -134,22 +125,12 @@ class SupabaseKanbanService {
         return this.loadFromLocalStorage(userId);
       }
 
-      const projects: KanbanProject[] = data.map(item => ({
-        id: item.id,
-        title: item.title,
-        client: item.client,
-        dueDate: item.due_date,
-        priority: item.priority,
-        status: item.status,
-        description: item.description,
-        links: item.links || [],
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-        user_id: item.user_id
-      }));
+      // Extrair projetos do campo board_data
+      const boardData = data[0];
+      const projects = boardData.board_data as KanbanProject[];
 
-      console.log('🎉 Projetos carregados do Supabase:', projects.length);
-      return projects;
+      console.log('🎉 Projetos carregados do Supabase:', projects?.length || 0);
+      return projects || [];
     } catch (error) {
       console.error('❌ Erro ao carregar board:', error);
       console.log('📦 Carregando do localStorage como fallback');
