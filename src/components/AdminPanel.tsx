@@ -36,13 +36,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 
 type SubscriptionPlan = 'free' | 'basic' | 'premium' | 'enterprise' | 'enterprise-annual';
+type UserType = 'individual' | 'company_owner' | 'employee' | 'admin';
 
 interface UserProfile {
   id: string;
   email: string;
   name?: string | null;
   subscription?: SubscriptionPlan | null;
-  user_type?: string | null;
+  user_type?: UserType | null;
   banned?: boolean | null;
   created_at: string;
   updated_at?: string;
@@ -165,25 +166,22 @@ const AdminPanel = () => {
     }
   };
 
-  const handleUpdateSubscription = async (userId: string, newPlan: string) => {
+  const handleUpdateSubscription = async (userId: string, newPlan: SubscriptionPlan) => {
     try {
-      // Ensure the plan is a valid subscription type
-      const validPlan = newPlan as SubscriptionPlan;
-      
       const subscriptionData = {
-        plan: validPlan,
+        plan: newPlan,
         status: 'active' as const,
         current_period_start: new Date().toISOString(),
         current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         payment_provider: 'manual_admin',
-        amount: validPlan === 'basic' ? 29 : validPlan === 'premium' ? 49 : validPlan === 'enterprise' ? 99 : 0,
+        amount: newPlan === 'basic' ? 29 : newPlan === 'premium' ? 49 : newPlan === 'enterprise' ? 99 : newPlan === 'enterprise-annual' ? 1990 : 0,
         currency: 'BRL'
       };
 
       const { error } = await supabase
         .from('profiles')
         .update({ 
-          subscription: validPlan,
+          subscription: newPlan,
           subscription_data: subscriptionData,
           updated_at: new Date().toISOString()
         })
@@ -193,13 +191,13 @@ const AdminPanel = () => {
 
       setUsers(users.map(u => u.id === userId ? { 
         ...u, 
-        subscription: validPlan,
+        subscription: newPlan,
         subscription_data: subscriptionData
       } : u));
       
       toast({ 
         title: 'Sucesso', 
-        description: `Plano atualizado para ${validPlan}` 
+        description: `Plano atualizado para ${newPlan}` 
       });
       await loadData(); // Recarregar analytics
     } catch (error) {
@@ -404,6 +402,7 @@ const AdminPanel = () => {
                     <SelectItem value="basic">Basic</SelectItem>
                     <SelectItem value="premium">Premium</SelectItem>
                     <SelectItem value="enterprise">Enterprise</SelectItem>
+                    <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -444,7 +443,7 @@ const AdminPanel = () => {
                         <TableCell>
                           <Select 
                             value={user.subscription || 'free'} 
-                            onValueChange={(value) => handleUpdateSubscription(user.id, value)}
+                            onValueChange={(value: SubscriptionPlan) => handleUpdateSubscription(user.id, value)}
                           >
                             <SelectTrigger className="w-full min-w-[100px]">
                               <SelectValue />
@@ -454,13 +453,14 @@ const AdminPanel = () => {
                               <SelectItem value="basic">Basic</SelectItem>
                               <SelectItem value="premium">Premium</SelectItem>
                               <SelectItem value="enterprise">Enterprise</SelectItem>
+                              <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>
                         <TableCell>
                           <Select 
                             value={user.user_type || 'individual'} 
-                            onValueChange={(value) => handleUpdateUserField(user.id, 'user_type', value)}
+                            onValueChange={(value: UserType) => handleUpdateUserField(user.id, 'user_type', value)}
                           >
                             <SelectTrigger className="w-full min-w-[120px]">
                               <SelectValue />
@@ -510,7 +510,7 @@ const AdminPanel = () => {
           </Card>
         </TabsContent>
 
-        {/* ADMINS */}
+        {/* ... keep existing code (admins and analytics tabs) */}
         <TabsContent value="admins" className="space-y-4">
           <Card>
             <CardHeader>
@@ -551,7 +551,6 @@ const AdminPanel = () => {
           </Card>
         </TabsContent>
 
-        {/* ANALYTICS */}
         <TabsContent value="analytics" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
