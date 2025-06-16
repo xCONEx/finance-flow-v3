@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +25,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
-import { kanbanService, KanbanProject } from '../services/kanbanService';
+import { supabaseKanbanService, KanbanProject } from '../services/supabaseKanbanService';
 
 interface Column {
   id: string;
@@ -92,7 +93,6 @@ const EntregaFlowKanban = () => {
     if (!p.dueDate) return false;
     const deadline = new Date(p.dueDate);
     const today = new Date();
-      const { currentTheme } = useTheme();
     const diffTime = deadline.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays <= 2 && diffDays >= 0;
@@ -114,7 +114,7 @@ const EntregaFlowKanban = () => {
     
     try {
       setLoading(true);
-      const loadedProjects = await kanbanService.loadBoard(user.id);
+      const loadedProjects = await supabaseKanbanService.loadBoard(user.id);
       setProjects(loadedProjects);
       console.log('📦 Projetos carregados:', loadedProjects.length);
     } catch (error) {
@@ -133,7 +133,7 @@ const EntregaFlowKanban = () => {
     if (!user?.id) return;
     
     try {
-      await kanbanService.saveBoard(user.id, projectsData);
+      await supabaseKanbanService.saveBoard(user.id, projectsData);
       // Também salva no localStorage como backup
       localStorage.setItem('entregaFlowProjects', JSON.stringify(projectsData));
     } catch (error) {
@@ -191,7 +191,8 @@ const EntregaFlowKanban = () => {
       description: newProject.description || '',
       links: newProject.links || [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      user_id: user?.id || ''
     };
 
     const updatedProjects = [...projects, project];

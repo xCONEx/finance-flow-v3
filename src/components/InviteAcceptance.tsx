@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Mail, Building2, UserCheck, X, Crown, Edit, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '../contexts/AuthContext';
-import { firestoreService } from '../services/firestore';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const InviteAcceptance = () => {
   const [pendingInvites, setPendingInvites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user } = useSupabaseAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -25,8 +25,29 @@ const InviteAcceptance = () => {
       console.log('Carregando convites para:', user.email);
       setLoading(true);
       
-      // Buscar convites no Firebase
-      const invites = await firestoreService.getUserInvites(user.email);
+      // Buscar convites no Supabase
+      const { data, error } = await supabase
+        .from('agency_invites')
+        .select(`
+          *,
+          agencies:agency_id (
+            name
+          )
+        `)
+        .eq('email', user.email)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      const invites = (data || []).map(invite => ({
+        id: invite.id,
+        agencyId: invite.agency_id,
+        agencyName: invite.agencies?.name || 'Agência',
+        role: invite.role,
+        invitedBy: invite.invited_by_email,
+        sentAt: invite.created_at
+      }));
+
       setPendingInvites(invites);
     } catch (error) {
       console.error('Erro ao carregar convites:', error);
@@ -35,12 +56,31 @@ const InviteAcceptance = () => {
     }
   };
 
-  const handleAcceptInvite = async (inviteId, agenciaId) => {
+  const handleAcceptInvite = async (inviteId: string, agencyId: string) => {
     try {
-      console.log('Aceitando convite:', inviteId, agenciaId);
+      console.log('Aceitando convite:', inviteId, agencyId);
       
-      // Aceitar convite no Firebase
-      await firestoreService.acceptInvite(inviteId, user.id, agenciaId);
+      // Aceitar convite no Supabase
+      const { error: updateError } = await supabase
+        .from('agency_invites')
+        .update({ 
+          status: 'accepted',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('id', inviteId);
+
+      if (updateError) throw updateError;
+
+      // Atualizar perfil do usuário
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          agency_id: agencyId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user?.id);
+
+      if (profileError) throw profileError;
       
       setPendingInvites(pendingInvites.filter(invite => invite.id !== inviteId));
       
@@ -61,12 +101,21 @@ const InviteAcceptance = () => {
     }
   };
 
-  const handleDeclineInvite = async (inviteId) => {
+  const handleDeclineInvite = async (inviteId: string) => {
     try {
       console.log('Recusando convite:', inviteId);
       
       // Atualizar status do convite para recusado
-      await firestoreService.updateInviteStatus(inviteId, 'declined');
+      const { error } = await supabase
+        .from('agency_invites')
+        .update({ 
+          status: 'declined',
+          declined_at: new Date().toISOString()
+        })
+        .eq('id', inviteId);
+
+      if (error) throw error;
+
       setPendingInvites(pendingInvites.filter(invite => invite.id !== inviteId));
       
       toast({
@@ -83,7 +132,7 @@ const InviteAcceptance = () => {
     }
   };
 
-  const getRoleLabel = (role) => {
+  const getRoleLabel = (role: string) => {
     switch (role) {
       case 'owner': return 'Proprietário';
       case 'editor': return 'Editor';
@@ -92,7 +141,7 @@ const InviteAcceptance = () => {
     }
   };
 
-  const getRoleIcon = (role) => {
+  const getRoleIcon = (role: string) => {
     switch (role) {
       case 'owner': return <Crown className="h-4 w-4 text-yellow-600" />;
       case 'editor': return <Edit className="h-4 w-4 text-blue-600" />;
@@ -141,7 +190,7 @@ const InviteAcceptance = () => {
                 </Badge>
               </p>
               <p className="text-sm">
-                <strong>Data do convite:</strong> {new Date(invite.sentAt?.toDate?.() || invite.sentAt).toLocaleDateString()}
+                <strong>Data do convite:</strong> {new Date(invite.sentAt).toLocaleDateString()}
               </p>
               {invite.role === 'editor' && (
                 <p className="text-xs text-blue-600 bg-blue-100 p-2 rounded">

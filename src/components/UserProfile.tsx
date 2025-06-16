@@ -154,168 +154,141 @@ const UserProfile = () => {
     }));
   };
 
-  const handleEditToggle = () => {
-    if (isEditing) {
-      if (user && profile) {
-        setFormData({
-          name: profile.name || user.email || '',
-          email: user.email || '',
-          phone: profile.phone || '',
-          company: profile.company || ''
-        });
-      }
-    }
-    setIsEditing(!isEditing);
-  };
-
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
-          <User className={`text-${currentTheme.accent}`} />
-          Meu Perfil
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">Informações da sua conta</p>
-      </div>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Perfil do Usuário
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Avatar Section */}
+          <div className="flex flex-col items-center gap-4">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={getProfileImageUrl()} alt="Profile" />
+              <AvatarFallback className={`text-white text-xl bg-gradient-to-r ${currentTheme.primary}`}>
+                {formData.name ? formData.name.charAt(0).toUpperCase() : 'U'}
+              </AvatarFallback>
+            </Avatar>
+            
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Alterar Foto
+            </Button>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoUpload}
+              className="hidden"
+            />
+          </div>
 
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Conta</CardTitle>
-              <Button
-                variant="outline"
-                onClick={handleEditToggle}
-                disabled={isLoading}
-              >
-                {isEditing ? 'Cancelar' : 'Editar Perfil'}
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-6">
-            {/* User Photo */}
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={getProfileImageUrl()} alt={profile?.name || 'User'} />
-                <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white text-2xl`}>
-                  {formData.name?.charAt(0) || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              {isEditing && (
-                <div className="space-y-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isLoading}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isLoading ? 'Salvando...' : 'Alterar Foto'}
-                  </Button>
-                  <p className="text-xs text-gray-500">JPG, PNG até 3MB</p>
-                </div>
-              )}
+          {/* Form Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                disabled={!isEditing || isLoading}
+              />
             </div>
 
-            <div className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo</Label>
-                  {isEditing ? (
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      placeholder="Digite seu nome completo"
-                    />
-                  ) : (
-                    <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">{formData.name || 'Não informado'}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">{formData.email}</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  {isEditing ? (
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      placeholder="(11) 99999-9999"
-                    />
-                  ) : (
-                    <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">{formData.phone || 'Não informado'}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="company">Empresa</Label>
-                  {isEditing ? (
-                    <Input
-                      id="company"
-                      value={formData.company}
-                      onChange={(e) => handleInputChange('company', e.target.value)}
-                      placeholder="Nome da sua empresa"
-                    />
-                  ) : (
-                    <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">{formData.company || 'Não informado'}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tipo de Usuário</Label>
-                <p className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">
-                  {profile?.user_type === 'admin' && 'Administrador do Sistema'}
-                  {profile?.user_type === 'company_owner' && 'Dono da Empresa'}
-                  {profile?.user_type === 'employee' && 'Colaborador'}
-                  {profile?.user_type === 'individual' && 'Usuário Individual'}
-                  {!profile?.user_type && 'Individual'}
-                </p>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                value={formData.email}
+                disabled={true}
+                className="bg-gray-50"
+              />
             </div>
 
-            {isEditing && (
-              <div className="flex gap-2">
-                <Button 
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                disabled={!isEditing || isLoading}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company">Empresa</Label>
+              <Input
+                id="company"
+                value={formData.company}
+                onChange={(e) => handleInputChange('company', e.target.value)}
+                disabled={!isEditing || isLoading}
+                placeholder="Nome da empresa"
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4">
+            {!isEditing ? (
+              <>
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  className={`flex-1 bg-gradient-to-r ${currentTheme.primary}`}
+                >
+                  Editar Perfil
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={signOut}
+                  className="flex-1"
+                >
+                  Sair
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
                   onClick={handleSave}
-                  className={`bg-gradient-to-r ${currentTheme.primary}`}
                   disabled={isLoading}
+                  className={`flex-1 bg-gradient-to-r ${currentTheme.primary}`}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+                  {isLoading ? 'Salvando...' : 'Salvar'}
                 </Button>
-              </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    // Reset form data
+                    if (user && profile) {
+                      setFormData({
+                        name: profile.name || user.email || '',
+                        email: user.email || '',
+                        phone: profile.phone || '',
+                        company: profile.company || ''
+                      });
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+              </>
             )}
-
-            <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h4 className="font-medium">Conta</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Membro desde {new Date(profile?.created_at || '').toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-                <Button variant="outline" onClick={signOut}>
-                  Sair da Conta
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
