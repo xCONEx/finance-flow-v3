@@ -51,10 +51,10 @@ class SupabaseKanbanService {
         // Não fazer throw, continuar tentando salvar
       }
 
-      // Salvar projetos como JSON no campo board_data
+      // Salvar projetos como JSON no campo board_data - cast to Json type
       const boardRecord = {
         agency_id: userId,
-        board_data: projects,
+        board_data: projects as any, // Cast to any first to satisfy Json type
         updated_at: new Date().toISOString()
       };
 
@@ -125,9 +125,9 @@ class SupabaseKanbanService {
         return this.loadFromLocalStorage(userId);
       }
 
-      // Extrair projetos do campo board_data
+      // Extrair projetos do campo board_data - safe type casting
       const boardData = data[0];
-      const projects = boardData.board_data as KanbanProject[];
+      const projects = (boardData.board_data as unknown) as KanbanProject[];
 
       console.log('🎉 Projetos carregados do Supabase:', projects?.length || 0);
       return projects || [];
