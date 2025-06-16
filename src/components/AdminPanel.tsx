@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -27,7 +28,6 @@ import {
   CheckCircle,
   TrendingUp,
   UserPlus,
-  Edit,
   Ban,
   UserCheck,
   AlertTriangle
@@ -86,17 +86,6 @@ const AdminPanel = () => {
       // Verificar JWT token e claims
       const { data: { session } } = await supabase.auth.getSession();
       console.log('🎫 JWT Claims:', session?.access_token ? JSON.stringify(session.user) : 'No session');
-      
-      // Verificar políticas RLS existentes
-      console.log('🔒 Verificando políticas RLS...');
-      const { data: policies, error: policiesError } = await supabase
-        .from('information_schema.policies')
-        .select('*')
-        .eq('schemaname', 'public')
-        .eq('tablename', 'profiles');
-      
-      console.log('📋 Políticas RLS encontradas:', policies);
-      if (policiesError) console.error('❌ Erro ao buscar políticas:', policiesError);
 
       let profilesData: UserProfile[] = [];
       let queryError = null;
@@ -122,17 +111,19 @@ const AdminPanel = () => {
         console.error('❌ Erro consulta normal:', normalError);
         queryError = normalError;
         
-        // Tentar com RPC que pode contornar RLS
-        console.log('🔄 Tentativa 2: Usando função RPC...');
-        const { data: rpcData, error: rpcError } = await supabase
-          .rpc('get_all_profiles_admin', { admin_email: user?.email });
-        
-        if (rpcError) {
-          console.error('❌ Erro RPC:', rpcError);
-          console.log('📝 Tentando criar função RPC...');
+        // Tentar consulta apenas do próprio usuário como fallback
+        console.log('🔄 Tentativa 2: Consultando apenas dados próprios...');
+        const { data: selfData, error: selfError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user?.id)
+          .single();
+
+        if (selfError) {
+          console.error('❌ Erro consulta próprio usuário:', selfError);
         } else {
-          console.log('✅ RPC funcionou:', rpcData);
-          profilesData = rpcData || [];
+          console.log('✅ Dados do próprio usuário carregados:', selfData);
+          profilesData = [selfData];
         }
       } else {
         console.log('✅ Consulta normal bem-sucedida:', normalData?.length, 'registros');
@@ -148,8 +139,7 @@ const AdminPanel = () => {
         queryError: queryError?.message,
         profilesCount: profilesData.length,
         timestamp: new Date().toISOString(),
-        jwtClaims: session?.user || null,
-        policiesCount: policies?.length || 0
+        jwtClaims: session?.user || null
       });
 
       console.log('📈 Dados carregados:', profilesData?.length || 0, 'usuários');
@@ -397,7 +387,6 @@ const AdminPanel = () => {
               <p><strong>User ID:</strong> {debugInfo.userId}</p>
               <p><strong>É Admin Autorizado:</strong> {debugInfo.isAuthorized ? 'Sim' : 'Não'}</p>
               <p><strong>Usuários Carregados:</strong> {debugInfo.profilesCount}</p>
-              <p><strong>Políticas RLS Encontradas:</strong> {debugInfo.policiesCount || 'N/A'}</p>
               {debugInfo.queryError && (
                 <p><strong>Erro de Consulta:</strong> <span className="text-red-600">{debugInfo.queryError}</span></p>
               )}
