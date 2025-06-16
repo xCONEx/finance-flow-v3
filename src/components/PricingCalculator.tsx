@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Calculator, Save, DollarSign, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,10 +17,11 @@ import { formatCurrency } from '../utils/formatters';
 import ManualValueModal from './ManualValueModal';
 
 const PricingCalculator = () => {
-  const { addJob, workRoutine } = useApp();
+  const { addJob, workRoutine, refreshJobs } = useApp();
   const { currentTheme } = useTheme();
   const { user } = useSupabaseAuth();
   const [showManualValue, setShowManualValue] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     description: '',
@@ -141,10 +143,12 @@ const PricingCalculator = () => {
       return;
     }
 
+    setIsSaving(true);
+
     const newJob = {
       description: formData.description,
       client: formData.client,
-      eventDate: formData.eventDate,
+      eventDate: formData.eventDate || new Date().toISOString().split('T')[0],
       estimatedHours: formData.estimatedHours,
       difficultyLevel: formData.difficultyLevel,
       logistics: formData.logisticsValue,
@@ -164,15 +168,20 @@ const PricingCalculator = () => {
     };
 
     try {
+      console.log('💾 Salvando job:', newJob);
+      
       // Adicionar ao estado local usando o método do contexto
       await addJob(newJob);
+      
+      // Forçar atualização da lista de jobs
+      await refreshJobs();
 
       toast({
-        title: "Job Salvo!",
-        description: `Orçamento de ${formData.description} salvo com sucesso.`,
+        title: "Job Salvo com Sucesso!",
+        description: `Orçamento de "${formData.description}" foi salvo e aparecerá na lista de jobs.`,
       });
 
-      // Reset form
+      // Reset form após salvar com sucesso
       setFormData({
         description: '',
         client: '',
@@ -185,6 +194,7 @@ const PricingCalculator = () => {
         category: '',
         discountPercentage: 0
       });
+      
       setCalculatedPrice({
         totalCosts: 0,
         serviceValue: 0,
@@ -193,13 +203,17 @@ const PricingCalculator = () => {
         additionalCosts: 0
       });
 
+      console.log('✅ Job salvo e form resetado com sucesso');
+
     } catch (error) {
       console.error('❌ Erro ao salvar job:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao salvar job.",
+        title: "Erro ao Salvar",
+        description: "Ocorreu um erro ao salvar o job. Tente novamente.",
         variant: "destructive"
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -397,9 +411,13 @@ const PricingCalculator = () => {
                   </div>
                 </div>
 
-                <Button onClick={saveJob} className="w-full bg-green-600 hover:bg-green-700">
+                <Button 
+                  onClick={saveJob} 
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  disabled={isSaving}
+                >
                   <Save className="mr-2 h-4 w-4" />
-                  Salvar Job
+                  {isSaving ? 'Salvando...' : 'Salvar Job'}
                 </Button>
               </>
             ) : (
