@@ -1,18 +1,21 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Save, Upload } from 'lucide-react';
+import { User, Save, Upload, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSubscription } from '../hooks/useSubscription';
 import { toast } from '@/hooks/use-toast';
 
 const UserProfile = () => {
   const { user, profile, updateProfile, signOut } = useSupabaseAuth();
   const { currentTheme } = useTheme();
+  const { subscription } = useSubscription();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isEditing, setIsEditing] = useState(false);
@@ -28,7 +31,7 @@ const UserProfile = () => {
   useEffect(() => {
     if (user && profile) {
       setFormData({
-        name: profile.name || user.email || '',
+        name: profile.name || user.user_metadata?.name || user.email?.split('@')[0] || '',
         email: user.email || '',
         phone: profile.phone || '',
         company: profile.company || ''
@@ -49,6 +52,8 @@ const UserProfile = () => {
     return '';
   };
 
+  const isEnterpriseUser = subscription === 'enterprise' || subscription === 'enterprise-annual';
+
   const handleSave = async () => {
     if (!user?.id) return;
     
@@ -60,7 +65,8 @@ const UserProfile = () => {
         updateData.phone = formData.phone;
       }
       
-      if (formData.company !== profile?.company) {
+      // Só permitir alterar empresa para usuários Enterprise
+      if (isEnterpriseUser && formData.company !== profile?.company) {
         updateData.company = formData.company;
       }
       
@@ -154,13 +160,47 @@ const UserProfile = () => {
     }));
   };
 
+  const getPlanBadgeColor = () => {
+    switch (subscription) {
+      case 'enterprise':
+      case 'enterprise-annual':
+        return 'bg-purple-100 text-purple-800';
+      case 'premium':
+        return 'bg-blue-100 text-blue-800';
+      case 'basic':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPlanName = () => {
+    switch (subscription) {
+      case 'enterprise':
+        return 'Enterprise';
+      case 'enterprise-annual':
+        return 'Enterprise Anual';
+      case 'premium':
+        return 'Premium';
+      case 'basic':
+        return 'Básico';
+      default:
+        return 'Gratuito';
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Perfil do Usuário
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Perfil do Usuário
+            </div>
+            <Badge className={getPlanBadgeColor()}>
+              {getPlanName()}
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -226,14 +266,28 @@ const UserProfile = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="company">Empresa</Label>
+              <Label htmlFor="company" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Empresa
+                {!isEnterpriseUser && (
+                  <Badge variant="outline" className="text-xs">
+                    Enterprise
+                  </Badge>
+                )}
+              </Label>
               <Input
                 id="company"
                 value={formData.company}
                 onChange={(e) => handleInputChange('company', e.target.value)}
-                disabled={!isEditing || isLoading}
-                placeholder="Nome da empresa"
+                disabled={!isEditing || isLoading || !isEnterpriseUser}
+                placeholder={isEnterpriseUser ? "Nome da empresa" : "Disponível no plano Enterprise"}
+                className={!isEnterpriseUser ? "bg-gray-50" : ""}
               />
+              {!isEnterpriseUser && isEditing && (
+                <p className="text-xs text-gray-500">
+                  O campo empresa está disponível apenas para usuários do plano Enterprise
+                </p>
+              )}
             </div>
           </div>
 
@@ -272,7 +326,7 @@ const UserProfile = () => {
                     // Reset form data
                     if (user && profile) {
                       setFormData({
-                        name: profile.name || user.email || '',
+                        name: profile.name || user.user_metadata?.name || user.email?.split('@')[0] || '',
                         email: user.email || '',
                         phone: profile.phone || '',
                         company: profile.company || ''
