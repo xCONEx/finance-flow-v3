@@ -215,6 +215,20 @@ const CompanyManagement = () => {
 
       console.log('✅ Agência criada:', data);
 
+      // Atualizar o tipo do usuário para company_owner
+      console.log('👤 Atualizando tipo do usuário para company_owner...');
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ user_type: 'company_owner' })
+        .eq('id', owner.id);
+
+      if (updateError) {
+        console.error('⚠️ Erro ao atualizar tipo do usuário:', updateError);
+        // Não falhar a operação, apenas logar o aviso
+      } else {
+        console.log('✅ Tipo do usuário atualizado para company_owner');
+      }
+
       toast({
         title: 'Sucesso',
         description: 'Agência criada com sucesso'
@@ -224,6 +238,7 @@ const CompanyManagement = () => {
       setNewAgencyName('');
       setSelectedOwnerEmail('');
       loadAgencies();
+      loadUsers(); // Recarregar usuários para ver a mudança do tipo
     } catch (error: any) {
       console.error('❌ Erro ao criar agência:', error);
       toast({
@@ -273,6 +288,44 @@ const CompanyManagement = () => {
 
       console.log('✅ Agência atualizada');
 
+      // Se mudou o proprietário, atualizar os tipos de usuário
+      if (editingAgency.owner_uid !== owner.id) {
+        console.log('👤 Mudança de proprietário detectada, atualizando tipos...');
+        
+        // Atualizar o novo owner para company_owner
+        const { error: newOwnerError } = await supabase
+          .from('profiles')
+          .update({ user_type: 'company_owner' })
+          .eq('id', owner.id);
+
+        if (newOwnerError) {
+          console.error('⚠️ Erro ao atualizar novo proprietário:', newOwnerError);
+        } else {
+          console.log('✅ Novo proprietário atualizado para company_owner');
+        }
+
+        // Verificar se o antigo owner ainda possui outras agências
+        const { data: otherAgencies, error: checkError } = await supabase
+          .from('agencies')
+          .select('id')
+          .eq('owner_uid', editingAgency.owner_uid)
+          .neq('id', editingAgency.id);
+
+        if (!checkError && (!otherAgencies || otherAgencies.length === 0)) {
+          // Antigo owner não possui outras agências, voltar para individual
+          const { error: oldOwnerError } = await supabase
+            .from('profiles')
+            .update({ user_type: 'individual' })
+            .eq('id', editingAgency.owner_uid);
+
+          if (oldOwnerError) {
+            console.error('⚠️ Erro ao atualizar antigo proprietário:', oldOwnerError);
+          } else {
+            console.log('✅ Antigo proprietário voltou para individual');
+          }
+        }
+      }
+
       toast({
         title: 'Sucesso',
         description: 'Agência atualizada com sucesso'
@@ -281,6 +334,7 @@ const CompanyManagement = () => {
       setIsEditDialogOpen(false);
       setEditingAgency(null);
       loadAgencies();
+      loadUsers(); // Recarregar usuários para ver as mudanças de tipo
     } catch (error: any) {
       console.error('❌ Erro ao atualizar agência:', error);
       toast({
@@ -300,6 +354,20 @@ const CompanyManagement = () => {
     try {
       console.log('🗑️ Excluindo agência:', agencyId);
 
+      // Primeiro, pegar o owner da agência antes de deletar
+      const { data: agencyData, error: fetchError } = await supabase
+        .from('agencies')
+        .select('owner_uid')
+        .eq('id', agencyId)
+        .single();
+
+      if (fetchError || !agencyData) {
+        console.error('❌ Erro ao buscar dados da agência:', fetchError);
+        throw fetchError || new Error('Agência não encontrada');
+      }
+
+      const ownerId = agencyData.owner_uid;
+
       const { error } = await supabase
         .from('agencies')
         .delete()
@@ -312,12 +380,33 @@ const CompanyManagement = () => {
 
       console.log('✅ Agência excluída');
 
+      // Verificar se o owner ainda possui outras agências
+      const { data: otherAgencies, error: checkError } = await supabase
+        .from('agencies')
+        .select('id')
+        .eq('owner_uid', ownerId);
+
+      if (!checkError && (!otherAgencies || otherAgencies.length === 0)) {
+        // Owner não possui outras agências, voltar para individual
+        const { error: updateOwnerError } = await supabase
+          .from('profiles')
+          .update({ user_type: 'individual' })
+          .eq('id', ownerId);
+
+        if (updateOwnerError) {
+          console.error('⚠️ Erro ao atualizar proprietário para individual:', updateOwnerError);
+        } else {
+          console.log('✅ Proprietário voltou para individual');
+        }
+      }
+
       toast({
         title: 'Sucesso',
         description: 'Agência excluída com sucesso'
       });
 
       loadAgencies();
+      loadUsers(); // Recarregar usuários para ver as mudanças de tipo
     } catch (error: any) {
       console.error('❌ Erro ao excluir agência:', error);
       toast({
