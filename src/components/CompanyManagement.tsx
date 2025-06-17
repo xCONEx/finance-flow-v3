@@ -32,8 +32,7 @@ import {
   Edit,
   Trash2,
   Users,
-  UserPlus,
-  UserMinus
+  RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -76,44 +75,101 @@ const CompanyManagement = () => {
   const [editCompanyDescription, setEditCompanyDescription] = useState('');
   const [editOwnerEmail, setEditOwnerEmail] = useState('');
 
-  // Load companies
+  // Load companies com melhor tratamento de erro
   const loadCompanies = async () => {
     try {
       setLoading(true);
-      console.log('🏢 Carregando empresas...');
+      console.log('🏢 Tentando carregar empresas via RPC...');
       
-      const { data, error } = await (supabase as any).rpc('get_all_companies_for_admin');
+      // Tentar usar a função RPC
+      let { data, error } = await (supabase as any).rpc('get_all_companies_for_admin');
       
       if (error) {
-        console.error('❌ Erro ao carregar empresas:', error);
-        throw error;
+        console.error('❌ Erro na função RPC:', error);
+        
+        // Fallback: buscar diretamente das tabelas se a função RPC falhar
+        console.log('🔄 Tentando fallback direto nas tabelas...');
+        
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('agencies')
+          .select(`
+            id,
+            name,
+            owner_id,
+            created_at,
+            profiles!inner(email, name)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (fallbackError) {
+          console.error('❌ Erro no fallback:', fallbackError);
+          throw fallbackError;
+        }
+
+        // Verificar se fallbackData é válido antes de mapear
+        if (!fallbackData || !Array.isArray(fallbackData)) {
+          console.error('❌ Dados inválidos no fallback');
+          throw new Error('Dados inválidos recebidos do fallback');
+        }
+
+        // Transformar dados do fallback para o formato esperado
+        data = fallbackData.map(company => ({
+          id: company.id,
+          name: company.name,
+          description: '', // Sem descrição no fallback
+          owner_id: company.owner_id,
+          owner_email: (company.profiles as any).email,
+          owner_name: (company.profiles as any).name || (company.profiles as any).email,
+          created_at: company.created_at,
+          collaborators_count: 0 // Não temos essa informação no fallback
+        }));
       }
       
       console.log('✅ Empresas carregadas:', data?.length || 0);
       setCompanies(data || []);
+      
     } catch (error: any) {
-      console.error('❌ Erro ao carregar empresas:', error);
+      console.error('❌ Erro completo ao carregar empresas:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao carregar empresas: ' + (error?.message || 'Erro desconhecido'),
+        description: 'Erro ao carregar empresas. Verifique se você tem permissões de administrador.',
         variant: 'destructive'
       });
+      setCompanies([]);
     }
   };
 
   // Load users
   const loadUsers = async () => {
     try {
-      const { data, error } = await (supabase as any).rpc('get_all_profiles_for_admin');
+      console.log('👥 Carregando usuários...');
+      
+      // Tentar usar função RPC primeiro
+      let { data, error } = await (supabase as any).rpc('get_all_profiles_for_admin');
       
       if (error) {
-        console.error('❌ Erro ao carregar usuários:', error);
-        throw error;
+        console.log('🔄 Fallback para busca direta de usuários...');
+        // Fallback para busca direta
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('profiles')
+          .select('id, email, name, user_type')
+          .order('email');
+
+        if (fallbackError) throw fallbackError;
+        data = fallbackData;
       }
       
+      console.log('✅ Usuários carregados:', data?.length || 0);
       setUsers(data || []);
+      
     } catch (error: any) {
       console.error('❌ Erro ao carregar usuários:', error);
+      toast({
+        title: 'Aviso',
+        description: 'Não foi possível carregar a lista de usuários',
+        variant: 'destructive'
+      });
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -288,10 +344,24 @@ const CompanyManagement = () => {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Gestão de Empresas
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Gestão de Empresas ({companies.length})
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                loadCompanies();
+                loadUsers();
+              }}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Atualizar
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-2 mb-4">
@@ -428,10 +498,12 @@ const CompanyManagement = () => {
             </Table>
           </div>
 
-          {filteredCompanies.length === 0 && (
+          {filteredCompanies.length === 0 && !loading && (
             <div className="text-center py-8">
               <Building2 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">Nenhuma empresa encontrada</p>
+              <p className="text-gray-500">
+                {companies.length === 0 ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa corresponde à busca'}
+              </p>
             </div>
           )}
         </CardContent>
