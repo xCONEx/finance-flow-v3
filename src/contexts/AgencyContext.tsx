@@ -83,23 +83,30 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  // Carregar convites pendentes
+  // Carregar convites pendentes - Só busca se o usuário tem email
   const loadPendingInvitations = async () => {
-    if (!user || !isAuthenticated) return;
+    if (!user || !isAuthenticated || !user.email) {
+      console.log('📧 Não buscando convites: usuário sem email ou não autenticado');
+      setPendingInvitations([]);
+      return;
+    }
     
     try {
+      console.log('📧 Buscando convites para:', user.email);
       const { data, error } = await (supabase as any).rpc('get_pending_invitations');
       
       if (error) {
         console.error('❌ Erro ao carregar convites:', error);
+        setPendingInvitations([]);
         return;
       }
       
       const invitationsData = data && Array.isArray(data) ? data : [];
       setPendingInvitations(invitationsData);
-      console.log('📧 Convites pendentes:', invitationsData.length);
+      console.log('📧 Convites pendentes encontrados:', invitationsData.length);
     } catch (error) {
       console.error('❌ Erro ao carregar convites:', error);
+      setPendingInvitations([]);
     }
   };
 
@@ -240,7 +247,10 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (user && isAuthenticated) {
       loadUserAgencies();
-      loadPendingInvitations();
+      // Só busca convites se o usuário tem email
+      if (user.email) {
+        loadPendingInvitations();
+      }
     } else {
       setAgencies([]);
       setPendingInvitations([]);
