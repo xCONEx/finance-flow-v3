@@ -72,7 +72,7 @@ const AdminPanel = () => {
       setLoading(true);
       console.log('🔍 Carregando dados do admin via RPC...');
       
-      // Usar a função RPC para buscar todos os usuários
+      // Usar a nova função RPC para buscar todos os usuários com type assertion
       const { data: profilesData, error } = await (supabase as any).rpc('get_all_profiles_for_admin');
 
       if (error) {
@@ -130,12 +130,21 @@ const AdminPanel = () => {
     try {
       console.log(`🔄 Atualizando ${field} para usuário ${userId}:`, value);
       
-      // Usar a função RPC para atualizar
-      const updateData = { [field]: value };
-      const { data, error } = await (supabase as any).rpc('admin_update_profile', {
-        target_user_id: userId,
-        update_data: updateData
-      });
+      // Preparar parâmetros baseados no campo
+      let updateParams: any = {
+        target_user_id: userId
+      };
+
+      if (field === 'user_type') {
+        updateParams.new_user_type = value;
+      } else if (field === 'subscription') {
+        updateParams.new_subscription = value;
+      } else if (field === 'banned') {
+        updateParams.new_banned = value;
+      }
+
+      // Usar a nova função RPC para atualizar com type assertion
+      const { data, error } = await (supabase as any).rpc('admin_update_profile', updateParams);
 
       if (error) {
         console.error('❌ Erro ao atualizar via RPC:', error);
@@ -170,15 +179,11 @@ const AdminPanel = () => {
         currency: 'BRL'
       };
 
-      // Usar a função RPC para atualizar
-      const updateData = { 
-        subscription: newPlan,
-        subscription_data: subscriptionData
-      };
-      
+      // Usar a nova função RPC para atualizar com type assertion
       const { data, error } = await (supabase as any).rpc('admin_update_profile', {
         target_user_id: userId,
-        update_data: updateData
+        new_subscription: newPlan,
+        new_subscription_data: subscriptionData
       });
 
       if (error) throw error;
@@ -195,7 +200,7 @@ const AdminPanel = () => {
         description: `Plano atualizado para ${newPlan}` 
       });
       
-      // Recarregar analytics sem chamadas excessivas
+      // Recarregar analytics
       const profiles = users.map(u => u.id === userId ? { ...u, subscription: newPlan } : u);
       const totalUsers = profiles.length;
       const freeUsers = profiles.filter((u: any) => !u.subscription || u.subscription === 'free').length;
@@ -231,11 +236,10 @@ const AdminPanel = () => {
 
   const handleBanUser = async (userId: string, banned: boolean) => {
     try {
-      // Usar a função RPC para atualizar
-      const updateData = { banned };
+      // Usar a nova função RPC para atualizar com type assertion
       const { data, error } = await (supabase as any).rpc('admin_update_profile', {
         target_user_id: userId,
-        update_data: updateData
+        new_banned: banned
       });
 
       if (error) throw error;
