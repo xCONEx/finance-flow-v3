@@ -81,7 +81,7 @@ const ContextSelector = () => {
           )}
         </DropdownMenuItem>
         
-        {/* Lista de agências */}
+        {/* Lista de agências - Só mostra se houver agências */}
         {agencies.length > 0 && (
           <>
             <DropdownMenuSeparator />
@@ -106,16 +106,16 @@ const ContextSelector = () => {
           </>
         )}
 
-        {/* Convites pendentes */}
+        {/* Convites pendentes - Só mostra se houver convites */}
         {pendingInvitations.length > 0 && (
           <>
             <DropdownMenuSeparator />
             <div className="px-2 py-1 text-xs text-muted-foreground font-medium flex items-center gap-1">
               <Bell className="h-3 w-3" />
-              Convites Pendentes
+              Convites Pendentes ({pendingInvitations.length})
             </div>
             {pendingInvitations.map((invitation) => (
-              <div key={invitation.id} className="px-2 py-2 border-b border-gray-100">
+              <div key={invitation.id} className="px-2 py-2 border-b border-gray-100 last:border-b-0">
                 <div className="flex flex-col gap-2">
                   <div>
                     <div className="text-sm font-medium">{invitation.agency_name}</div>
