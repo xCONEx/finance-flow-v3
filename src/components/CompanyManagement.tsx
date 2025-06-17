@@ -37,13 +37,13 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-interface Company {
+interface Agency {
   id: string;
   name: string;
-  description?: string;
-  owner_id: string;
+  owner_uid: string;
   owner_email: string;
   owner_name?: string;
+  status?: string;
   created_at: string;
   collaborators_count: number;
 }
@@ -57,85 +57,81 @@ interface UserProfile {
 
 const CompanyManagement = () => {
   const { toast } = useToast();
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Create company dialog
+  // Create agency dialog
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newCompanyName, setNewCompanyName] = useState('');
-  const [newCompanyDescription, setNewCompanyDescription] = useState('');
+  const [newAgencyName, setNewAgencyName] = useState('');
   const [selectedOwnerEmail, setSelectedOwnerEmail] = useState('');
 
-  // Edit company dialog
+  // Edit agency dialog
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
-  const [editCompanyName, setEditCompanyName] = useState('');
-  const [editCompanyDescription, setEditCompanyDescription] = useState('');
+  const [editingAgency, setEditingAgency] = useState<Agency | null>(null);
+  const [editAgencyName, setEditAgencyName] = useState('');
   const [editOwnerEmail, setEditOwnerEmail] = useState('');
 
-  // Load companies com melhor tratamento de erro
-  const loadCompanies = async () => {
+  // Load agencies
+  const loadAgencies = async () => {
     try {
       setLoading(true);
-      console.log('🏢 Tentando carregar empresas via RPC...');
+      console.log('🏢 Carregando agências...');
       
-      // Tentar usar a função RPC
-      let { data, error } = await (supabase as any).rpc('get_all_companies_for_admin');
-      
+      // Buscar agências com informações dos owners
+      const { data, error } = await supabase
+        .from('agencies')
+        .select(`
+          id,
+          name,
+          owner_uid,
+          status,
+          created_at,
+          profiles!agencies_owner_uid_fkey (
+            email,
+            name
+          )
+        `)
+        .order('created_at', { ascending: false });
+
       if (error) {
-        console.error('❌ Erro na função RPC:', error);
-        
-        // Fallback: buscar diretamente das tabelas se a função RPC falhar
-        console.log('🔄 Tentando fallback direto nas tabelas...');
-        
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('agencies')
-          .select(`
-            id,
-            name,
-            owner_id,
-            created_at,
-            profiles!inner(email, name)
-          `)
-          .order('created_at', { ascending: false });
-
-        if (fallbackError) {
-          console.error('❌ Erro no fallback:', fallbackError);
-          throw fallbackError;
-        }
-
-        // Verificar se fallbackData é válido antes de mapear
-        if (!fallbackData || !Array.isArray(fallbackData)) {
-          console.error('❌ Dados inválidos no fallback');
-          throw new Error('Dados inválidos recebidos do fallback');
-        }
-
-        // Transformar dados do fallback para o formato esperado
-        data = fallbackData.map(company => ({
-          id: company.id,
-          name: company.name,
-          description: '', // Sem descrição no fallback
-          owner_id: company.owner_id,
-          owner_email: (company.profiles as any).email,
-          owner_name: (company.profiles as any).name || (company.profiles as any).email,
-          created_at: company.created_at,
-          collaborators_count: 0 // Não temos essa informação no fallback
-        }));
+        console.error('❌ Erro ao carregar agências:', error);
+        throw error;
       }
+
+      // Buscar contagem de colaboradores para cada agência
+      const agenciesWithCollaborators = await Promise.all(
+        (data || []).map(async (agency) => {
+          const { count } = await supabase
+            .from('agency_collaborators')
+            .select('id', { count: 'exact' })
+            .eq('agency_id', agency.id);
+
+          return {
+            id: agency.id,
+            name: agency.name,
+            owner_uid: agency.owner_uid,
+            owner_email: agency.profiles?.email || 'N/A',
+            owner_name: agency.profiles?.name || 'N/A',
+            status: agency.status || 'active',
+            created_at: agency.created_at,
+            collaborators_count: count || 0
+          };
+        })
+      );
       
-      console.log('✅ Empresas carregadas:', data?.length || 0);
-      setCompanies(data || []);
+      console.log('✅ Agências carregadas:', agenciesWithCollaborators.length);
+      setAgencies(agenciesWithCollaborators);
       
     } catch (error: any) {
-      console.error('❌ Erro completo ao carregar empresas:', error);
+      console.error('❌ Erro completo ao carregar agências:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao carregar empresas. Verifique se você tem permissões de administrador.',
+        description: 'Erro ao carregar agências. Verifique se você tem permissões de administrador.',
         variant: 'destructive'
       });
-      setCompanies([]);
+      setAgencies([]);
     }
   };
 
@@ -144,19 +140,14 @@ const CompanyManagement = () => {
     try {
       console.log('👥 Carregando usuários...');
       
-      // Tentar usar função RPC primeiro
-      let { data, error } = await (supabase as any).rpc('get_all_profiles_for_admin');
-      
-      if (error) {
-        console.log('🔄 Fallback para busca direta de usuários...');
-        // Fallback para busca direta
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('profiles')
-          .select('id, email, name, user_type')
-          .order('email');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, name, user_type')
+        .order('email');
 
-        if (fallbackError) throw fallbackError;
-        data = fallbackData;
+      if (error) {
+        console.error('❌ Erro ao carregar usuários:', error);
+        throw error;
       }
       
       console.log('✅ Usuários carregados:', data?.length || 0);
@@ -176,16 +167,16 @@ const CompanyManagement = () => {
   };
 
   useEffect(() => {
-    loadCompanies();
+    loadAgencies();
     loadUsers();
   }, []);
 
-  // Create company
-  const handleCreateCompany = async () => {
-    if (!newCompanyName.trim() || !selectedOwnerEmail) {
+  // Create agency
+  const handleCreateAgency = async () => {
+    if (!newAgencyName.trim() || !selectedOwnerEmail) {
       toast({
         title: 'Erro',
-        description: 'Nome da empresa e email do proprietário são obrigatórios',
+        description: 'Nome da agência e email do proprietário são obrigatórios',
         variant: 'destructive'
       });
       return;
@@ -202,43 +193,53 @@ const CompanyManagement = () => {
     }
 
     try {
-      const { data, error } = await (supabase as any).rpc('admin_create_company', {
-        company_name: newCompanyName.trim(),
-        company_description: newCompanyDescription.trim() || null,
-        owner_user_id: owner.id
+      console.log('🏗️ Criando agência:', { 
+        name: newAgencyName, 
+        owner: owner.id 
       });
 
+      const { data, error } = await supabase
+        .from('agencies')
+        .insert({
+          name: newAgencyName.trim(),
+          owner_uid: owner.id,
+          status: 'active'
+        })
+        .select()
+        .single();
+
       if (error) {
-        console.error('❌ Erro ao criar empresa:', error);
+        console.error('❌ Erro ao criar agência:', error);
         throw error;
       }
 
+      console.log('✅ Agência criada:', data);
+
       toast({
         title: 'Sucesso',
-        description: 'Empresa criada com sucesso'
+        description: 'Agência criada com sucesso'
       });
 
       setIsCreateDialogOpen(false);
-      setNewCompanyName('');
-      setNewCompanyDescription('');
+      setNewAgencyName('');
       setSelectedOwnerEmail('');
-      loadCompanies();
+      loadAgencies();
     } catch (error: any) {
-      console.error('❌ Erro ao criar empresa:', error);
+      console.error('❌ Erro ao criar agência:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao criar empresa: ' + (error?.message || 'Erro desconhecido'),
+        description: 'Erro ao criar agência: ' + (error?.message || 'Erro desconhecido'),
         variant: 'destructive'
       });
     }
   };
 
-  // Edit company
-  const handleEditCompany = async () => {
-    if (!editingCompany || !editCompanyName.trim() || !editOwnerEmail) {
+  // Edit agency
+  const handleEditAgency = async () => {
+    if (!editingAgency || !editAgencyName.trim() || !editOwnerEmail) {
       toast({
         title: 'Erro',
-        description: 'Nome da empresa e email do proprietário são obrigatórios',
+        description: 'Nome da agência e email do proprietário são obrigatórios',
         variant: 'destructive'
       });
       return;
@@ -255,87 +256,96 @@ const CompanyManagement = () => {
     }
 
     try {
-      const { data, error } = await (supabase as any).rpc('admin_update_company', {
-        company_id: editingCompany.id,
-        new_name: editCompanyName.trim(),
-        new_description: editCompanyDescription.trim() || null,
-        new_owner_id: owner.id
-      });
+      console.log('✏️ Editando agência:', editingAgency.id);
+
+      const { error } = await supabase
+        .from('agencies')
+        .update({
+          name: editAgencyName.trim(),
+          owner_uid: owner.id
+        })
+        .eq('id', editingAgency.id);
 
       if (error) {
-        console.error('❌ Erro ao atualizar empresa:', error);
+        console.error('❌ Erro ao atualizar agência:', error);
         throw error;
       }
 
+      console.log('✅ Agência atualizada');
+
       toast({
         title: 'Sucesso',
-        description: 'Empresa atualizada com sucesso'
+        description: 'Agência atualizada com sucesso'
       });
 
       setIsEditDialogOpen(false);
-      setEditingCompany(null);
-      loadCompanies();
+      setEditingAgency(null);
+      loadAgencies();
     } catch (error: any) {
-      console.error('❌ Erro ao atualizar empresa:', error);
+      console.error('❌ Erro ao atualizar agência:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao atualizar empresa: ' + (error?.message || 'Erro desconhecido'),
+        description: 'Erro ao atualizar agência: ' + (error?.message || 'Erro desconhecido'),
         variant: 'destructive'
       });
     }
   };
 
-  // Delete company
-  const handleDeleteCompany = async (companyId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.')) {
+  // Delete agency
+  const handleDeleteAgency = async (agencyId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta agência? Esta ação não pode ser desfeita.')) {
       return;
     }
 
     try {
-      const { data, error } = await (supabase as any).rpc('admin_delete_company', {
-        company_id: companyId
-      });
+      console.log('🗑️ Excluindo agência:', agencyId);
+
+      const { error } = await supabase
+        .from('agencies')
+        .delete()
+        .eq('id', agencyId);
 
       if (error) {
-        console.error('❌ Erro ao excluir empresa:', error);
+        console.error('❌ Erro ao excluir agência:', error);
         throw error;
       }
 
+      console.log('✅ Agência excluída');
+
       toast({
         title: 'Sucesso',
-        description: 'Empresa excluída com sucesso'
+        description: 'Agência excluída com sucesso'
       });
 
-      loadCompanies();
+      loadAgencies();
     } catch (error: any) {
-      console.error('❌ Erro ao excluir empresa:', error);
+      console.error('❌ Erro ao excluir agência:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao excluir empresa: ' + (error?.message || 'Erro desconhecido'),
+        description: 'Erro ao excluir agência: ' + (error?.message || 'Erro desconhecido'),
         variant: 'destructive'
       });
     }
   };
 
-  const openEditDialog = (company: Company) => {
-    setEditingCompany(company);
-    setEditCompanyName(company.name);
-    setEditCompanyDescription(company.description || '');
-    setEditOwnerEmail(company.owner_email);
+  const openEditDialog = (agency: Agency) => {
+    setEditingAgency(agency);
+    setEditAgencyName(agency.name);
+    setEditOwnerEmail(agency.owner_email);
     setIsEditDialogOpen(true);
   };
 
-  const filteredCompanies = companies.filter(company =>
-    company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    company.owner_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (company.owner_name && company.owner_name.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredAgencies = agencies.filter(agency =>
+    agency.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    agency.owner_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (agency.owner_name && agency.owner_name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   if (loading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Carregando empresas...</p>
+        <p className="text-gray-600">Carregando agências...</p>
       </div>
     );
   }
@@ -347,13 +357,13 @@ const CompanyManagement = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg md:text-xl flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              Gestão de Empresas ({companies.length})
+              Gestão de Agências ({agencies.length})
             </CardTitle>
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                loadCompanies();
+                loadAgencies();
                 loadUsers();
               }}
               className="flex items-center gap-2"
@@ -366,7 +376,7 @@ const CompanyManagement = () => {
         <CardContent>
           <div className="flex flex-col md:flex-row gap-2 mb-4">
             <Input
-              placeholder="Buscar empresas..."
+              placeholder="Buscar agências..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1"
@@ -375,28 +385,20 @@ const CompanyManagement = () => {
               <DialogTrigger asChild>
                 <Button className="md:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
-                  Nova Empresa
+                  Nova Agência
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Criar Nova Empresa</DialogTitle>
+                  <DialogTitle>Criar Nova Agência</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium">Nome da Empresa</label>
+                    <label className="text-sm font-medium">Nome da Agência</label>
                     <Input
-                      placeholder="Digite o nome da empresa"
-                      value={newCompanyName}
-                      onChange={(e) => setNewCompanyName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Descrição</label>
-                    <Textarea
-                      placeholder="Descrição da empresa (opcional)"
-                      value={newCompanyDescription}
-                      onChange={(e) => setNewCompanyDescription(e.target.value)}
+                      placeholder="Digite o nome da agência"
+                      value={newAgencyName}
+                      onChange={(e) => setNewAgencyName(e.target.value)}
                     />
                   </div>
                   <div>
@@ -418,8 +420,8 @@ const CompanyManagement = () => {
                     <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button onClick={handleCreateCompany}>
-                      Criar Empresa
+                    <Button onClick={handleCreateAgency}>
+                      Criar Agência
                     </Button>
                   </div>
                 </div>
@@ -427,47 +429,50 @@ const CompanyManagement = () => {
             </Dialog>
           </div>
 
-          {/* Companies Table */}
+          {/* Agencies Table */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Empresa</TableHead>
+                  <TableHead className="min-w-[200px]">Agência</TableHead>
                   <TableHead className="min-w-[200px]">Proprietário</TableHead>
                   <TableHead className="min-w-[100px]">Colaboradores</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
                   <TableHead className="min-w-[100px]">Criada em</TableHead>
                   <TableHead className="min-w-[150px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCompanies.map((company) => (
-                  <TableRow key={company.id}>
+                {filteredAgencies.map((agency) => (
+                  <TableRow key={agency.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium text-sm">{company.name}</p>
-                        {company.description && (
-                          <p className="text-xs text-gray-600">{company.description}</p>
-                        )}
-                        <p className="text-xs text-gray-400">ID: {company.id.slice(0, 8)}...</p>
+                        <p className="font-medium text-sm">{agency.name}</p>
+                        <p className="text-xs text-gray-400">ID: {agency.id.slice(0, 8)}...</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="text-sm">{company.owner_email}</p>
-                        {company.owner_name && (
-                          <p className="text-xs text-gray-600">{company.owner_name}</p>
+                        <p className="text-sm">{agency.owner_email}</p>
+                        {agency.owner_name && agency.owner_name !== 'N/A' && (
+                          <p className="text-xs text-gray-600">{agency.owner_name}</p>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">
                         <Users className="h-3 w-3 mr-1" />
-                        {company.collaborators_count}
+                        {agency.collaborators_count}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={agency.status === 'active' ? 'default' : 'secondary'}>
+                        {agency.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <p className="text-sm">
-                        {new Date(company.created_at).toLocaleDateString('pt-BR')}
+                        {new Date(agency.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     </TableCell>
                     <TableCell>
@@ -475,7 +480,7 @@ const CompanyManagement = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => openEditDialog(company)}
+                          onClick={() => openEditDialog(agency)}
                           className="text-xs"
                         >
                           <Edit className="h-3 w-3 mr-1" />
@@ -484,7 +489,7 @@ const CompanyManagement = () => {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleDeleteCompany(company.id)}
+                          onClick={() => handleDeleteAgency(agency.id)}
                           className="text-xs"
                         >
                           <Trash2 className="h-3 w-3 mr-1" />
@@ -498,38 +503,30 @@ const CompanyManagement = () => {
             </Table>
           </div>
 
-          {filteredCompanies.length === 0 && !loading && (
+          {filteredAgencies.length === 0 && !loading && (
             <div className="text-center py-8">
               <Building2 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500">
-                {companies.length === 0 ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa corresponde à busca'}
+                {agencies.length === 0 ? 'Nenhuma agência encontrada' : 'Nenhuma agência corresponde à busca'}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Edit Company Dialog */}
+      {/* Edit Agency Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Empresa</DialogTitle>
+            <DialogTitle>Editar Agência</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Nome da Empresa</label>
+              <label className="text-sm font-medium">Nome da Agência</label>
               <Input
-                placeholder="Digite o nome da empresa"
-                value={editCompanyName}
-                onChange={(e) => setEditCompanyName(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Descrição</label>
-              <Textarea
-                placeholder="Descrição da empresa (opcional)"
-                value={editCompanyDescription}
-                onChange={(e) => setEditCompanyDescription(e.target.value)}
+                placeholder="Digite o nome da agência"
+                value={editAgencyName}
+                onChange={(e) => setEditAgencyName(e.target.value)}
               />
             </div>
             <div>
@@ -551,7 +548,7 @@ const CompanyManagement = () => {
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleEditCompany}>
+              <Button onClick={handleEditAgency}>
                 Salvar Alterações
               </Button>
             </div>
