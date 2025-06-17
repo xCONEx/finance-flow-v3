@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Card,
@@ -34,6 +35,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import CompanyManagement from './CompanyManagement';
 
 type SubscriptionPlan = 'free' | 'basic' | 'premium' | 'enterprise' | 'enterprise-annual';
 type UserType = 'individual' | 'company_owner' | 'employee' | 'admin';
@@ -383,8 +385,9 @@ const AdminPanel = () => {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid grid-cols-2 md:grid-cols-3 gap-1 md:gap-2 w-full">
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-1 md:gap-2 w-full">
           <TabsTrigger value="users" className="text-xs md:text-sm">Usuários</TabsTrigger>
+          <TabsTrigger value="companies" className="text-xs md:text-sm">Empresas</TabsTrigger>
           <TabsTrigger value="admins" className="text-xs md:text-sm">Administradores</TabsTrigger>
           <TabsTrigger value="analytics" className="text-xs md:text-sm">Analytics</TabsTrigger>
         </TabsList>
@@ -531,6 +534,11 @@ const AdminPanel = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* COMPANIES */}
+        <TabsContent value="companies" className="space-y-4">
+          <CompanyManagement />
         </TabsContent>
 
         {/* ADMINS */}
