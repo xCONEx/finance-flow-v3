@@ -13,18 +13,32 @@ interface Agency {
   is_owner: boolean;
 }
 
+interface PendingInvitation {
+  id: string;
+  agency_id: string;
+  agency_name: string;
+  agency_description?: string;
+  invited_by_name: string;
+  role: string;
+  invited_at: string;
+  expires_at: string;
+}
+
 interface AgencyContextType {
   // Estados
   agencies: Agency[];
   currentContext: 'individual' | Agency;
   loading: boolean;
+  pendingInvitations: PendingInvitation[];
   
   // Ações
   setCurrentContext: (context: 'individual' | Agency) => void;
   createAgency: (name: string, description?: string) => Promise<boolean>;
   inviteCollaborator: (agencyId: string, email: string) => Promise<boolean>;
   acceptInvitation: (invitationId: string) => Promise<boolean>;
+  rejectInvitation: (invitationId: string) => Promise<boolean>;
   loadUserAgencies: () => Promise<void>;
+  loadPendingInvitations: () => Promise<void>;
 }
 
 const AgencyContext = createContext<AgencyContextType | undefined>(undefined);
@@ -41,6 +55,7 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [currentContext, setCurrentContext] = useState<'individual' | Agency>('individual');
   const [loading, setLoading] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   
   const { user, isAuthenticated } = useSupabaseAuth();
   const { toast } = useToast();
@@ -51,7 +66,6 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     
     try {
       setLoading(true);
-      // Usar any temporariamente até que os tipos RPC sejam gerados
       const { data, error } = await (supabase as any).rpc('get_user_agencies');
       
       if (error) {
@@ -59,7 +73,6 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return;
       }
       
-      // Verificar se data não é null e é um array
       const agenciesData = data && Array.isArray(data) ? data : [];
       setAgencies(agenciesData);
       console.log('🏢 Agências carregadas:', agenciesData.length);
@@ -67,6 +80,26 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.error('❌ Erro ao carregar agências:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Carregar convites pendentes
+  const loadPendingInvitations = async () => {
+    if (!user || !isAuthenticated) return;
+    
+    try {
+      const { data, error } = await (supabase as any).rpc('get_pending_invitations');
+      
+      if (error) {
+        console.error('❌ Erro ao carregar convites:', error);
+        return;
+      }
+      
+      const invitationsData = data && Array.isArray(data) ? data : [];
+      setPendingInvitations(invitationsData);
+      console.log('📧 Convites pendentes:', invitationsData.length);
+    } catch (error) {
+      console.error('❌ Erro ao carregar convites:', error);
     }
   };
 
@@ -90,7 +123,6 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return false;
       }
       
-      // Recarregar agências
       await loadUserAgencies();
       
       toast({
@@ -156,8 +188,8 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return false;
       }
       
-      // Recarregar agências
       await loadUserAgencies();
+      await loadPendingInvitations();
       
       toast({
         title: "Convite Aceito",
@@ -171,12 +203,47 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  // Carregar agências quando usuario logar
+  // Rejeitar convite
+  const rejectInvitation = async (invitationId: string): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+      const { data, error } = await (supabase as any).rpc('reject_agency_invitation', {
+        invitation_id: invitationId
+      });
+      
+      if (error) {
+        console.error('❌ Erro ao rejeitar convite:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao rejeitar convite",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      await loadPendingInvitations();
+      
+      toast({
+        title: "Convite Rejeitado",
+        description: "Convite rejeitado com sucesso"
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Erro ao rejeitar convite:', error);
+      return false;
+    }
+  };
+
+  // Carregar dados quando usuario logar
   useEffect(() => {
     if (user && isAuthenticated) {
       loadUserAgencies();
+      loadPendingInvitations();
     } else {
       setAgencies([]);
+      setPendingInvitations([]);
       setCurrentContext('individual');
     }
   }, [user, isAuthenticated]);
@@ -185,11 +252,14 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     agencies,
     currentContext,
     loading,
+    pendingInvitations,
     setCurrentContext,
     createAgency,
     inviteCollaborator,
     acceptInvitation,
-    loadUserAgencies
+    rejectInvitation,
+    loadUserAgencies,
+    loadPendingInvitations
   };
 
   return (
