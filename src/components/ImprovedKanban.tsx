@@ -20,15 +20,16 @@ import {
   Eye,
   CheckCircle,
   AlertTriangle,
-  Play,
   Scissors,
   Search,
   FileVideo,
-  ExternalLink
+  ExternalLink,
+  Building2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
-import { useApp } from '../contexts/AppContext';
+import { useAgency } from '../contexts/AgencyContext';
+import { supabase } from '@/integrations/supabase/client';
 
 // Definições de tipos específicas para projetos audiovisuais
 interface VideoProject {
@@ -96,19 +97,46 @@ const ImprovedKanban = () => {
   });
 
   const { user, profile } = useSupabaseAuth();
-  const { projects, addProject, updateProject, deleteProject, loading } = useApp();
+  const { currentContext } = useAgency();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user && !loading) {
+    if (user) {
       loadProjectData();
     }
-  }, [user, projects, loading]);
+  }, [user, currentContext]);
 
-  const loadProjectData = () => {
+  const loadProjectData = async () => {
+    if (!user?.id) return;
+    
     try {
-      console.log('📦 Carregando projetos do contexto:', projects.length);
+      setIsLoading(true);
+      console.log('📦 Carregando projetos para contexto:', currentContext);
       
+      let kanbanData;
+      
+      if (currentContext === 'individual') {
+        // Carregar kanban individual
+        const { data, error } = await (supabase as any).rpc('get_user_kanban');
+        if (error) {
+          console.error('❌ Erro ao carregar kanban individual:', error);
+          kanbanData = [];
+        } else {
+          kanbanData = data && data.length > 0 ? JSON.parse(data[0].board_data || '[]') : [];
+        }
+      } else {
+        // Carregar kanban da agência
+        const { data, error } = await (supabase as any).rpc('get_agency_kanban', {
+          target_agency_id: currentContext.id
+        });
+        if (error) {
+          console.error('❌ Erro ao carregar kanban da agência:', error);
+          kanbanData = [];
+        } else {
+          kanbanData = data && data.length > 0 ? JSON.parse(data[0].board_data || '[]') : [];
+        }
+      }
+
       // Criar board inicial com colunas específicas para projetos audiovisuais
       const initialBoard: ProjectBoard = {
         'filmado': {
@@ -116,28 +144,28 @@ const ImprovedKanban = () => {
           color: 'bg-blue-50 border-blue-200',
           icon: Video,
           description: 'Material gravado, aguardando edição',
-          projects: projects.filter(p => p.status === 'filmado') || []
+          projects: kanbanData.filter((p: VideoProject) => p.status === 'filmado') || []
         },
         'edicao': {
           title: 'Em Edição',
           color: 'bg-orange-50 border-orange-200',
           icon: Scissors,
           description: 'Projeto sendo editado',
-          projects: projects.filter(p => p.status === 'edicao') || []
+          projects: kanbanData.filter((p: VideoProject) => p.status === 'edicao') || []
         },
         'revisao': {
           title: 'Revisão',
           color: 'bg-yellow-50 border-yellow-200',
           icon: Eye,
           description: 'Aguardando aprovação do cliente',
-          projects: projects.filter(p => p.status === 'revisao') || []
+          projects: kanbanData.filter((p: VideoProject) => p.status === 'revisao') || []
         },
         'entregue': {
           title: 'Entregue',
           color: 'bg-green-50 border-green-200',
           icon: CheckCircle,
           description: 'Projeto finalizado e entregue',
-          projects: projects.filter(p => p.status === 'entregue') || []
+          projects: kanbanData.filter((p: VideoProject) => p.status === 'entregue') || []
         }
       };
 
@@ -147,6 +175,46 @@ const ImprovedKanban = () => {
       console.error('❌ Erro ao carregar projetos:', error);
       setIsLoading(false);
     }
+  };
+
+  const saveProjectData = async (projectsData: VideoProject[]) => {
+    if (!user?.id) return;
+    
+    try {
+      if (currentContext === 'individual') {
+        // Salvar kanban individual
+        const { error } = await (supabase as any).rpc('save_user_kanban', {
+          kanban_data: JSON.stringify(projectsData)
+        });
+        if (error) {
+          console.error('❌ Erro ao salvar kanban individual:', error);
+          throw error;
+        }
+      } else {
+        // Salvar kanban da agência
+        const { error } = await (supabase as any).rpc('save_agency_kanban', {
+          target_agency_id: currentContext.id,
+          kanban_data: JSON.stringify(projectsData)
+        });
+        if (error) {
+          console.error('❌ Erro ao salvar kanban da agência:', error);
+          throw error;
+        }
+      }
+      
+      console.log('💾 Kanban salvo com sucesso para contexto:', currentContext);
+    } catch (error) {
+      console.error('❌ Erro ao salvar kanban:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar alterações",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getAllProjects = () => {
+    return Object.values(board).flatMap(column => column.projects);
   };
 
   const handleDragEnd = async (result: any) => {
@@ -180,22 +248,18 @@ const ImprovedKanban = () => {
 
       setBoard(newBoard);
       
-      // Atualizar no contexto
-      try {
-        await updateProject(movedProject.id, { status: movedProject.status });
-        
-        toast({
-          title: "Projeto Movido",
-          description: `"${movedProject.title}" movido para ${destColumn.title}`
-        });
-      } catch (error) {
-        console.error('❌ Erro ao atualizar projeto:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao mover projeto",
-          variant: "destructive"
-        });
+      // Salvar alterações
+      const allProjects = getAllProjects();
+      const updatedProject = allProjects.find(p => p.id === movedProject.id);
+      if (updatedProject) {
+        updatedProject.status = movedProject.status;
+        await saveProjectData(allProjects);
       }
+      
+      toast({
+        title: "Projeto Movido",
+        description: `"${movedProject.title}" movido para ${destColumn.title}`
+      });
     }
   };
 
@@ -226,7 +290,19 @@ const ImprovedKanban = () => {
         status: selectedColumn as VideoProject['status']
       };
 
-      await addProject(project);
+      // Atualizar board local
+      const newBoard = {
+        ...board,
+        [selectedColumn]: {
+          ...board[selectedColumn],
+          projects: [...board[selectedColumn].projects, project]
+        }
+      };
+      setBoard(newBoard);
+
+      // Salvar no banco
+      const allProjects = [...getAllProjects(), project];
+      await saveProjectData(allProjects);
 
       // Limpar formulário
       setNewProject({
@@ -275,8 +351,19 @@ const ImprovedKanban = () => {
     };
 
     try {
-      await updateProject(selectedProject.id, { deliveryLinks: updatedProject.deliveryLinks });
+      // Atualizar projeto no board
+      const newBoard = { ...board };
+      Object.keys(newBoard).forEach(columnId => {
+        newBoard[columnId].projects = newBoard[columnId].projects.map(p =>
+          p.id === selectedProject.id ? updatedProject : p
+        );
+      });
+      setBoard(newBoard);
       setSelectedProject(updatedProject);
+
+      // Salvar alterações
+      const allProjects = Object.values(newBoard).flatMap(column => column.projects);
+      await saveProjectData(allProjects);
 
       // Limpar formulário
       setNewDeliveryLink({
@@ -350,7 +437,7 @@ const ImprovedKanban = () => {
     );
   };
 
-  if (isLoading || loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="text-center">
@@ -369,9 +456,20 @@ const ImprovedKanban = () => {
           <h2 className="text-3xl font-bold flex items-center gap-2">
             <FileVideo className="text-purple-600" />
             Gestão de Projetos Audiovisuais
+            {currentContext !== 'individual' && (
+              <Badge className="bg-blue-100 text-blue-800 ml-2">
+                <Building2 className="h-3 w-3 mr-1" />
+                {currentContext.name}
+              </Badge>
+            )}
           </h2>
           <p className="text-gray-600">
             Organize seus projetos de filmagem e edição
+            {currentContext !== 'individual' && (
+              <span className="text-blue-600 ml-1">
+                • Colaborativo
+              </span>
+            )}
           </p>
         </div>
 
@@ -400,6 +498,11 @@ const ImprovedKanban = () => {
                 <DialogTitle>Criar Novo Projeto</DialogTitle>
                 <DialogDescription>
                   Preencha as informações do projeto audiovisual
+                  {currentContext !== 'individual' && (
+                    <span className="text-blue-600">
+                      {' '}• Agência: {currentContext.name}
+                    </span>
+                  )}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -654,6 +757,12 @@ const ImprovedKanban = () => {
               <span className="flex items-center gap-2">
                 <Video className="h-5 w-5" />
                 {selectedProject?.title}
+                {currentContext !== 'individual' && (
+                  <Badge className="bg-blue-100 text-blue-800">
+                    <Building2 className="h-3 w-3 mr-1" />
+                    {currentContext.name}
+                  </Badge>
+                )}
               </span>
               <div className="flex gap-2">
                 <Button
