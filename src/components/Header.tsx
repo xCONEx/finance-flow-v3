@@ -9,9 +9,6 @@ import { useAgency } from '../contexts/AgencyContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import { useTheme } from '../contexts/ThemeContext';
 
-import ContextSelector from './ContextSelector';
-
-
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -70,9 +67,9 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
     return (
       <div className="flex items-center gap-2">
         <Building2 className="h-4 w-4" />
-        <span>{currentContext.name}</span>
+        <span className="truncate max-w-[120px]">{currentContext.name}</span>
         {currentContext.is_owner && (
-          <span className="text-xs bg-purple-100 text-purple-800 px-1 rounded">Owner</span>
+          <span className="text-xs bg-purple-100 text-purple-800 px-1 rounded flex-shrink-0">Owner</span>
         )}
       </div>
     );
@@ -88,13 +85,13 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                 <span className="text-white font-bold text-sm">FF</span>
               </div>
           </div>
-          <span className={`font-bold text-xl bg-gradient-to-r ${currentTheme.primary} bg-clip-text text-transparent`}>
+          <span className={`font-bold text-xl bg-gradient-to-r ${currentTheme.primary} bg-clip-text text-transparent hidden sm:block`}>
                 FinanceFlow
               </span>
         </div>
 
         {/* Menu de navegação (só desktop) */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden lg:flex items-center gap-1">
           {navigationItems.map((item) => (
             <Button
               key={item.id}
@@ -108,7 +105,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
               onClick={() => onTabChange(item.id)}
             >
               <item.icon className="h-4 w-4" />
-              {item.label}
+              <span className="hidden xl:block">{item.label}</span>
             </Button>
           ))}
         </nav>
@@ -118,7 +115,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
           {/* Seletor de Contexto Individual/Empresa */}
           {hasEnterprisePlan && agencies.length > 0 && (
             <Select value={getCurrentContextValue()} onValueChange={handleContextChange}>
-              <SelectTrigger className="w-auto min-w-[140px] h-9">
+              <SelectTrigger className="w-auto min-w-[120px] max-w-[160px] h-9">
                 <SelectValue>
                   {getCurrentContextLabel()}
                 </SelectValue>
@@ -134,9 +131,9 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                   <SelectItem key={agency.id} value={agency.id}>
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4" />
-                      <span>{agency.name}</span>
+                      <span className="truncate max-w-[100px]">{agency.name}</span>
                       {agency.is_owner && (
-                        <span className="text-xs bg-purple-100 text-purple-800 px-1 rounded ml-1">
+                        <span className="text-xs bg-purple-100 text-purple-800 px-1 rounded ml-1 flex-shrink-0">
                           Owner
                         </span>
                       )}
@@ -157,12 +154,13 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
               <Shield className="h-4 w-4" />
             </Button>
           )}
-<ContextSelector />
+
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleValuesVisibility}
             title={valuesHidden ? "Mostrar valores" : "Ocultar valores"}
+            className="hidden sm:flex"
           >
             {valuesHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </Button>
@@ -171,6 +169,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
             variant={activeTab === 'settings' ? "default" : "ghost"}
             size="sm"
             onClick={() => onTabChange('settings')}
+            className="hidden sm:flex"
           >
             <Settings className="h-4 w-4" />
           </Button>
