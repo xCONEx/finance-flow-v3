@@ -10,12 +10,11 @@ import {
   Plus, 
   Building2,
   Crown,
-  Mail,
   Trash2,
   AlertTriangle,
   UserPlus,
-  Search,
-  RefreshCw
+  RefreshCw,
+  User
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
@@ -229,8 +228,8 @@ const CompanyDashboard = () => {
   };
 
   // Remover colaborador
-  const handleRemoveCollaborator = async (collaboratorId: string) => {
-    if (!confirm('Tem certeza que deseja remover este colaborador?')) {
+  const handleRemoveCollaborator = async (collaboratorId: string, collaboratorEmail: string) => {
+    if (!confirm(`Tem certeza que deseja remover ${collaboratorEmail} da equipe?`)) {
       return;
     }
 
@@ -251,7 +250,7 @@ const CompanyDashboard = () => {
 
       toast({
         title: 'Sucesso',
-        description: 'Colaborador removido com sucesso'
+        description: `${collaboratorEmail} foi removido da equipe`
       });
 
       if (selectedAgency) {
@@ -320,7 +319,7 @@ const CompanyDashboard = () => {
                 <Building2 className="h-8 w-8 text-purple-600" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
                   Gestão de Equipe
                 </h1>
                 <p className="text-gray-600">Gerencie sua equipe e colaboradores</p>
@@ -353,7 +352,7 @@ const CompanyDashboard = () => {
               <Building2 className="h-8 w-8 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
                 Gestão de Equipe
               </h1>
               <p className="text-gray-600">Gerencie sua equipe e colaboradores</p>
@@ -410,7 +409,7 @@ const CompanyDashboard = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Crown className="h-5 w-5 text-yellow-600" />
-                    {selectedAgency.name}
+                    <span className="truncate">{selectedAgency.name}</span>
                   </CardTitle>
                   <Badge variant="secondary">Proprietário</Badge>
                 </div>
@@ -456,43 +455,48 @@ const CompanyDashboard = () => {
                           loadCollaborators(selectedAgency.id);
                         }
                       }}
+                      className="hidden sm:flex"
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Atualizar
                     </Button>
                     <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button size="sm">
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Adicionar
+                        <Button size="sm" className="flex items-center gap-2">
+                          <div className="relative">
+                            <User className="h-4 w-4" />
+                            <Plus className="h-3 w-3 absolute -top-1 -right-1 bg-white rounded-full" />
+                          </div>
+                          <span className="hidden sm:inline">Adicionar</span>
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="mx-4 max-w-md">
                         <DialogHeader>
                           <DialogTitle>Adicionar Colaborador</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="bg-gray-50 p-3 rounded-lg">
                             <p className="text-sm text-gray-600">Empresa:</p>
-                            <p className="font-medium">{selectedAgency.name}</p>
+                            <p className="font-medium truncate">{selectedAgency.name}</p>
                           </div>
-                          <div>
+                          <div className="space-y-2">
                             <label className="text-sm font-medium">Email do Colaborador</label>
                             <Input
                               type="email"
                               placeholder="Digite o email do colaborador"
                               value={inviteEmail}
                               onChange={(e) => setInviteEmail(e.target.value)}
+                              className="w-full"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500">
                               O usuário deve estar cadastrado no sistema
                             </p>
                           </div>
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
+                          <div className="flex flex-col sm:flex-row justify-end gap-2">
+                            <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)} className="w-full sm:w-auto">
                               Cancelar
                             </Button>
-                            <Button onClick={handleInviteCollaborator}>
+                            <Button onClick={handleInviteCollaborator} className="w-full sm:w-auto">
                               <UserPlus className="h-4 w-4 mr-2" />
                               Adicionar
                             </Button>
@@ -513,29 +517,30 @@ const CompanyDashboard = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {collaborators.map((collaborator) => (
-                      <div key={collaborator.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-gray-100 rounded-full">
-                            <Users className="h-4 w-4 text-gray-600" />
+                      <div key={collaborator.id} className="flex items-center justify-between p-3 sm:p-4 border rounded-lg bg-white">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="p-2 bg-gray-100 rounded-full flex-shrink-0">
+                            <User className="h-4 w-4 text-gray-600" />
                           </div>
-                          <div>
-                            <p className="font-medium">{collaborator.user_email}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{collaborator.user_email}</p>
                             {collaborator.user_name && collaborator.user_name !== 'N/A' && (
-                              <p className="text-sm text-gray-600">{collaborator.user_name}</p>
+                              <p className="text-sm text-gray-600 truncate">{collaborator.user_name}</p>
                             )}
                             <p className="text-xs text-gray-400">
                               Adicionado em {new Date(collaborator.added_at).toLocaleDateString('pt-BR')}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{collaborator.role}</Badge>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Badge variant="outline" className="hidden sm:inline-flex">{collaborator.role}</Badge>
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => handleRemoveCollaborator(collaborator.id)}
+                            onClick={() => handleRemoveCollaborator(collaborator.id, collaborator.user_email || '')}
+                            className="p-2"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
