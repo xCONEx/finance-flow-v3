@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Card,
@@ -30,7 +29,9 @@ import {
   UserPlus,
   Edit,
   Ban,
-  UserCheck
+  UserCheck,
+  Trash2,
+  UserMinus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -435,7 +436,7 @@ const AdminPanel = () => {
             </CardContent>
           </Card>
 
-          {/* Tabela responsiva */}
+          {/* Tabela responsiva com botões minimalistas */}
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -446,7 +447,7 @@ const AdminPanel = () => {
                       <TableHead className="min-w-[100px]">Status</TableHead>
                       <TableHead className="min-w-[100px]">Plano</TableHead>
                       <TableHead className="min-w-[120px]">Tipo</TableHead>
-                      <TableHead className="min-w-[200px]">Ações</TableHead>
+                      <TableHead className="min-w-[120px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -500,23 +501,18 @@ const AdminPanel = () => {
                           </Select>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col md:flex-row gap-1 md:gap-2">
+                          <div className="flex gap-1">
                             <Button
                               variant={user.banned ? "outline" : "destructive"}
                               size="sm"
                               onClick={() => handleBanUser(user.id, !user.banned)}
-                              className="text-xs"
+                              className="p-2"
+                              title={user.banned ? "Desbanir usuário" : "Banir usuário"}
                             >
                               {user.banned ? (
-                                <>
-                                  <UserCheck className="h-3 w-3 mr-1" />
-                                  Desbanir
-                                </>
+                                <UserCheck className="h-4 w-4" />
                               ) : (
-                                <>
-                                  <Ban className="h-3 w-3 mr-1" />
-                                  Banir
-                                </>
+                                <Ban className="h-4 w-4" />
                               )}
                             </Button>
                           </div>
