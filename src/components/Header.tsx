@@ -160,7 +160,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
             size="sm"
             onClick={toggleValuesVisibility}
             title={valuesHidden ? "Mostrar valores" : "Ocultar valores"}
-            className="hidden sm:flex"
+            className="flex"
           >
             {valuesHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </Button>
@@ -169,7 +169,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
             variant={activeTab === 'settings' ? "default" : "ghost"}
             size="sm"
             onClick={() => onTabChange('settings')}
-            className="hidden sm:flex"
+            className="flex"
           >
             <Settings className="h-4 w-4" />
           </Button>
