@@ -8,6 +8,7 @@ import { SupabaseAuthProvider } from "./contexts/SupabaseAuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { PrivacyProvider } from "./contexts/PrivacyContext";
 import { AppProvider } from "./contexts/AppContext";
+import { AgencyProvider } from "./contexts/AgencyContext";
 import MainApp from "./components/MainApp";
 import LoginPage from "./components/LoginPage";
 import NotFound from "./pages/NotFound";
@@ -21,21 +22,23 @@ const App = () => (
       <SupabaseAuthProvider>
         <ThemeProvider>
           <PrivacyProvider>
-            <AppProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/*" element={
-                    <ProtectedRoute>
-                      <MainApp />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </AppProvider>
+            <AgencyProvider>
+              <AppProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/*" element={
+                      <ProtectedRoute>
+                        <MainApp />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </AppProvider>
+            </AgencyProvider>
           </PrivacyProvider>
         </ThemeProvider>
       </SupabaseAuthProvider>
