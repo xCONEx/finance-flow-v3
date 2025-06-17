@@ -9,6 +9,9 @@ import { useAgency } from '../contexts/AgencyContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import { useTheme } from '../contexts/ThemeContext';
 
+import ContextSelector from './ContextSelector';
+
+
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -154,7 +157,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
               <Shield className="h-4 w-4" />
             </Button>
           )}
-
+<ContextSelector />
           <Button
             variant="ghost"
             size="sm"
