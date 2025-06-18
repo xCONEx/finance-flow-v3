@@ -13,7 +13,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 interface Company {
   id: string;
   name: string;
-  owner_uid: string;
+  owner_id: string; // CORRIGIDO: usar owner_id
   owner_email: string;
   owner_name?: string;
   status: string;
@@ -43,18 +43,18 @@ const EditCompanyDialog: React.FC<EditCompanyDialogProps> = ({
   users,
   onEditCompany
 }) => {
-  const [editCompanyName, setEditCompanyName] = useState('');
+  const [editName, setEditName] = useState('');
   const [editOwnerEmail, setEditOwnerEmail] = useState('');
 
   useEffect(() => {
     if (company) {
-      setEditCompanyName(company.name);
+      setEditName(company.name);
       setEditOwnerEmail(company.owner_email);
     }
   }, [company]);
 
   const handleEdit = async () => {
-    await onEditCompany(editCompanyName, editOwnerEmail);
+    await onEditCompany(editName, editOwnerEmail);
     onOpenChange(false);
   };
 
@@ -69,8 +69,8 @@ const EditCompanyDialog: React.FC<EditCompanyDialogProps> = ({
             <label className="text-sm font-medium">Nome da Empresa</label>
             <Input
               placeholder="Digite o nome da empresa"
-              value={editCompanyName}
-              onChange={(e) => setEditCompanyName(e.target.value)}
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
             />
           </div>
           <div>
