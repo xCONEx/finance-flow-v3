@@ -6,21 +6,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Users,
-  UserPlus,
-  UserMinus
-} from 'lucide-react';
+import { Users, UserPlus, Trash2, User } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -61,94 +49,81 @@ const CollaboratorsDialog: React.FC<CollaboratorsDialogProps> = ({
   onRemoveCollaborator,
   onInviteCollaborator
 }) => {
+  if (!company) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl mx-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Colaboradores - {company?.name}
+            Colaboradores - {company.name}
           </DialogTitle>
         </DialogHeader>
+        
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Total: {collaborators.length} colaborador(es)
+              {collaborators.length} colaborador{collaborators.length !== 1 ? 'es' : ''}
             </p>
             <Button
               size="sm"
-              onClick={() => company && onInviteCollaborator(company)}
+              onClick={() => onInviteCollaborator(company)}
               className="flex items-center gap-2"
             >
               <UserPlus className="h-4 w-4" />
-              <span className="hidden sm:inline">Adicionar</span>
+              Adicionar
             </Button>
           </div>
-          
+
           {loadingCollaborators ? (
-            <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
-              <p className="text-sm text-gray-600">Carregando colaboradores...</p>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Carregando colaboradores...</p>
             </div>
-          ) : collaborators.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Colaborador</TableHead>
-                    <TableHead className="hidden sm:table-cell">Cargo</TableHead>
-                    <TableHead className="hidden md:table-cell">Adicionado</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {collaborators.map((collab) => (
-                    <TableRow key={collab.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-sm">{collab.email}</p>
-                          {collab.name && collab.name !== 'N/A' && (
-                            <p className="text-xs text-gray-600">{collab.name}</p>
-                          )}
-                          <p className="text-xs text-gray-500 sm:hidden">{collab.role}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Badge variant="secondary" className="text-xs">
-                          {collab.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <p className="text-sm">
-                          {new Date(collab.added_at).toLocaleDateString('pt-BR')}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => onRemoveCollaborator(collab.id, collab.email)}
-                          className="p-2"
-                          title="Remover colaborador"
-                        >
-                          <UserMinus className="h-3 w-3" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
+          ) : collaborators.length === 0 ? (
             <div className="text-center py-8">
               <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500">Nenhum colaborador encontrado</p>
-              <Button
-                className="mt-4"
-                onClick={() => company && onInviteCollaborator(company)}
-              >
-                Adicionar primeiro colaborador
-              </Button>
+              <p className="text-sm text-gray-400 mt-2">
+                Adicione pessoas para colaborar nesta empresa
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {collaborators.map((collaborator) => (
+                <div
+                  key={collaborator.id}
+                  className="flex items-center justify-between p-3 border rounded-lg bg-white"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="p-2 bg-gray-100 rounded-full flex-shrink-0">
+                      <User className="h-4 w-4 text-gray-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{collaborator.email}</p>
+                      {collaborator.name && collaborator.name !== 'N/A' && (
+                        <p className="text-sm text-gray-600 truncate">{collaborator.name}</p>
+                      )}
+                      <p className="text-xs text-gray-400">
+                        Adicionado em {new Date(collaborator.added_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge variant="outline">{collaborator.role}</Badge>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => onRemoveCollaborator(collaborator.id, collaborator.email)}
+                      className="p-2"
+                      title="Remover colaborador"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
