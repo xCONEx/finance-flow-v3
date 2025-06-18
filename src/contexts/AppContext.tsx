@@ -176,11 +176,10 @@ export const useApp = () => {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, user } = useSupabaseAuth();
-  const { scheduleNotification, sendImmediateNotification } = useNotifications();
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Data state
+  // Data state - declare monthlyCosts before using it
   const [tasks, setTasks] = useState<Task[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [monthlyCosts, setMonthlyCosts] = useState<MonthlyCost[]>([]);
@@ -189,6 +188,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [projects, setProjects] = useState<VideoProject[]>([]);
   const [notifications, setNotifications] = useState<CostNotification[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Now we can safely use monthlyCosts in useNotifications
+  const { scheduleNotification, sendImmediateNotification } = useNotifications(monthlyCosts);
 
   useEffect(() => {
     if (!isAuthenticated) {
