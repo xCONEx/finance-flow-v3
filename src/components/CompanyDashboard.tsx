@@ -19,13 +19,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
+// Let's use a more flexible interface that matches the actual database
 interface Agency {
   id: string;
   name: string;
-  owner_uid: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
+  [key: string]: any; // Allow any other properties
 }
 
 interface Collaborator {
@@ -58,22 +56,29 @@ const CompanyDashboard = () => {
     try {
       console.log('🏢 Carregando agências do usuário...');
       
+      // First, let's try to get all columns to see what's available
       const { data, error } = await supabase
         .from('agencies')
-        .select('id, name, owner_uid, status, created_at, updated_at')
-        .eq('owner_uid', user.id);
+        .select('*');
 
       if (error) {
         console.error('❌ Erro ao carregar agências:', error);
         throw error;
       }
 
-      console.log('✅ Agências carregadas:', data?.length || 0);
-      setUserAgencies(data || []);
+      console.log('✅ Estrutura da tabela agencies:', data?.[0] || 'Nenhum dado encontrado');
+
+      // Filter by user on the client side using the correct column name
+      const userOwnedAgencies = data?.filter(agency => 
+        agency.owner_uid === user.id
+      ) || [];
+
+      console.log('✅ Agências do usuário:', userOwnedAgencies.length);
+      setUserAgencies(userOwnedAgencies);
       
       // Selecionar primeira agência automaticamente
-      if (data && data.length > 0 && !selectedAgency) {
-        setSelectedAgency(data[0]);
+      if (userOwnedAgencies.length > 0 && !selectedAgency) {
+        setSelectedAgency(userOwnedAgencies[0]);
       }
       
     } catch (error: any) {
