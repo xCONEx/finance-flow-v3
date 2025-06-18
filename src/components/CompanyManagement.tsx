@@ -94,7 +94,7 @@ const CompanyManagement = () => {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
 
-  // Load companies usando owner_uid conforme schema
+  // Load companies using owner_uid correctly
   const loadCompanies = async () => {
     try {
       setLoading(true);
@@ -116,8 +116,12 @@ const CompanyManagement = () => {
         throw agenciesError;
       }
 
+      console.log('🏢 Agências encontradas:', agencies?.length || 0);
+
       // Buscar dados dos proprietários
-      const ownerIds = agencies?.map(a => a.owner_uid) || [];
+      const ownerIds = [...new Set(agencies?.map(a => a.owner_uid) || [])];
+      console.log('👥 Buscando owners:', ownerIds.length);
+      
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email, name')
@@ -144,7 +148,7 @@ const CompanyManagement = () => {
         return {
           id: agency.id,
           name: agency.name,
-          description: '',
+          description: '', // Campo vazio já que não existe
           owner_uid: agency.owner_uid,
           owner_email: owner?.email || 'Email não encontrado',
           owner_name: owner?.name || owner?.email || 'N/A',
@@ -153,17 +157,19 @@ const CompanyManagement = () => {
         };
       }) || [];
 
-      console.log('✅ Empresas carregadas:', companiesData.length);
+      console.log('✅ Empresas processadas:', companiesData.length);
       setCompanies(companiesData);
       
     } catch (error: any) {
       console.error('❌ Erro completo ao carregar empresas:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao carregar empresas.',
+        description: 'Erro ao carregar empresas: ' + (error?.message || 'Erro desconhecido'),
         variant: 'destructive'
       });
       setCompanies([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -197,7 +203,7 @@ const CompanyManagement = () => {
     }
   };
 
-  // Load collaborators for a company
+  // Load collaborators for a company - FIX the join syntax
   const loadCollaborators = async (companyId: string) => {
     try {
       setLoadingCollaborators(true);
@@ -628,6 +634,11 @@ const CompanyManagement = () => {
     company.owner_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (company.owner_name && company.owner_name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  useEffect(() => {
+    loadCompanies();
+    loadUsers();
+  }, []);
 
   if (loading) {
     return (

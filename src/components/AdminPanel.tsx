@@ -31,7 +31,9 @@ import {
   Ban,
   UserCheck,
   Trash2,
-  UserMinus
+  UserMinus,
+  Download,
+  FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -88,25 +90,22 @@ const AdminPanel = () => {
       
       // Analytics - com verificações de null safety
       const profiles = profilesData || [];
+      const { totalRevenue, planCounts } = calculateRevenue(profiles);
       const totalUsers = profiles.length;
-      const freeUsers = profiles.filter((u: any) => !u.subscription || u.subscription === 'free').length;
-      const premiumUsers = profiles.filter((u: any) => u.subscription === 'premium').length;
-      const basicUsers = profiles.filter((u: any) => u.subscription === 'basic').length;
-      const enterpriseUsers = profiles.filter((u: any) => u.subscription === 'enterprise' || u.subscription === 'enterprise-annual').length;
       const bannedUsers = profiles.filter((u: any) => u.banned).length;
       
       setAnalytics({
         overview: {
           totalUsers,
           totalAgencias: 0,
-          totalRevenue: 0,
+          totalRevenue,
           activeUsers: totalUsers - bannedUsers
         },
         userStats: {
-          freeUsers,
-          premiumUsers,
-          basicUsers,
-          enterpriseUsers,
+          freeUsers: planCounts.freeUsers,
+          premiumUsers: planCounts.premiumUsers,
+          basicUsers: planCounts.basicUsers,
+          enterpriseUsers: planCounts.enterpriseUsers + planCounts.enterpriseAnnualUsers,
           bannedUsers
         }
       });
@@ -128,6 +127,107 @@ const AdminPanel = () => {
       loadData();
     }
   }, [loadData]);
+
+  const calculateRevenue = (profiles: UserProfile[]) => {
+    const planValues = {
+      'free': 0,
+      'basic': 29,
+      'premium': 49,
+      'enterprise': 99,
+      'enterprise-annual': 1990
+    };
+
+    let totalRevenue = 0;
+    const planCounts = {
+      freeUsers: 0,
+      basicUsers: 0,
+      premiumUsers: 0,
+      enterpriseUsers: 0,
+      enterpriseAnnualUsers: 0
+    };
+
+    profiles.forEach(profile => {
+      const plan = profile.subscription || 'free';
+      totalRevenue += planValues[plan as keyof typeof planValues] || 0;
+      
+      switch (plan) {
+        case 'free':
+          planCounts.freeUsers++;
+          break;
+        case 'basic':
+          planCounts.basicUsers++;
+          break;
+        case 'premium':
+          planCounts.premiumUsers++;
+          break;
+        case 'enterprise':
+          planCounts.enterpriseUsers++;
+          break;
+        case 'enterprise-annual':
+          planCounts.enterpriseAnnualUsers++;
+          break;
+      }
+    });
+
+    return { totalRevenue, planCounts };
+  };
+
+  const exportToPDF = async (period: 'monthly' | 'quarterly' | 'annual') => {
+    try {
+      const { totalRevenue, planCounts } = calculateRevenue(users);
+      const totalUsers = users.length;
+      const bannedUsers = users.filter(u => u.banned).length;
+      const activeUsers = totalUsers - bannedUsers;
+      
+      // Create PDF content
+      const content = `
+RELATÓRIO ANALÍTICO - ${period.toUpperCase()}
+Data: ${new Date().toLocaleDateString('pt-BR')}
+
+=== RESUMO GERAL ===
+Total de Usuários: ${totalUsers}
+Usuários Ativos: ${activeUsers}
+Usuários Banidos: ${bannedUsers}
+Receita Total: R$ ${totalRevenue.toLocaleString('pt-BR')}
+
+=== DISTRIBUIÇÃO DE PLANOS ===
+Usuários Free: ${planCounts.freeUsers} (R$ 0)
+Usuários Basic: ${planCounts.basicUsers} (R$ ${(planCounts.basicUsers * 29).toLocaleString('pt-BR')})
+Usuários Premium: ${planCounts.premiumUsers} (R$ ${(planCounts.premiumUsers * 49).toLocaleString('pt-BR')})
+Usuários Enterprise: ${planCounts.enterpriseUsers} (R$ ${(planCounts.enterpriseUsers * 99).toLocaleString('pt-BR')})
+Usuários Enterprise Anual: ${planCounts.enterpriseAnnualUsers} (R$ ${(planCounts.enterpriseAnnualUsers * 1990).toLocaleString('pt-BR')})
+
+=== MÉTRICAS ===
+Taxa de Conversão: ${totalUsers > 0 ? (((planCounts.basicUsers + planCounts.premiumUsers + planCounts.enterpriseUsers + planCounts.enterpriseAnnualUsers) / totalUsers) * 100).toFixed(1) : 0}%
+Receita Média por Usuário: R$ ${totalUsers > 0 ? (totalRevenue / totalUsers).toFixed(2) : '0.00'}
+
+Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
+      `;
+
+      // Create and download the file
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `analytics-${period}-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Sucesso',
+        description: `Relatório ${period} exportado com sucesso`
+      });
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao exportar relatório',
+        variant: 'destructive'
+      });
+    }
+  };
 
   const handleUpdateUserField = async (userId: string, field: string, value: any) => {
     try {
@@ -205,25 +305,22 @@ const AdminPanel = () => {
       
       // Recarregar analytics
       const profiles = users.map(u => u.id === userId ? { ...u, subscription: newPlan } : u);
+      const { totalRevenue, planCounts } = calculateRevenue(profiles);
       const totalUsers = profiles.length;
-      const freeUsers = profiles.filter((u: any) => !u.subscription || u.subscription === 'free').length;
-      const premiumUsers = profiles.filter((u: any) => u.subscription === 'premium').length;
-      const basicUsers = profiles.filter((u: any) => u.subscription === 'basic').length;
-      const enterpriseUsers = profiles.filter((u: any) => u.subscription === 'enterprise' || u.subscription === 'enterprise-annual').length;
       const bannedUsers = profiles.filter((u: any) => u.banned).length;
       
       setAnalytics({
         overview: {
           totalUsers,
           totalAgencias: 0,
-          totalRevenue: 0,
+          totalRevenue,
           activeUsers: totalUsers - bannedUsers
         },
         userStats: {
-          freeUsers,
-          premiumUsers,
-          basicUsers,
-          enterpriseUsers,
+          freeUsers: planCounts.freeUsers,
+          premiumUsers: planCounts.premiumUsers,
+          basicUsers: planCounts.basicUsers,
+          enterpriseUsers: planCounts.enterpriseUsers + planCounts.enterpriseAnnualUsers,
           bannedUsers
         }
       });
@@ -579,6 +676,50 @@ const AdminPanel = () => {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
+          {/* Export buttons */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Exportar Relatórios
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-2">
+                <Button
+                  onClick={() => exportToPDF('monthly')}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Relatório Mensal</span>
+                  <span className="sm:hidden">Mensal</span>
+                </Button>
+                <Button
+                  onClick={() => exportToPDF('quarterly')}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Relatório Trimestral</span>
+                  <span className="sm:hidden">Trimestral</span>
+                </Button>
+                <Button
+                  onClick={() => exportToPDF('annual')}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Relatório Anual</span>
+                  <span className="sm:hidden">Anual</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
@@ -636,7 +777,7 @@ const AdminPanel = () => {
                   <div className="flex justify-between text-sm">
                     <span>Receita Estimada:</span>
                     <span className="font-bold text-purple-600">
-                      R$ {((basicUsers * 29) + (premiumUsers * 49) + (enterpriseUsers * 99)).toLocaleString('pt-BR')}
+                      R$ {(analytics?.overview?.totalRevenue || 0).toLocaleString('pt-BR')}
                     </span>
                   </div>
                 </div>
