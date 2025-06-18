@@ -22,7 +22,7 @@ import {
 interface Company {
   id: string;
   name: string;
-  owner_uid: string;
+  owner_id: string; // CORRIGIDO: usar owner_id
   owner_email: string;
   owner_name?: string;
   status: string;
