@@ -33,18 +33,18 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
       currency: 'BRL',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }).replace('R$', 'R$ ').trim(); // Corrigir formatação
+    }).replace('R$', 'R$ ').trim();
   };
 
   const parseCurrency = (val: string): number => {
-    // Remove tudo exceto números e vírgula/ponto
-    const cleanValue = val.replace(/[^\d,.-]/g, '');
+    // Remove tudo exceto números
+    const numbersOnly = val.replace(/\D/g, '');
     
     // Se está vazio, retorna 0
-    if (!cleanValue) return 0;
+    if (!numbersOnly) return 0;
     
-    // Converter vírgula para ponto e fazer parsing
-    const numericValue = parseFloat(cleanValue.replace(',', '.'));
+    // Converter para centavos e depois para reais
+    const numericValue = parseInt(numbersOnly) / 100;
     return isNaN(numericValue) ? 0 : numericValue;
   };
 
@@ -58,7 +58,7 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
       return;
     }
 
-    // Parse do valor
+    // Parse do valor (aceita múltiplos dígitos)
     const numericValue = parseCurrency(inputValue);
     
     // Formatar e atualizar display
