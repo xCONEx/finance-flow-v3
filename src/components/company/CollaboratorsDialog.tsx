@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -13,7 +12,7 @@ import { Users, UserPlus, Trash2, User } from 'lucide-react';
 interface Company {
   id: string;
   name: string;
-  owner_uid: string;
+  owner_id: string; // CORRIGIDO: usar owner_id
   owner_email: string;
   owner_name?: string;
   status: string;
