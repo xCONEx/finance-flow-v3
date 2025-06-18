@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -13,7 +12,7 @@ import { UserPlus } from 'lucide-react';
 interface Company {
   id: string;
   name: string;
-  owner_uid: string;
+  owner_id: string;
   owner_email: string;
   owner_name?: string;
   status: string;
