@@ -549,12 +549,22 @@ const CompanyManagement = () => {
       }
 
       // Verificar se já é colaborador
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from('agency_collaborators')
         .select('id')
         .eq('agency_id', selectedCompany.id)
         .eq('user_id', profiles.id)
-        .single();
+        .maybeSingle();
+
+      if (existingError) {
+        console.error('❌ Erro ao verificar colaborador existente:', existingError);
+        toast({
+          title: 'Erro',
+          description: 'Erro ao verificar se usuário já é colaborador',
+          variant: 'destructive'
+        });
+        return;
+      }
 
       if (existing) {
         toast({
