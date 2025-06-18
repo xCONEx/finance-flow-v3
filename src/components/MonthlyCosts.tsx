@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
-import { Plus, Trash2, DollarSign, Edit, FileText, Loader2 } from 'lucide-react';
+import { Plus, Trash2, DollarSign, Edit, FileText, Loader2, Calendar, Bell, Repeat, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useApp } from '../contexts/AppContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -67,11 +69,46 @@ const MonthlyCosts = () => {
     }
   };
 
+  const formatDueDate = (dueDate: string) => {
+    return new Date(dueDate).toLocaleDateString('pt-BR');
+  };
+
+  const getDaysUntilDue = (dueDate: string) => {
+    const today = new Date();
+    const due = new Date(dueDate);
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getDueDateBadge = (dueDate: string) => {
+    const days = getDaysUntilDue(dueDate);
+    
+    if (days < 0) {
+      return <Badge variant="destructive">Vencido</Badge>;
+    } else if (days === 0) {
+      return <Badge variant="destructive">Vence hoje</Badge>;
+    } else if (days <= 3) {
+      return <Badge className="bg-orange-500">Vence em {days}d</Badge>;
+    } else if (days <= 7) {
+      return <Badge className="bg-yellow-500">Vence em {days}d</Badge>;
+    } else {
+      return <Badge variant="outline">Vence em {days}d</Badge>;
+    }
+  };
+
   const totalMonthlyCosts = monthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
   const currentMonth = new Date().toISOString().slice(0, 7);
   const currentMonthCosts = monthlyCosts
     .filter(cost => cost.month === currentMonth)
     .reduce((sum, cost) => sum + cost.value, 0);
+
+  // Custos com vencimento próximo (próximos 7 dias)
+  const upcomingCosts = monthlyCosts.filter(cost => {
+    if (!cost.dueDate) return false;
+    const days = getDaysUntilDue(cost.dueDate);
+    return days >= 0 && days <= 7;
+  }).length;
 
   if (loading) {
     return (
@@ -124,7 +161,7 @@ const MonthlyCosts = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-gradient-to-r from-red-50 to-pink-50 border-red-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
           <CardContent className="p-4 sm:p-6">
             <div className="text-center">
@@ -146,6 +183,18 @@ const MonthlyCosts = () => {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-center">
+              <h3 className="text-sm sm:text-lg font-semibold text-blue-800">Vencimentos</h3>
+              <div className="text-xl sm:text-3xl font-bold text-blue-600">
+                {upcomingCosts}
+              </div>
+              <p className="text-xs text-blue-600">próximos 7 dias</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Costs List */}
@@ -155,11 +204,44 @@ const MonthlyCosts = () => {
             <CardContent className="p-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{cost.description}</h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-semibold truncate">{cost.description}</h3>
+                    <div className="flex gap-1">
+                      {cost.isRecurring && (
+                        <Badge variant="outline" className="text-xs">
+                          <Repeat className="h-3 w-3 mr-1" />
+                          Recorrente
+                        </Badge>
+                      )}
+                      {cost.installments && cost.installments > 1 && (
+                        <Badge variant="outline" className="text-xs">
+                          <CreditCard className="h-3 w-3 mr-1" />
+                          {cost.currentInstallment || 1}/{cost.installments}
+                        </Badge>
+                      )}
+                      {cost.notificationEnabled && (
+                        <Badge variant="outline" className="text-xs">
+                          <Bell className="h-3 w-3 mr-1" />
+                          Notif.
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  
                   <p className="text-sm text-gray-600">Categoria: {cost.category}</p>
                   <p className="text-xs text-gray-500">
                     Mês: {new Date(cost.month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                   </p>
+                  
+                  {cost.dueDate && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">
+                        Vence em: {formatDueDate(cost.dueDate)}
+                      </span>
+                      {getDueDateBadge(cost.dueDate)}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <div className="text-right flex-1 sm:flex-none">

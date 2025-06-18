@@ -95,7 +95,9 @@ const Dashboard = () => {
       description: 'Novo Custo',
       category: 'Geral',
       value: 0,
-      month: new Date().toISOString().slice(0, 7)
+      month: new Date().toISOString().slice(0, 7),
+      isRecurring: false,
+      notificationEnabled: true
     });
   };
 
@@ -272,7 +274,34 @@ const Dashboard = () => {
             <Button
               variant="outline"
               className="w-full transition-all duration-300 hover:scale-105"
-              onClick={handleExportReport}
+              onClick={() => {
+                if (!limits.canUseAdvancedReports) {
+                  alert('Relatórios avançados disponíveis apenas nos planos pagos!');
+                  return;
+                }
+
+                // Generate a simple report
+                const report = {
+                  data: new Date().toISOString(),
+                  totalJobs,
+                  totalJobsValue,
+                  totalMonthlyCosts,
+                  totalEquipmentValue,
+                  hourlyRate,
+                  completedTasks,
+                  totalTasks
+                };
+
+                const dataStr = JSON.stringify(report, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = `financeflow-report-pessoal-${new Date().toISOString().slice(0, 10)}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+              }}
               disabled={!limits.canUseAdvancedReports}
             >
               <TrendingUp className="mr-2 h-4 w-4" />
