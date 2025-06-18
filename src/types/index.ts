@@ -48,6 +48,12 @@ export interface MonthlyCost {
   category: string;
   value: number;
   month: string;
+  dueDate?: string;
+  isRecurring: boolean;
+  installments?: number;
+  currentInstallment?: number;
+  parentId?: string;
+  notificationEnabled: boolean;
   createdAt: string;
   userId: string;
   companyId?: string;
@@ -83,6 +89,17 @@ export interface WorkRoutine {
   valuePerDay: number;
   valuePerHour: number;
   userId: string;
+}
+
+export interface CostNotification {
+  id: string;
+  costId: string;
+  userId: string;
+  title: string;
+  message: string;
+  dueDate: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export interface Theme {
