@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,11 +21,15 @@ import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-// Let's use a more flexible interface that matches the actual database
+// Interface alinhada com o schema real da base de dados
 interface Agency {
   id: string;
   name: string;
-  [key: string]: any; // Allow any other properties
+  description?: string;
+  owner_uid: string; // Usar owner_uid conforme o schema atual
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Collaborator {
@@ -56,29 +62,23 @@ const CompanyDashboard = () => {
     try {
       console.log('🏢 Carregando agências do usuário...');
       
-      // First, let's try to get all columns to see what's available
+      // Buscar agências onde o usuário é owner usando owner_uid
       const { data, error } = await supabase
         .from('agencies')
-        .select('*');
+        .select('*')
+        .eq('owner_uid', user.id);
 
       if (error) {
         console.error('❌ Erro ao carregar agências:', error);
         throw error;
       }
 
-      console.log('✅ Estrutura da tabela agencies:', data?.[0] || 'Nenhum dado encontrado');
-
-      // Filter by user on the client side using the correct column name
-      const userOwnedAgencies = data?.filter(agency => 
-        agency.owner_uid === user.id
-      ) || [];
-
-      console.log('✅ Agências do usuário:', userOwnedAgencies.length);
-      setUserAgencies(userOwnedAgencies);
+      console.log('✅ Agências do usuário:', data?.length || 0);
+      setUserAgencies(data || []);
       
       // Selecionar primeira agência automaticamente
-      if (userOwnedAgencies.length > 0 && !selectedAgency) {
-        setSelectedAgency(userOwnedAgencies[0]);
+      if (data && data.length > 0 && !selectedAgency) {
+        setSelectedAgency(data[0]);
       }
       
     } catch (error: any) {
