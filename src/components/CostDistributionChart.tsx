@@ -3,6 +3,7 @@ import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useApp } from '../contexts/AppContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
+import { safeFormatCurrency } from '../utils/formatters';
 
 const CostDistributionChart = () => {
   const { monthlyCosts } = useApp();
@@ -10,14 +11,20 @@ const CostDistributionChart = () => {
 
   const costsByCategory = monthlyCosts.reduce((acc, cost) => {
     const category = cost.category || 'Outros';
-    acc[category] = (acc[category] || 0) + cost.value;
+    // Usar verificação segura para o valor
+    const value = cost.value || cost.amount || 0;
+    const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
+    
+    acc[category] = (acc[category] || 0) + safeValue;
     return acc;
   }, {} as Record<string, number>);
 
-  const data = Object.entries(costsByCategory).map(([name, value]) => ({
-    name,
-    value
-  }));
+  const data = Object.entries(costsByCategory)
+    .filter(([_, value]) => value > 0) // Filtrar valores zero ou negativos
+    .map(([name, value]) => ({
+      name,
+      value
+    }));
 
   const COLORS = [
     '#8884d8',
@@ -36,6 +43,11 @@ const CostDistributionChart = () => {
       </div>
     );
   }
+
+  const customTooltip = ({ value }: { value?: number }) => {
+    if (value === undefined || value === null) return null;
+    return formatValue(value);
+  };
 
   return (
     <div className="space-y-4 flex flex-col items-center justify-center w-full">
@@ -57,7 +69,7 @@ const CostDistributionChart = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number) => formatValue(value)} />
+              <Tooltip formatter={customTooltip} />
             </PieChart>
           </ResponsiveContainer>
         </div>
