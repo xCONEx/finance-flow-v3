@@ -808,6 +808,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notification_enabled: costData.notificationEnabled !== false
       };
 
+      console.log('📝 Dados para inserir:', dataToInsert);
+
       const { data, error } = await supabase
         .from('expenses')
         .insert([dataToInsert])
@@ -881,6 +883,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notification_enabled: updates.notificationEnabled !== false,
         updated_at: new Date().toISOString()
       };
+
+      console.log('📝 Dados para atualizar:', dataToUpdate);
 
       const { data, error } = await supabase
         .from('expenses')
