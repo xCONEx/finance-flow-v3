@@ -1,0 +1,17 @@
+
+{
+  "name": "Finance Flow",
+  "short_name": "FinanceFlow",
+  "description": "Sistema de gestão financeira e controle de custos",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
+    }
+  ],
+  "notification": {
+    "icon": "/favicon.ico",
+    "badge": "/favicon.ico"
+  }
+}
