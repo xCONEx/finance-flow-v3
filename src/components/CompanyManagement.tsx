@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -33,7 +32,9 @@ import {
   Users,
   RefreshCw,
   Mail,
-  UserPlus
+  UserPlus,
+  UserMinus,
+  Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,6 +48,15 @@ interface Company {
   owner_name?: string;
   created_at: string;
   collaborators_count: number;
+}
+
+interface Collaborator {
+  id: string;
+  user_id: string;
+  email: string;
+  name?: string;
+  role: string;
+  added_at: string;
 }
 
 interface UserProfile {
@@ -66,22 +76,25 @@ const CompanyManagement = () => {
   // Create company dialog
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
-  const [newCompanyDescription, setNewCompanyDescription] = useState('');
   const [selectedOwnerEmail, setSelectedOwnerEmail] = useState('');
 
   // Edit company dialog
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [editCompanyName, setEditCompanyName] = useState('');
-  const [editCompanyDescription, setEditCompanyDescription] = useState('');
   const [editOwnerEmail, setEditOwnerEmail] = useState('');
+
+  // Collaborators dialog
+  const [isCollaboratorsDialogOpen, setIsCollaboratorsDialogOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [loadingCollaborators, setLoadingCollaborators] = useState(false);
 
   // Invite collaborator dialog
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
 
-  // Load companies diretamente da tabela agencies
+  // Load companies usando owner_uid conforme schema
   const loadCompanies = async () => {
     try {
       setLoading(true);
@@ -131,7 +144,7 @@ const CompanyManagement = () => {
         return {
           id: agency.id,
           name: agency.name,
-          description: '', // Não existe no schema atual
+          description: '',
           owner_uid: agency.owner_uid,
           owner_email: owner?.email || 'Email não encontrado',
           owner_name: owner?.name || owner?.email || 'N/A',
@@ -154,7 +167,7 @@ const CompanyManagement = () => {
     }
   };
 
-  // Load users diretamente da tabela profiles
+  // Load users
   const loadUsers = async () => {
     try {
       console.log('👥 Carregando usuários...');
@@ -184,10 +197,94 @@ const CompanyManagement = () => {
     }
   };
 
-  useEffect(() => {
-    loadCompanies();
-    loadUsers();
-  }, []);
+  // Load collaborators for a company
+  const loadCollaborators = async (companyId: string) => {
+    try {
+      setLoadingCollaborators(true);
+      console.log('👥 Carregando colaboradores para empresa:', companyId);
+
+      const { data: collaboratorsData, error } = await supabase
+        .from('agency_collaborators')
+        .select(`
+          id,
+          user_id,
+          role,
+          added_at,
+          profiles!agency_collaborators_user_id_fkey (
+            email,
+            name
+          )
+        `)
+        .eq('agency_id', companyId);
+
+      if (error) {
+        console.error('❌ Erro ao carregar colaboradores:', error);
+        throw error;
+      }
+
+      const formattedCollaborators = collaboratorsData?.map(collab => ({
+        id: collab.id,
+        user_id: collab.user_id,
+        email: collab.profiles?.email || 'Email não encontrado',
+        name: collab.profiles?.name || collab.profiles?.email || 'N/A',
+        role: collab.role || 'member',
+        added_at: collab.added_at
+      })) || [];
+
+      console.log('✅ Colaboradores carregados:', formattedCollaborators.length);
+      setCollaborators(formattedCollaborators);
+    } catch (error: any) {
+      console.error('❌ Erro ao carregar colaboradores:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao carregar colaboradores',
+        variant: 'destructive'
+      });
+      setCollaborators([]);
+    } finally {
+      setLoadingCollaborators(false);
+    }
+  };
+
+  // Remove collaborator
+  const handleRemoveCollaborator = async (collaboratorId: string, email: string) => {
+    if (!confirm(`Tem certeza que deseja remover ${email} da empresa?`)) {
+      return;
+    }
+
+    try {
+      console.log('🗑️ Removendo colaborador:', collaboratorId);
+
+      const { error } = await supabase
+        .from('agency_collaborators')
+        .delete()
+        .eq('id', collaboratorId);
+
+      if (error) {
+        console.error('❌ Erro ao remover colaborador:', error);
+        throw error;
+      }
+
+      console.log('✅ Colaborador removido');
+      toast({
+        title: 'Sucesso',
+        description: `Colaborador ${email} removido com sucesso`
+      });
+
+      // Recarregar colaboradores
+      if (selectedCompany) {
+        loadCollaborators(selectedCompany.id);
+      }
+      loadCompanies();
+    } catch (error: any) {
+      console.error('❌ Erro ao remover colaborador:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao remover colaborador: ' + (error?.message || 'Erro desconhecido'),
+        variant: 'destructive'
+      });
+    }
+  };
 
   // Create company diretamente na tabela
   const handleCreateCompany = async () => {
@@ -250,7 +347,6 @@ const CompanyManagement = () => {
 
       setIsCreateDialogOpen(false);
       setNewCompanyName('');
-      setNewCompanyDescription('');
       setSelectedOwnerEmail('');
       loadCompanies();
       loadUsers();
@@ -493,8 +589,12 @@ const CompanyManagement = () => {
 
       setIsInviteDialogOpen(false);
       setInviteEmail('');
-      setSelectedCompany(null);
       loadCompanies();
+      
+      // Recarregar colaboradores se a dialog estiver aberta
+      if (isCollaboratorsDialogOpen) {
+        loadCollaborators(selectedCompany.id);
+      }
     } catch (error: any) {
       console.error('❌ Erro ao adicionar colaborador:', error);
       toast({
@@ -508,9 +608,14 @@ const CompanyManagement = () => {
   const openEditDialog = (company: Company) => {
     setEditingCompany(company);
     setEditCompanyName(company.name);
-    setEditCompanyDescription(company.description || '');
     setEditOwnerEmail(company.owner_email);
     setIsEditDialogOpen(true);
+  };
+
+  const openCollaboratorsDialog = (company: Company) => {
+    setSelectedCompany(company);
+    setIsCollaboratorsDialogOpen(true);
+    loadCollaborators(company.id);
   };
 
   const openInviteDialog = (company: Company) => {
@@ -534,13 +639,17 @@ const CompanyManagement = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-2 md:p-0">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <CardTitle className="text-lg md:text-xl flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              Gestão de Empresas ({companies.length})
+              <span className="hidden sm:inline">Gestão de Empresas</span>
+              <span className="sm:hidden">Empresas</span>
+              <Badge variant="secondary" className="text-xs">
+                {companies.length}
+              </Badge>
             </CardTitle>
             <Button
               variant="outline"
@@ -552,12 +661,12 @@ const CompanyManagement = () => {
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              Atualizar
+              <span className="hidden sm:inline">Atualizar</span>
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-2 mb-4">
+        <CardContent className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-2">
             <Input
               placeholder="Buscar empresas..."
               value={searchQuery}
@@ -566,12 +675,13 @@ const CompanyManagement = () => {
             />
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="md:w-auto">
+                <Button className="whitespace-nowrap">
                   <Plus className="h-4 w-4 mr-2" />
-                  Nova Empresa
+                  <span className="hidden sm:inline">Nova Empresa</span>
+                  <span className="sm:hidden">Nova</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-md mx-4">
                 <DialogHeader>
                   <DialogTitle>Criar Nova Empresa</DialogTitle>
                 </DialogHeader>
@@ -599,12 +709,12 @@ const CompanyManagement = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex justify-end gap-2">
+                  <div className="flex flex-col md:flex-row justify-end gap-2">
                     <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                       Cancelar
                     </Button>
                     <Button onClick={handleCreateCompany}>
-                      Criar Empresa
+                      Criar
                     </Button>
                   </div>
                 </div>
@@ -612,16 +722,19 @@ const CompanyManagement = () => {
             </Dialog>
           </div>
 
-          {/* Companies Table */}
+          {/* Companies Table - Responsiva */}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Empresa</TableHead>
-                  <TableHead className="min-w-[200px]">Proprietário</TableHead>
-                  <TableHead className="min-w-[100px]">Colaboradores</TableHead>
-                  <TableHead className="min-w-[100px]">Criada em</TableHead>
-                  <TableHead className="min-w-[200px]">Ações</TableHead>
+                  <TableHead className="min-w-[180px]">Empresa</TableHead>
+                  <TableHead className="min-w-[180px] hidden md:table-cell">Proprietário</TableHead>
+                  <TableHead className="min-w-[80px]">
+                    <Users className="h-4 w-4 inline md:mr-1" />
+                    <span className="hidden md:inline">Colaboradores</span>
+                  </TableHead>
+                  <TableHead className="min-w-[100px] hidden lg:table-cell">Criada</TableHead>
+                  <TableHead className="min-w-[120px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -630,10 +743,11 @@ const CompanyManagement = () => {
                     <TableCell>
                       <div>
                         <p className="font-medium text-sm">{company.name}</p>
+                        <p className="text-xs text-gray-400 md:hidden">{company.owner_email}</p>
                         <p className="text-xs text-gray-400">ID: {company.id.slice(0, 8)}...</p>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div>
                         <p className="text-sm">{company.owner_email}</p>
                         {company.owner_name && company.owner_name !== 'N/A' && (
@@ -642,44 +756,52 @@ const CompanyManagement = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">
-                        <Users className="h-3 w-3 mr-1" />
+                      <Badge variant="secondary" className="text-xs">
                         {company.collaborators_count}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <p className="text-sm">
                         {new Date(company.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col md:flex-row gap-1">
+                      <div className="flex flex-wrap gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openCollaboratorsDialog(company)}
+                          className="p-2"
+                          title="Ver colaboradores"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => openInviteDialog(company)}
-                          className="text-xs"
+                          className="p-2"
+                          title="Convidar colaborador"
                         >
-                          <Mail className="h-3 w-3 mr-1" />
-                          Convidar
+                          <UserPlus className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => openEditDialog(company)}
-                          className="text-xs"
+                          className="p-2"
+                          title="Editar empresa"
                         >
-                          <Edit className="h-3 w-3 mr-1" />
-                          Editar
+                          <Edit className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDeleteCompany(company.id)}
-                          className="text-xs"
+                          className="p-2"
+                          title="Excluir empresa"
                         >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Excluir
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </TableCell>
@@ -700,9 +822,103 @@ const CompanyManagement = () => {
         </CardContent>
       </Card>
 
+      {/* Collaborators Dialog */}
+      <Dialog open={isCollaboratorsDialogOpen} onOpenChange={setIsCollaboratorsDialogOpen}>
+        <DialogContent className="max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Colaboradores - {selectedCompany?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-600">
+                Total: {collaborators.length} colaborador(es)
+              </p>
+              <Button
+                size="sm"
+                onClick={() => openInviteDialog(selectedCompany!)}
+                className="flex items-center gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Adicionar</span>
+              </Button>
+            </div>
+            
+            {loadingCollaborators ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                <p className="text-sm text-gray-600">Carregando colaboradores...</p>
+              </div>
+            ) : collaborators.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Colaborador</TableHead>
+                      <TableHead className="hidden sm:table-cell">Cargo</TableHead>
+                      <TableHead className="hidden md:table-cell">Adicionado</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {collaborators.map((collab) => (
+                      <TableRow key={collab.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-sm">{collab.email}</p>
+                            {collab.name && collab.name !== 'N/A' && (
+                              <p className="text-xs text-gray-600">{collab.name}</p>
+                            )}
+                            <p className="text-xs text-gray-500 sm:hidden">{collab.role}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant="secondary" className="text-xs">
+                            {collab.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <p className="text-sm">
+                            {new Date(collab.added_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRemoveCollaborator(collab.id, collab.email)}
+                            className="p-2"
+                            title="Remover colaborador"
+                          >
+                            <UserMinus className="h-3 w-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500">Nenhum colaborador encontrado</p>
+                <Button
+                  className="mt-4"
+                  onClick={() => openInviteDialog(selectedCompany!)}
+                >
+                  Adicionar primeiro colaborador
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Company Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md mx-4">
           <DialogHeader>
             <DialogTitle>Editar Empresa</DialogTitle>
           </DialogHeader>
@@ -730,12 +946,12 @@ const CompanyManagement = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col md:flex-row justify-end gap-2">
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancelar
               </Button>
               <Button onClick={handleEditCompany}>
-                Salvar Alterações
+                Salvar
               </Button>
             </div>
           </div>
@@ -744,7 +960,7 @@ const CompanyManagement = () => {
 
       {/* Invite Collaborator Dialog */}
       <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md mx-4">
           <DialogHeader>
             <DialogTitle>Convidar Colaborador</DialogTitle>
           </DialogHeader>
@@ -765,13 +981,13 @@ const CompanyManagement = () => {
                 O usuário deve estar cadastrado no sistema
               </p>
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col md:flex-row justify-end gap-2">
               <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
                 Cancelar
               </Button>
               <Button onClick={handleInviteCollaborator}>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Adicionar Colaborador
+                Adicionar
               </Button>
             </div>
           </div>
