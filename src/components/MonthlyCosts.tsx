@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,6 @@ import { toast } from '@/hooks/use-toast';
 import ExpenseModal from './ExpenseModal';
 import CostDistributionChart from './CostDistributionChart';
 import { generateExpensesPDF } from '../utils/pdfGenerator';
-import { safeFormatCurrency, safeFormatNumber } from '../utils/formatters';
 
 const MonthlyCosts = () => {
   const { monthlyCosts, addMonthlyCost, deleteMonthlyCost, loading } = useApp();
@@ -32,15 +30,11 @@ const MonthlyCosts = () => {
     let variable = 0;
 
     costs.forEach(cost => {
-      // Usar verificação segura para amount/value
-      const amount = cost.amount || cost.value || 0;
-      const safeAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
-      
-      total += safeAmount;
+      total += cost.amount;
       if (cost.type === 'fixed') {
-        fixed += safeAmount;
+        fixed += cost.amount;
       } else {
-        variable += safeAmount;
+        variable += cost.amount;
       }
     });
 
@@ -99,8 +93,6 @@ const MonthlyCosts = () => {
     const selectedMonthNumber = selectedMonth.split('-')[1];
 
     const filtered = monthlyCosts.filter(cost => {
-      if (!cost.dueDate) return false;
-      
       const costYear = new Date(cost.dueDate).getFullYear().toString();
       const costMonth = (new Date(cost.dueDate).getMonth() + 1).toString().padStart(2, '0');
       return costYear === selectedYear && costMonth === selectedMonthNumber;
@@ -175,7 +167,7 @@ const MonthlyCosts = () => {
             <div className="text-center">
               <h3 className="text-sm sm:text-lg font-semibold text-red-800">Total do Mês</h3>
               <div className="text-xl sm:text-3xl font-bold text-red-600">
-                {safeFormatCurrency(monthlyTotal)}
+                R$ {monthlyTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </CardContent>
@@ -186,7 +178,7 @@ const MonthlyCosts = () => {
             <div className="text-center">
               <h3 className="text-sm sm:text-lg font-semibold text-blue-800">Custos Fixos</h3>
               <div className="text-xl sm:text-3xl font-bold text-blue-600">
-                {safeFormatCurrency(fixedCosts)}
+                R$ {fixedCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </CardContent>
@@ -197,7 +189,7 @@ const MonthlyCosts = () => {
             <div className="text-center">
               <h3 className="text-sm sm:text-lg font-semibold text-yellow-800">Custos Variáveis</h3>
               <div className="text-xl sm:text-3xl font-bold text-yellow-600">
-                {safeFormatCurrency(variableCosts)}
+                R$ {variableCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </div>
           </CardContent>
@@ -221,57 +213,49 @@ const MonthlyCosts = () => {
 
       {/* Costs List */}
       <div className="grid gap-4">
-        {filteredCosts.map((cost) => {
-          // Usar verificação segura para todos os valores
-          const amount = cost.amount || cost.value || 0;
-          const description = cost.description || 'Sem descrição';
-          const category = cost.category || 'Sem categoria';
-          const dueDate = cost.dueDate || new Date().toISOString();
-          
-          return (
-            <Card key={cost.id} className="transition-all duration-300 hover:shadow-lg">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <h3 className="font-semibold truncate">{description}</h3>
-                      <div className="flex gap-2">
-                        <Badge variant={cost.type === 'fixed' ? 'default' : 'secondary'} className="text-xs">
-                          {cost.type === 'fixed' ? 'Fixo' : 'Variável'}
+        {filteredCosts.map((cost) => (
+          <Card key={cost.id} className="transition-all duration-300 hover:shadow-lg">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <h3 className="font-semibold truncate">{cost.description}</h3>
+                    <div className="flex gap-2">
+                      <Badge variant={cost.type === 'fixed' ? 'default' : 'secondary'} className="text-xs">
+                        {cost.type === 'fixed' ? 'Fixo' : 'Variável'}
+                      </Badge>
+                      {cost.is_recurring && (
+                        <Badge variant="outline" className="text-xs">
+                          Recorrente
                         </Badge>
-                        {cost.is_recurring && (
-                          <Badge variant="outline" className="text-xs">
-                            Recorrente
-                          </Badge>
-                        )}
-                      </div>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-600">Categoria: {category}</p>
-                    <p className="text-xs text-gray-500">
-                      Vencimento: {new Date(dueDate).toLocaleDateString('pt-BR')}
-                    </p>
                   </div>
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="text-right flex-1 sm:flex-none">
-                      <div className="text-lg font-bold text-green-600">
-                        {safeFormatCurrency(amount)}
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDelete(cost.id)}
-                      className="transition-all duration-300 hover:scale-105"
-                      disabled={submitting}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <p className="text-sm text-gray-600">Categoria: {cost.category}</p>
+                  <p className="text-xs text-gray-500">
+                    Vencimento: {new Date(cost.dueDate).toLocaleDateString('pt-BR')}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="text-right flex-1 sm:flex-none">
+                    <div className="text-lg font-bold text-green-600">
+                      R$ {cost.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDelete(cost.id)}
+                    className="transition-all duration-300 hover:scale-105"
+                    disabled={submitting}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
         
         {filteredCosts.length === 0 && (
           <Card>
