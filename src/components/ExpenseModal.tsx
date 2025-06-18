@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useApp } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
+import { CurrencyInput } from '@/components/ui/currency-input';
 
 interface ExpenseModalProps {
   open: boolean;
@@ -63,7 +64,7 @@ const ExpenseModal = ({ open, onOpenChange, editingCost }: ExpenseModalProps) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.description || !formData.category) {
+    if (!formData.description || !formData.category || formData.value <= 0) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios",
@@ -86,6 +87,8 @@ const ExpenseModal = ({ open, onOpenChange, editingCost }: ExpenseModalProps) =>
         currentInstallment: formData.installments > 1 ? 1 : undefined,
         parentId: undefined
       };
+
+      console.log('💰 Salvando custo:', costData);
 
       if (editingCost) {
         await updateMonthlyCost(editingCost.id, costData);
@@ -111,9 +114,10 @@ const ExpenseModal = ({ open, onOpenChange, editingCost }: ExpenseModalProps) =>
       }
       onOpenChange(false);
     } catch (error) {
+      console.error('❌ Erro ao salvar custo:', error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar custo.",
+        description: "Erro ao salvar custo. Verifique os dados e tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -169,15 +173,11 @@ const ExpenseModal = ({ open, onOpenChange, editingCost }: ExpenseModalProps) =>
 
             <div>
               <Label htmlFor="value">Valor (R$) *</Label>
-              <Input
+              <CurrencyInput
                 id="value"
-                type="number"
-                min="0"
-                step="0.01"
                 value={formData.value}
-                onChange={(e) => setFormData({...formData, value: parseFloat(e.target.value) || 0})}
-                placeholder="0,00"
-                required
+                onChange={(value) => setFormData({...formData, value})}
+                placeholder="R$ 0,00"
               />
             </div>
 
