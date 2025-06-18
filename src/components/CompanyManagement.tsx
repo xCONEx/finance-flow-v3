@@ -94,7 +94,7 @@ const CompanyManagement = () => {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
 
-  // Load companies using owner_uid correctly
+  // Load companies usando owner_uid corretamente
   const loadCompanies = async () => {
     try {
       setLoading(true);
@@ -334,17 +334,7 @@ const CompanyManagement = () => {
         throw error;
       }
 
-      // Atualizar tipo do usuário para company_owner
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ user_type: 'company_owner' })
-        .eq('id', owner.id);
-
-      if (updateError) {
-        console.error('⚠️ Erro ao atualizar tipo do usuário:', updateError);
-      }
-
-      console.log('✅ Empresa criada:', data);
+      console.log('✅ Empresa criada (trigger vai sincronizar perfil):', data);
 
       toast({
         title: 'Sucesso',
@@ -354,8 +344,12 @@ const CompanyManagement = () => {
       setIsCreateDialogOpen(false);
       setNewCompanyName('');
       setSelectedOwnerEmail('');
-      loadCompanies();
-      loadUsers();
+      
+      // Aguardar um pouco para o trigger executar
+      setTimeout(() => {
+        loadCompanies();
+        loadUsers();
+      }, 500);
     } catch (error: any) {
       console.error('❌ Erro ao criar empresa:', error);
       toast({
@@ -404,36 +398,7 @@ const CompanyManagement = () => {
         throw error;
       }
 
-      // Atualizar tipo do novo owner
-      const { error: updateNewOwnerError } = await supabase
-        .from('profiles')
-        .update({ user_type: 'company_owner' })
-        .eq('id', owner.id);
-
-      if (updateNewOwnerError) {
-        console.error('⚠️ Erro ao atualizar novo owner:', updateNewOwnerError);
-      }
-
-      // Se mudou o owner, verificar se o antigo ainda tem outras empresas
-      if (editingCompany.owner_uid !== owner.id) {
-        const { data: otherAgencies } = await supabase
-          .from('agencies')
-          .select('id')
-          .eq('owner_uid', editingCompany.owner_uid);
-
-        if (!otherAgencies || otherAgencies.length === 0) {
-          const { error: updateOldOwnerError } = await supabase
-            .from('profiles')
-            .update({ user_type: 'individual' })
-            .eq('id', editingCompany.owner_uid);
-
-          if (updateOldOwnerError) {
-            console.error('⚠️ Erro ao atualizar antigo owner:', updateOldOwnerError);
-          }
-        }
-      }
-
-      console.log('✅ Empresa atualizada');
+      console.log('✅ Empresa atualizada (trigger vai sincronizar perfil)');
 
       toast({
         title: 'Sucesso',
@@ -480,26 +445,7 @@ const CompanyManagement = () => {
         throw error;
       }
 
-      // Verificar se o owner ainda tem outras empresas
-      if (agency?.owner_uid) {
-        const { data: otherAgencies } = await supabase
-          .from('agencies')
-          .select('id')
-          .eq('owner_uid', agency.owner_uid);
-
-        if (!otherAgencies || otherAgencies.length === 0) {
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ user_type: 'individual' })
-            .eq('id', agency.owner_uid);
-
-          if (updateError) {
-            console.error('⚠️ Erro ao atualizar tipo do usuário:', updateError);
-          }
-        }
-      }
-
-      console.log('✅ Empresa excluída');
+      console.log('✅ Empresa excluída (trigger vai sincronizar perfil)');
 
       toast({
         title: 'Sucesso',
@@ -581,7 +527,7 @@ const CompanyManagement = () => {
         throw new Error('Usuário não autenticado');
       }
 
-      // Adicionar como colaborador diretamente
+      // Adicionar como colaborador diretamente - trigger vai sincronizar perfil
       const { error } = await supabase
         .from('agency_collaborators')
         .insert({
@@ -596,7 +542,7 @@ const CompanyManagement = () => {
         throw error;
       }
 
-      console.log('✅ Colaborador adicionado');
+      console.log('✅ Colaborador adicionado (trigger vai sincronizar perfil)');
 
       toast({
         title: 'Sucesso',
@@ -605,12 +551,14 @@ const CompanyManagement = () => {
 
       setIsInviteDialogOpen(false);
       setInviteEmail('');
-      loadCompanies();
       
-      // Recarregar colaboradores se a dialog estiver aberta
-      if (isCollaboratorsDialogOpen) {
-        loadCollaborators(selectedCompany.id);
-      }
+      // Aguardar um pouco para o trigger executar
+      setTimeout(() => {
+        loadCompanies();
+        if (isCollaboratorsDialogOpen) {
+          loadCollaborators(selectedCompany.id);
+        }
+      }, 500);
     } catch (error: any) {
       console.error('❌ Erro ao adicionar colaborador:', error);
       toast({
