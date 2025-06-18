@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -25,7 +24,7 @@ import InviteCollaboratorDialog from './company/InviteCollaboratorDialog';
 interface Company {
   id: string;
   name: string;
-  owner_uid: string;
+  owner_id: string; // CORRIGIDO: usar owner_id
   owner_email: string;
   owner_name?: string;
   status: string;
@@ -69,19 +68,19 @@ const CompanyManagement = () => {
   // Invite collaborator dialog
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
 
-  // Load companies usando owner_uid conforme schema correto
+  // Load companies usando owner_id conforme schema correto
   const loadCompanies = async () => {
     try {
       setLoading(true);
       console.log('🏢 Carregando empresas...');
       
-      // CORREÇÃO: Usar owner_uid em vez de owner_id conforme schema real
+      // CORREÇÃO: Usar owner_id conforme schema atualizado
       const { data: agencies, error: agenciesError } = await supabase
         .from('agencies')
         .select(`
           id,
           name,
-          owner_uid,
+          owner_id,
           status,
           created_at,
           updated_at
@@ -95,7 +94,7 @@ const CompanyManagement = () => {
       console.log('🏢 Agências encontradas:', agencies?.length || 0);
 
       // Buscar dados dos owners
-      const ownerIds = [...new Set(agencies?.map(a => a.owner_uid) || [])];
+      const ownerIds = [...new Set(agencies?.map(a => a.owner_id) || [])];
       console.log('👥 Buscando owners:', ownerIds.length);
       
       const { data: profiles, error: profilesError } = await supabase
@@ -118,13 +117,13 @@ const CompanyManagement = () => {
 
       // Processar dados das empresas
       const companiesData = agencies?.map(agency => {
-        const owner = profiles?.find(p => p.id === agency.owner_uid);
+        const owner = profiles?.find(p => p.id === agency.owner_id);
         const collabCount = collaborators?.filter(c => c.agency_id === agency.id).length || 0;
 
         return {
           id: agency.id,
           name: agency.name,
-          owner_uid: agency.owner_uid,
+          owner_id: agency.owner_id, // CORRIGIDO: usar owner_id
           owner_email: owner?.email || 'Email não encontrado',
           owner_name: owner?.name || owner?.email || 'N/A',
           status: agency.status,
@@ -226,7 +225,7 @@ const CompanyManagement = () => {
     }
   };
 
-  // Create company usando owner_uid
+  // Create company usando owner_id
   const handleCreateCompany = async (name: string, ownerEmail: string) => {
     if (!name.trim() || !ownerEmail) {
       toast({
@@ -257,7 +256,7 @@ const CompanyManagement = () => {
         .from('agencies')
         .insert({
           name: name.trim(),
-          owner_uid: owner.id, // CORREÇÃO: usar owner_uid
+          owner_id: owner.id, // CORRIGIDO: usar owner_id
           status: 'active'
         })
         .select()
@@ -287,7 +286,7 @@ const CompanyManagement = () => {
     }
   };
 
-  // Edit company usando owner_uid
+  // Edit company usando owner_id
   const handleEditCompany = async (name: string, ownerEmail: string) => {
     if (!editingCompany || !name.trim() || !ownerEmail) {
       toast({
@@ -315,7 +314,7 @@ const CompanyManagement = () => {
         .from('agencies')
         .update({
           name: name.trim(),
-          owner_uid: owner.id, // CORREÇÃO: usar owner_uid
+          owner_id: owner.id, // CORRIGIDO: usar owner_id
           updated_at: new Date().toISOString()
         })
         .eq('id', editingCompany.id);
