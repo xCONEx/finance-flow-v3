@@ -1,11 +1,8 @@
 
 import { useEffect } from 'react';
 import { notificationService } from '../services/notificationService';
-import { useApp } from '../contexts/AppContext';
 
-export const useNotifications = () => {
-  const { monthlyCosts } = useApp();
-
+export const useNotifications = (monthlyCosts?: any[]) => {
   useEffect(() => {
     // Inicializar o serviço de notificações
     notificationService.initialize();
@@ -13,7 +10,7 @@ export const useNotifications = () => {
 
   useEffect(() => {
     // Agendar notificações para todos os custos com vencimento
-    if (monthlyCosts.length > 0) {
+    if (monthlyCosts && monthlyCosts.length > 0) {
       monthlyCosts.forEach(cost => {
         if (cost.dueDate && cost.notificationEnabled) {
           notificationService.scheduleExpenseReminder(cost);
