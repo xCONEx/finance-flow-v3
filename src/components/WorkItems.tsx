@@ -154,7 +154,7 @@ return (
     </div>
 
     {/* Items List */}
-    <div className="grid gap-4">
+    <div className="grid gap-4 pb-20 md:pb-0">
       {workItems.length > 0 ? (
         workItems.map((item) => (
           <Card key={item.id} className="transition-all duration-300 hover:shadow-lg">
