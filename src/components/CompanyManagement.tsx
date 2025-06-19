@@ -2,11 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Building2, Users, Plus, Edit, Trash2, UserPlus, Loader2 } from 'lucide-react';
+import { Building2, Users, Plus, Loader2 } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -19,7 +15,7 @@ import CollaboratorsDialog from './company/CollaboratorsDialog';
 interface Company {
   id: string;
   name: string;
-  owner_uid: string; // CORRIGIDO: usar owner_uid
+  owner_uid: string; // CORRIGIDO: usar owner_uid conforme tipos TypeScript gerados
   owner_email: string;
   owner_name?: string;
   status: string;
@@ -62,60 +58,36 @@ const CompanyManagement = () => {
     try {
       setLoading(true);
       
-      // Usar a função RPC que já existe
-      const { data: companiesData, error: companiesError } = await supabase
+      console.log('🔍 Buscando empresas via RPC get_all_companies_admin...');
+      
+      // Usar a função RPC correta com tipo any para evitar problemas de tipo
+      const { data: companiesData, error: companiesError } = await (supabase as any)
         .rpc('get_all_companies_admin');
 
       if (companiesError) {
-        console.error('Erro ao buscar empresas:', companiesError);
+        console.error('❌ Erro ao buscar empresas:', companiesError);
         toast({
           title: "Erro",
-          description: "Erro ao carregar empresas.",
+          description: `Erro ao carregar empresas: ${companiesError.message}`,
           variant: "destructive"
         });
         return;
       }
 
-      console.log('Empresas carregadas:', companiesData);
+      console.log('✅ Empresas carregadas com sucesso:', companiesData?.length || 0);
+      console.log('📊 Dados das empresas:', companiesData);
 
-      // Buscar informações dos proprietários
-      if (companiesData && companiesData.length > 0) {
-        const ownerIds = [...new Set(companiesData.map((c: any) => c.owner_uid).filter(Boolean))]; // CORRIGIDO: usar owner_uid
-
-        if (ownerIds.length > 0) {
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, email, name')
-            .in('id', ownerIds);
-
-          if (!profilesError && profilesData) {
-            const profilesMap = profilesData.reduce((acc: any, profile: any) => {
-              acc[profile.id] = profile;
-              return acc;
-            }, {});
-
-            const enrichedCompanies = companiesData.map((company: any) => ({
-              id: company.id,
-              name: company.name,
-              owner_uid: company.owner_uid, // CORRIGIDO: usar owner_uid
-              owner_email: profilesMap[company.owner_uid]?.email || 'Email não encontrado', // CORRIGIDO: usar owner_uid
-              owner_name: profilesMap[company.owner_uid]?.name || 'N/A', // CORRIGIDO: usar owner_uid
-              status: company.status,
-              created_at: company.created_at,
-              collaborators_count: company.collaborators_count || 0
-            }));
-
-            setCompanies(enrichedCompanies);
-          }
-        }
+      // Os dados já vêm enriquecidos da função RPC
+      if (companiesData && Array.isArray(companiesData) && companiesData.length > 0) {
+        setCompanies(companiesData as Company[]);
       } else {
         setCompanies([]);
       }
     } catch (error) {
-      console.error('Erro ao buscar empresas:', error);
+      console.error('❌ Erro inesperado ao buscar empresas:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar empresas.",
+        description: "Erro inesperado ao carregar empresas.",
         variant: "destructive"
       });
     } finally {
@@ -125,42 +97,47 @@ const CompanyManagement = () => {
 
   const fetchUsers = async () => {
     try {
+      console.log('🔍 Buscando usuários...');
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('id, email, name, user_type')
         .order('email');
 
       if (error) {
-        console.error('Erro ao buscar usuários:', error);
+        console.error('❌ Erro ao buscar usuários:', error);
         return;
       }
 
+      console.log('✅ Usuários carregados:', data?.length || 0);
       setUsers(data || []);
     } catch (error) {
-      console.error('Erro ao buscar usuários:', error);
+      console.error('❌ Erro inesperado ao buscar usuários:', error);
     }
   };
 
   const fetchCollaborators = async (companyId: string) => {
     try {
       setLoadingCollaborators(true);
+      console.log('🔍 Buscando colaboradores para empresa:', companyId);
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .rpc('get_company_collaborators_admin', { company_id: companyId });
 
       if (error) {
-        console.error('Erro ao buscar colaboradores:', error);
+        console.error('❌ Erro ao buscar colaboradores:', error);
         toast({
           title: "Erro",
-          description: "Erro ao carregar colaboradores.",
+          description: `Erro ao carregar colaboradores: ${error.message}`,
           variant: "destructive"
         });
         return;
       }
 
+      console.log('✅ Colaboradores carregados:', data?.length || 0);
       setCollaborators(data || []);
     } catch (error) {
-      console.error('Erro ao buscar colaboradores:', error);
+      console.error('❌ Erro inesperado ao buscar colaboradores:', error);
     } finally {
       setLoadingCollaborators(false);
     }
@@ -168,6 +145,8 @@ const CompanyManagement = () => {
 
   const handleCreateCompany = async (name: string, ownerEmail: string) => {
     try {
+      console.log('➕ Criando empresa:', { name, ownerEmail });
+      
       const selectedUser = users.find(u => u.email === ownerEmail);
       if (!selectedUser) {
         toast({
@@ -182,22 +161,23 @@ const CompanyManagement = () => {
         .from('agencies')
         .insert({
           name,
-          owner_uid: selectedUser.id, // CORRIGIDO: usar owner_uid
+          owner_uid: selectedUser.id, // CORRIGIDO: usar owner_uid conforme tipos TypeScript
           status: 'active'
         })
         .select()
         .single();
 
       if (error) {
-        console.error('Erro ao criar empresa:', error);
+        console.error('❌ Erro ao criar empresa:', error);
         toast({
           title: "Erro",
-          description: "Erro ao criar empresa.",
+          description: `Erro ao criar empresa: ${error.message}`,
           variant: "destructive"
         });
         return;
       }
 
+      console.log('✅ Empresa criada com sucesso:', data);
       toast({
         title: "Sucesso",
         description: "Empresa criada com sucesso.",
@@ -205,10 +185,10 @@ const CompanyManagement = () => {
 
       fetchCompanies();
     } catch (error) {
-      console.error('Erro ao criar empresa:', error);
+      console.error('❌ Erro inesperado ao criar empresa:', error);
       toast({
         title: "Erro",
-        description: "Erro ao criar empresa.",
+        description: "Erro inesperado ao criar empresa.",
         variant: "destructive"
       });
     }
@@ -218,6 +198,8 @@ const CompanyManagement = () => {
     if (!selectedCompany) return;
 
     try {
+      console.log('✏️ Editando empresa:', { id: selectedCompany.id, name, ownerEmail });
+      
       const selectedUser = users.find(u => u.email === ownerEmail);
       if (!selectedUser) {
         toast({
@@ -232,20 +214,21 @@ const CompanyManagement = () => {
         .from('agencies')
         .update({
           name,
-          owner_uid: selectedUser.id // CORRIGIDO: usar owner_uid
+          owner_uid: selectedUser.id // CORRIGIDO: usar owner_uid conforme tipos TypeScript
         })
         .eq('id', selectedCompany.id);
 
       if (error) {
-        console.error('Erro ao editar empresa:', error);
+        console.error('❌ Erro ao editar empresa:', error);
         toast({
           title: "Erro",
-          description: "Erro ao editar empresa.",
+          description: `Erro ao editar empresa: ${error.message}`,
           variant: "destructive"
         });
         return;
       }
 
+      console.log('✅ Empresa editada com sucesso');
       toast({
         title: "Sucesso",
         description: "Empresa editada com sucesso.",
@@ -253,10 +236,10 @@ const CompanyManagement = () => {
 
       fetchCompanies();
     } catch (error) {
-      console.error('Erro ao editar empresa:', error);
+      console.error('❌ Erro inesperado ao editar empresa:', error);
       toast({
         title: "Erro",
-        description: "Erro ao editar empresa.",
+        description: "Erro inesperado ao editar empresa.",
         variant: "destructive"
       });
     }
@@ -268,21 +251,24 @@ const CompanyManagement = () => {
     }
 
     try {
+      console.log('🗑️ Excluindo empresa:', companyId);
+      
       const { error } = await supabase
         .from('agencies')
         .delete()
         .eq('id', companyId);
 
       if (error) {
-        console.error('Erro ao excluir empresa:', error);
+        console.error('❌ Erro ao excluir empresa:', error);
         toast({
           title: "Erro",
-          description: "Erro ao excluir empresa.",
+          description: `Erro ao excluir empresa: ${error.message}`,
           variant: "destructive"
         });
         return;
       }
 
+      console.log('✅ Empresa excluída com sucesso');
       toast({
         title: "Sucesso",
         description: "Empresa excluída com sucesso.",
@@ -290,10 +276,10 @@ const CompanyManagement = () => {
 
       fetchCompanies();
     } catch (error) {
-      console.error('Erro ao excluir empresa:', error);
+      console.error('❌ Erro inesperado ao excluir empresa:', error);
       toast({
         title: "Erro",
-        description: "Erro ao excluir empresa.",
+        description: "Erro inesperado ao excluir empresa.",
         variant: "destructive"
       });
     }
@@ -303,25 +289,28 @@ const CompanyManagement = () => {
     if (!selectedCompany) return;
 
     try {
-      const { data, error } = await supabase
+      console.log('📨 Convidando colaborador:', { companyId: selectedCompany.id, email });
+      
+      const { data, error } = await (supabase as any)
         .rpc('invite_collaborator_admin', {
           company_id: selectedCompany.id,
           collaborator_email: email
         });
 
       if (error) {
-        console.error('Erro ao convidar colaborador:', error);
+        console.error('❌ Erro ao convidar colaborador:', error);
         toast({
           title: "Erro",
-          description: "Erro ao convidar colaborador.",
+          description: `Erro ao convidar colaborador: ${error.message}`,
           variant: "destructive"
         });
         return;
       }
 
+      console.log('✅ Colaborador convidado com sucesso:', data);
       toast({
         title: "Sucesso",
-        description: "Colaborador convidado com sucesso.",
+        description: "Colaborador adicionado com sucesso.",
       });
 
       fetchCompanies();
@@ -329,10 +318,10 @@ const CompanyManagement = () => {
         fetchCollaborators(selectedCompany.id);
       }
     } catch (error) {
-      console.error('Erro ao convidar colaborador:', error);
+      console.error('❌ Erro inesperado ao convidar colaborador:', error);
       toast({
         title: "Erro",
-        description: "Erro ao convidar colaborador.",
+        description: "Erro inesperado ao convidar colaborador.",
         variant: "destructive"
       });
     }
@@ -344,21 +333,24 @@ const CompanyManagement = () => {
     }
 
     try {
-      const { error } = await supabase
+      console.log('🗑️ Removendo colaborador:', collaboratorId);
+      
+      const { data, error } = await (supabase as any)
         .rpc('remove_collaborator_admin', {
           collaborator_id: collaboratorId
         });
 
       if (error) {
-        console.error('Erro ao remover colaborador:', error);
+        console.error('❌ Erro ao remover colaborador:', error);
         toast({
           title: "Erro",
-          description: "Erro ao remover colaborador.",
+          description: `Erro ao remover colaborador: ${error.message}`,
           variant: "destructive"
         });
         return;
       }
 
+      console.log('✅ Colaborador removido com sucesso');
       toast({
         title: "Sucesso",
         description: "Colaborador removido com sucesso.",
@@ -369,10 +361,10 @@ const CompanyManagement = () => {
         fetchCollaborators(selectedCompany.id);
       }
     } catch (error) {
-      console.error('Erro ao remover colaborador:', error);
+      console.error('❌ Erro inesperado ao remover colaborador:', error);
       toast({
         title: "Erro",
-        description: "Erro ao remover colaborador.",
+        description: "Erro inesperado ao remover colaborador.",
         variant: "destructive"
       });
     }
@@ -380,8 +372,11 @@ const CompanyManagement = () => {
 
   useEffect(() => {
     if (isAdmin) {
+      console.log('👮 Usuário é admin, carregando dados...');
       fetchCompanies();
       fetchUsers();
+    } else {
+      console.log('⚠️ Usuário não é admin');
     }
   }, [isAdmin]);
 
@@ -437,23 +432,54 @@ const CompanyManagement = () => {
           </CardContent>
         </Card>
       ) : (
-        <CompanyTable
-          companies={companies}
-          onEdit={(company) => {
-            setSelectedCompany(company);
-            setShowEditDialog(true);
-          }}
-          onDelete={handleDeleteCompany}
-          onInviteCollaborator={(company) => {
-            setSelectedCompany(company);
-            setShowInviteDialog(true);
-          }}
-          onViewCollaborators={(company) => {
-            setSelectedCompany(company);
-            fetchCollaborators(company.id);
-            setShowCollaboratorsDialog(true);
-          }}
-        />
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Resumo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{companies.length}</div>
+                  <div className="text-sm text-gray-600">Empresas Cadastradas</div>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {companies.reduce((sum, company) => sum + (company.collaborators_count || 0), 0)}
+                  </div>
+                  <div className="text-sm text-gray-600">Total de Colaboradores</div>
+                </div>
+                <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {companies.filter(c => c.status === 'active').length}
+                  </div>
+                  <div className="text-sm text-gray-600">Empresas Ativas</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <CompanyTable
+            companies={companies}
+            onEditCompany={(company) => {
+              setSelectedCompany(company);
+              setShowEditDialog(true);
+            }}
+            onDeleteCompany={handleDeleteCompany}
+            onInviteCollaborator={(company) => {
+              setSelectedCompany(company);
+              setShowInviteDialog(true);
+            }}
+            onViewCollaborators={(company) => {
+              setSelectedCompany(company);
+              fetchCollaborators(company.id);
+              setShowCollaboratorsDialog(true);
+            }}
+          />
+        </>
       )}
 
       {/* Dialogs */}
