@@ -16,9 +16,13 @@ const UserProfile = () => {
   const { currentTheme } = useTheme();
   const { subscription } = useSubscription();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Aqui vamos guardar o nome da empresa vinculada (se existir)
+  const [linkedCompanyName, setLinkedCompanyName] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,81 +30,93 @@ const UserProfile = () => {
     company: ''
   });
 
-  // Get the correct user name from Google or profile
+  // Função para pegar o nome do usuário, igual antes
   const getUserDisplayName = () => {
     if (profile?.name) {
       return profile.name;
     }
-    
-    // Check Google metadata for full_name first, then name
     if (user?.user_metadata?.full_name) {
       return user.user_metadata.full_name;
     }
-    
     if (user?.user_metadata?.name) {
       return user.user_metadata.name;
     }
-    
-    // Fallback to email prefix
     return user?.email?.split('@')[0] || '';
   };
 
-  // Carregar dados quando profile mudar
+  // Detectar plano enterprise
+  const isEnterpriseUser = subscription === 'enterprise' || subscription === 'enterprise-annual';
+
+  // Carregar dados quando profile/user mudar
   useEffect(() => {
     if (user && profile) {
+      // Se o profile tem empresa vinculada, usar o nome dela. Supondo que você tem essa info:
+      // Exemplo: profile.company_name (empresa vinculada) ou null se não tem
+      if (profile.company_name) {
+        setLinkedCompanyName(profile.company_name);
+      } else {
+        setLinkedCompanyName(null);
+      }
+
       setFormData({
         name: getUserDisplayName(),
         email: user.email || '',
         phone: profile.phone || '',
-        company: profile.company || ''
+        // Se usuário tem empresa vinculada, no formData.company deixamos vazio
+        // para não editar esse campo, pois vamos mostrar linkedCompanyName
+        company: '', 
       });
     }
   }, [user, profile]);
 
-  // Buscar foto do perfil
+  // Pega URL da foto de perfil
   const getProfileImageUrl = () => {
     if (profile?.image_user) {
       return profile.image_user;
     }
-    
     if (user?.user_metadata?.avatar_url) {
       return user.user_metadata.avatar_url;
     }
-    
     return '';
   };
 
-  const isEnterpriseUser = subscription === 'enterprise' || subscription === 'enterprise-annual';
-
+  // Função salvar
   const handleSave = async () => {
     if (!user?.id) return;
-    
+
     setIsLoading(true);
     try {
       const updateData: any = {};
-      
+
       if (formData.phone !== profile?.phone) {
         updateData.phone = formData.phone;
       }
-      
-      // Só permitir alterar empresa para usuários Enterprise
-      if (isEnterpriseUser && formData.company !== profile?.company) {
-        updateData.company = formData.company;
+
+      // Se usuário NÃO tem empresa vinculada, então salvar o que ele digitou
+      if (!linkedCompanyName) {
+        // Se plano enterprise, salva company que ele digitou
+        if (isEnterpriseUser && formData.company !== profile?.company) {
+          updateData.company = formData.company;
+        }
+        // Se não for enterprise, salva mesmo assim pois campo livre
+        if (!isEnterpriseUser && formData.company !== profile?.company) {
+          updateData.company = formData.company;
+        }
       }
-      
+
       if (formData.name !== profile?.name) {
         updateData.name = formData.name;
       }
-      
+
       if (Object.keys(updateData).length > 0) {
         await updateProfile(updateData);
       }
-      
+
       toast({
         title: "Perfil Atualizado",
         description: "Suas informações foram atualizadas com sucesso.",
       });
-      
+
       setIsEditing(false);
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
@@ -113,6 +129,7 @@ const UserProfile = () => {
     setIsLoading(false);
   };
 
+  // Upload de foto (igual seu código)
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !user?.id) return;
@@ -140,10 +157,10 @@ const UserProfile = () => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
-        
+
         try {
           await updateProfile({ image_user: base64 });
-          
+
           toast({
             title: "Foto Atualizada",
             description: "Sua foto de perfil foi atualizada com sucesso.",
@@ -158,7 +175,7 @@ const UserProfile = () => {
         }
         setIsLoading(false);
       };
-      
+
       reader.readAsDataURL(file);
     } catch (error) {
       console.error('Erro ao processar imagem:', error);
@@ -171,6 +188,7 @@ const UserProfile = () => {
     }
   };
 
+  // Mudança em inputs
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -178,6 +196,7 @@ const UserProfile = () => {
     }));
   };
 
+  // Cor do badge plano
   const getPlanBadgeColor = () => {
     switch (subscription) {
       case 'enterprise':
@@ -192,6 +211,7 @@ const UserProfile = () => {
     }
   };
 
+  // Nome do plano
   const getPlanName = () => {
     switch (subscription) {
       case 'enterprise':
@@ -230,7 +250,7 @@ const UserProfile = () => {
                 {getUserDisplayName() ? getUserDisplayName().charAt(0).toUpperCase() : 'U'}
               </AvatarFallback>
             </Avatar>
-            
+
             <Button
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
@@ -240,7 +260,7 @@ const UserProfile = () => {
               <Upload className="h-4 w-4" />
               Alterar Foto
             </Button>
-            
+
             <input
               ref={fileInputRef}
               type="file"
@@ -293,17 +313,34 @@ const UserProfile = () => {
                   </Badge>
                 )}
               </Label>
-              <Input
-                id="company"
-                value={formData.company}
-                onChange={(e) => handleInputChange('company', e.target.value)}
-                disabled={!isEditing || isLoading || !isEnterpriseUser}
-                placeholder={isEnterpriseUser ? "Nome da empresa" : "Disponível no plano Enterprise"}
-                className={!isEnterpriseUser ? "bg-gray-50" : ""}
-              />
-              {!isEnterpriseUser && isEditing && (
+
+              {/* Se tem empresa vinculada, mostrar nome fixo (disabled) */}
+              {linkedCompanyName ? (
+                <Input
+                  id="company"
+                  value={linkedCompanyName}
+                  disabled={true}
+                  className="bg-gray-50 cursor-not-allowed"
+                />
+              ) : (
+                <Input
+                  id="company"
+                  value={formData.company}
+                  onChange={(e) => handleInputChange('company', e.target.value)}
+                  disabled={!isEditing || isLoading || (!isEnterpriseUser && !isEditing ? true : false)}
+                  placeholder={isEnterpriseUser ? "Nome da empresa" : "Disponível no plano Enterprise"}
+                  className={!isEnterpriseUser ? "bg-gray-50" : ""}
+                />
+              )}
+
+              {!isEnterpriseUser && !linkedCompanyName && isEditing && (
                 <p className="text-xs text-gray-500">
                   O campo empresa está disponível apenas para usuários do plano Enterprise
+                </p>
+              )}
+              {linkedCompanyName && (
+                <p className="text-xs text-gray-500">
+                  Você pertence à empresa acima, este campo não pode ser editado.
                 </p>
               )}
             </div>
@@ -341,13 +378,18 @@ const UserProfile = () => {
                   variant="outline"
                   onClick={() => {
                     setIsEditing(false);
-                    // Reset form data
+                    // Reset form data e linkedCompanyName
                     if (user && profile) {
+                      if (profile.company_name) {
+                        setLinkedCompanyName(profile.company_name);
+                      } else {
+                        setLinkedCompanyName(null);
+                      }
                       setFormData({
                         name: getUserDisplayName(),
                         email: user.email || '',
                         phone: profile.phone || '',
-                        company: profile.company || ''
+                        company: '',
                       });
                     }
                   }}
