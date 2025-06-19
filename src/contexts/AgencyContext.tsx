@@ -83,7 +83,7 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  // Carregar convites pendentes - Só busca se o usuário tem email
+  // Carregar convites pendentes
   const loadPendingInvitations = async () => {
     if (!user || !isAuthenticated || !user.email) {
       console.log('📧 Não buscando convites: usuário sem email ou não autenticado');
@@ -247,7 +247,6 @@ export const AgencyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (user && isAuthenticated) {
       loadUserAgencies();
-      // Só busca convites se o usuário tem email
       if (user.email) {
         loadPendingInvitations();
       }
