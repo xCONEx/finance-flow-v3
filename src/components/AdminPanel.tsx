@@ -485,338 +485,312 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
       </div>
 
         <Tabs defaultValue="users" className="space-y-4">
-    {/* TabsList com ícones no mobile e texto no desktop */}
-    <TabsList className="grid grid-cols-4 gap-1 md:gap-2 w-full">
-      <TabsTrigger
-        value="users"
-        className="flex flex-col items-center justify-center text-xs md:text-sm"
-      >
-        <User className="h-5 w-5 md:mb-1" />
-        <span className="hidden md:inline">Usuários</span>
-      </TabsTrigger>
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-1 md:gap-2 w-full">
+          <TabsTrigger value="users" className="text-xs md:text-sm">Usuários</TabsTrigger>
+          <TabsTrigger value="companies" className="text-xs md:text-sm">Empresas</TabsTrigger>
+          <TabsTrigger value="admins" className="text-xs md:text-sm">Administradores</TabsTrigger>
+          <TabsTrigger value="analytics" className="text-xs md:text-sm">Analytics</TabsTrigger>
+        </TabsList>
 
-      <TabsTrigger
-        value="companies"
-        className="flex flex-col items-center justify-center text-xs md:text-sm"
-      >
-        <Building className="h-5 w-5 md:mb-1" />
-        <span className="hidden md:inline">Empresas</span>
-      </TabsTrigger>
+        {/* USERS */}
+        <TabsContent value="users" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg md:text-xl">Filtro de Usuários</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:gap-2">
+                <Input
+                  placeholder="Buscar por email ou nome..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="text-sm"
+                />
+                <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    <SelectItem value="individual">Individual</SelectItem>
+                    <SelectItem value="company_owner">Company Owner</SelectItem>
+                    <SelectItem value="employee">Colaborador</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="Plano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os planos</SelectItem>
+                    <SelectItem value="free">Gratuito</SelectItem>
+                    <SelectItem value="basic">Basic</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                    <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
-      <TabsTrigger
-        value="admins"
-        className="flex flex-col items-center justify-center text-xs md:text-sm"
-      >
-        <Shield className="h-5 w-5 md:mb-1" />
-        <span className="hidden md:inline">Administradores</span>
-      </TabsTrigger>
-
-      <TabsTrigger
-        value="analytics"
-        className="flex flex-col items-center justify-center text-xs md:text-sm"
-      >
-        <BarChart className="h-5 w-5 md:mb-1" />
-        <span className="hidden md:inline">Analytics</span>
-      </TabsTrigger>
-    </TabsList>
-
-    {/* Conteúdo das abas */}
-    {/* USERS */}
-    <TabsContent value="users" className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg md:text-xl">Filtro de Usuários</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:gap-2">
-            <Input
-              placeholder="Buscar por email ou nome..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="text-sm"
-            />
-            <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                <SelectItem value="individual">Individual</SelectItem>
-                <SelectItem value="company_owner">Company Owner</SelectItem>
-                <SelectItem value="employee">Colaborador</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Plano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os planos</SelectItem>
-                <SelectItem value="free">Gratuito</SelectItem>
-                <SelectItem value="basic">Basic</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
-                <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabela responsiva */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[200px]">Usuário</TableHead>
-                  <TableHead className="min-w-[100px]">Status</TableHead>
-                  <TableHead className="min-w-[100px]">Plano</TableHead>
-                  <TableHead className="min-w-[120px]">Tipo</TableHead>
-                  <TableHead className="min-w-[120px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-sm">{user.email}</p>
-                        {user.name && (
-                          <p className="text-xs text-gray-600">{user.name}</p>
-                        )}
-                        <p className="text-xs text-gray-400">ID: {user.id.slice(0, 8)}...</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.banned ? "destructive" : "secondary"} className="text-xs">
-                        {user.banned ? "Banido" : "Ativo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Select 
-                        value={user.subscription || 'free'} 
-                        onValueChange={(value: SubscriptionPlan) => handleUpdateSubscription(user.id, value)}
-                      >
-                        <SelectTrigger className="w-full min-w-[100px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="free">Gratuito</SelectItem>
-                          <SelectItem value="basic">Basic</SelectItem>
-                          <SelectItem value="premium">Premium</SelectItem>
-                          <SelectItem value="enterprise">Enterprise</SelectItem>
-                          <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Select 
-                        value={user.user_type || 'individual'} 
-                        onValueChange={(value: UserType) => handleUpdateUserField(user.id, 'user_type', value)}
-                      >
-                        <SelectTrigger className="w-full min-w-[120px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="individual">Individual</SelectItem>
-                          <SelectItem value="company_owner">Company Owner</SelectItem>
-                          <SelectItem value="employee">Colaborador</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant={user.banned ? "outline" : "destructive"}
-                          size="sm"
-                          onClick={() => handleBanUser(user.id, !user.banned)}
-                          className="p-2"
-                          title={user.banned ? "Desbanir usuário" : "Banir usuário"}
-                        >
-                          {user.banned ? (
-                            <UserCheck className="h-4 w-4" />
-                          ) : (
-                            <Ban className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">Nenhum usuário encontrado</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </TabsContent>
-
-    {/* COMPANIES */}
-    <TabsContent value="companies" className="space-y-4">
-      <CompanyManagement />
-    </TabsContent>
-
-    {/* ADMINS */}
-    <TabsContent value="admins" className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg md:text-xl">Gerenciar Administradores</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-2">
-            <Input
-              placeholder="Email do novo admin"
-              value={newAdminEmail}
-              onChange={(e) => setNewAdminEmail(e.target.value)}
-              className="flex-1"
-            />
-            <Button onClick={handleAddAdmin} className="md:w-auto">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Adicionar Admin
-            </Button>
-          </div>
-
-          <div className="border rounded-lg p-4 space-y-2">
-            <h4 className="font-semibold text-sm md:text-base">Administradores Atuais:</h4>
-            {users.filter(u => u.user_type === 'admin').map(admin => (
-              <div key={admin.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                <div>
-                  <span className="text-sm font-medium">{admin.email}</span>
-                  {admin.name && (
-                    <p className="text-xs text-gray-600">{admin.name}</p>
-                  )}
+          {/* Tabela responsiva com botões minimalistas */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[200px]">Usuário</TableHead>
+                      <TableHead className="min-w-[100px]">Status</TableHead>
+                      <TableHead className="min-w-[100px]">Plano</TableHead>
+                      <TableHead className="min-w-[120px]">Tipo</TableHead>
+                      <TableHead className="min-w-[120px]">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-sm">{user.email}</p>
+                            {user.name && (
+                              <p className="text-xs text-gray-600">{user.name}</p>
+                            )}
+                            <p className="text-xs text-gray-400">ID: {user.id.slice(0, 8)}...</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.banned ? "destructive" : "secondary"} className="text-xs">
+                            {user.banned ? "Banido" : "Ativo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Select 
+                            value={user.subscription || 'free'} 
+                            onValueChange={(value: SubscriptionPlan) => handleUpdateSubscription(user.id, value)}
+                          >
+                            <SelectTrigger className="w-full min-w-[100px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="free">Gratuito</SelectItem>
+                              <SelectItem value="basic">Basic</SelectItem>
+                              <SelectItem value="premium">Premium</SelectItem>
+                              <SelectItem value="enterprise">Enterprise</SelectItem>
+                              <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select 
+                            value={user.user_type || 'individual'} 
+                            onValueChange={(value: UserType) => handleUpdateUserField(user.id, 'user_type', value)}
+                          >
+                            <SelectTrigger className="w-full min-w-[120px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="individual">Individual</SelectItem>
+                              <SelectItem value="company_owner">Company Owner</SelectItem>
+                              <SelectItem value="employee">Colaborador</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant={user.banned ? "outline" : "destructive"}
+                              size="sm"
+                              onClick={() => handleBanUser(user.id, !user.banned)}
+                              className="p-2"
+                              title={user.banned ? "Desbanir usuário" : "Banir usuário"}
+                            >
+                              {user.banned ? (
+                                <UserCheck className="h-4 w-4" />
+                              ) : (
+                                <Ban className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Nenhum usuário encontrado</p>
                 </div>
-                <Badge>Admin</Badge>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* COMPANIES */}
+        <TabsContent value="companies" className="space-y-4">
+          <CompanyManagement />
+        </TabsContent>
+
+        {/* ADMINS */}
+        <TabsContent value="admins" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg md:text-xl">Gerenciar Administradores</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col md:flex-row gap-2">
+                <Input
+                  placeholder="Email do novo admin"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleAddAdmin} className="md:w-auto">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Adicionar Admin
+                </Button>
               </div>
-            ))}
-            {users.filter(u => u.user_type === 'admin').length === 0 && (
-              <p className="text-gray-500 text-sm">Nenhum administrador encontrado</p>
-            )}
+
+              <div className="border rounded-lg p-4 space-y-2">
+                <h4 className="font-semibold text-sm md:text-base">Administradores Atuais:</h4>
+                {users.filter(u => u.user_type === 'admin').map(admin => (
+                  <div key={admin.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                    <div>
+                      <span className="text-sm font-medium">{admin.email}</span>
+                      {admin.name && (
+                        <p className="text-xs text-gray-600">{admin.name}</p>
+                      )}
+                    </div>
+                    <Badge>Admin</Badge>
+                  </div>
+                ))}
+                {users.filter(u => u.user_type === 'admin').length === 0 && (
+                  <p className="text-gray-500 text-sm">Nenhum administrador encontrado</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          {/* Export buttons */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Exportar Relatórios
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-2">
+                <Button
+                  onClick={() => exportToPDF('monthly')}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Relatório Mensal</span>
+                  <span className="sm:hidden">Mensal</span>
+                </Button>
+                <Button
+                  onClick={() => exportToPDF('quarterly')}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Relatório Trimestral</span>
+                  <span className="sm:hidden">Trimestral</span>
+                </Button>
+                <Button
+                  onClick={() => exportToPDF('annual')}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Relatório Anual</span>
+                  <span className="sm:hidden">Anual</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg md:text-xl">Distribuição de Usuários</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span>Usuários Free:</span>
+                    <span className="font-bold">{freeUsers}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Usuários Basic:</span>
+                    <span className="font-bold text-green-600">{basicUsers}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Usuários Premium:</span>
+                    <span className="font-bold text-blue-600">{premiumUsers}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Usuários Enterprise:</span>
+                    <span className="font-bold text-yellow-600">{enterpriseUsers}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Usuários Banidos:</span>
+                    <span className="font-bold text-red-600">{bannedUsers}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg md:text-xl">Informações Gerais</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span>Total de Usuários:</span>
+                    <span className="font-bold">{analytics?.overview?.totalUsers || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Usuários Ativos:</span>
+                    <span className="font-bold text-green-600">{analytics?.overview?.activeUsers || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Taxa de Conversão:</span>
+                    <span className="font-bold text-blue-600">
+                      {analytics?.overview?.totalUsers > 0 
+                        ? ((premiumUsers + basicUsers + enterpriseUsers) / analytics.overview.totalUsers * 100).toFixed(1)
+                        : 0
+                      }%
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Receita Estimada:</span>
+                    <span className="font-bold text-purple-600">
+                      R$ {(analytics?.overview?.totalRevenue || 0).toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
-    </TabsContent>
-
-    {/* ANALYTICS */}
-    <TabsContent value="analytics" className="space-y-4">
-      {/* Export buttons */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg md:text-xl flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Exportar Relatórios
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-2">
-            <Button
-              onClick={() => exportToPDF('monthly')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Relatório Mensal</span>
-              <span className="sm:hidden">Mensal</span>
-            </Button>
-            <Button
-              onClick={() => exportToPDF('quarterly')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Relatório Trimestral</span>
-              <span className="sm:hidden">Trimestral</span>
-            </Button>
-            <Button
-              onClick={() => exportToPDF('annual')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Relatório Anual</span>
-              <span className="sm:hidden">Anual</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Distribuição de Usuários</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span>Usuários Free:</span>
-                <span className="font-bold">{freeUsers}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Usuários Basic:</span>
-                <span className="font-bold text-green-600">{basicUsers}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Usuários Premium:</span>
-                <span className="font-bold text-blue-600">{premiumUsers}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Usuários Enterprise:</span>
-                <span className="font-bold text-yellow-600">{enterpriseUsers}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Usuários Banidos:</span>
-                <span className="font-bold text-red-600">{bannedUsers}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Estatísticas Gerais</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span>Total Usuários:</span>
-                <span className="font-bold">{totalUsers}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Total Empresas:</span>
-                <span className="font-bold">{totalCompanies}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Usuários Ativos:</span>
-                <span className="font-bold">{activeUsers}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Administradores:</span>
-                <span className="font-bold">{adminCount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Novos Usuários (30d):</span>
-                <span className="font-bold">{newUsers30d}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </TabsContent>
-  </Tabs>
+        </TabsContent>
+      </Tabs>
     </div>
   );
+
 };
 
 export default AdminPanel;
