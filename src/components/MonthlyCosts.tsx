@@ -199,7 +199,7 @@ return (
     </div>
 
     {/* Costs List */}
-    <div className="grid gap-4">
+    <div className="grid gap-4  pb-20 md:pb-0">
       {monthlyCosts.length > 0 ? (
         monthlyCosts.map((cost) => (
           <Card key={cost.id} className="transition-all duration-300 hover:shadow-lg">
