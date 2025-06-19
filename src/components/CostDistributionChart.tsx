@@ -12,7 +12,7 @@ const CostDistributionChart = () => {
   const costsByCategory = monthlyCosts.reduce((acc, cost) => {
     const category = cost.category || 'Outros';
     // Usar verificação segura para o valor
-    const value = cost.value || cost.amount || 0;
+    const value = cost.value || 0;
     const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
     
     acc[category] = (acc[category] || 0) + safeValue;
@@ -44,9 +44,17 @@ const CostDistributionChart = () => {
     );
   }
 
-  const customTooltip = ({ value }: { value?: number }) => {
-    if (value === undefined || value === null) return null;
-    return formatValue(value);
+  const customTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length > 0) {
+      const value = payload[0].value;
+      return (
+        <div className="bg-white p-2 border rounded shadow">
+          <p className="font-medium">{payload[0].name}</p>
+          <p className="text-blue-600">{formatValue(value)}</p>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -69,7 +77,7 @@ const CostDistributionChart = () => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={customTooltip} />
+              <Tooltip content={customTooltip} />
             </PieChart>
           </ResponsiveContainer>
         </div>
