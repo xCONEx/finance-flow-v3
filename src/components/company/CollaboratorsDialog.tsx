@@ -1,6 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import CollaboratorsDialog from './CollaboratorsDialog'; // seu componente que você enviou
-import { supabase } from '@/lib/supabaseClient'; // ajuste o caminho conforme seu projeto
+import React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Loader2, UserPlus, Trash2, Users } from 'lucide-react';
 
 interface Company {
   id: string;
