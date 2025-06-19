@@ -405,7 +405,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
   const { freeUsers = 0, premiumUsers = 0, basicUsers = 0, enterpriseUsers = 0, bannedUsers = 0 } = analytics?.userStats || {};
 
   return (
-    <div className="space-y-4 md:space-y-6 p-2 md:p-4">
+    <div className="space-y-4 md:space-y-6 p-2 md:p-4 ">
       <div className="text-center space-y-2">
         <h2 className="text-2xl md:text-3xl font-bold flex items-center justify-center gap-2">
           <Shield className="text-purple-600 h-6 w-6 md:h-8 md:w-8" />
@@ -509,7 +509,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
 </Tabs>
 
         {/* USERS */}
-        <TabsContent value="users" className="space-y-4">
+        <TabsContent value="users" className="space-y-4 pb-20 md:pb-0">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg md:text-xl">Filtro de Usuários</CardTitle>
@@ -648,12 +648,12 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         </TabsContent>
 
         {/* COMPANIES */}
-        <TabsContent value="companies" className="space-y-4">
+        <TabsContent value="companies" className="space-y-4 pb-20 md:pb-0">
           <CompanyManagement />
         </TabsContent>
 
         {/* ADMINS */}
-        <TabsContent value="admins" className="space-y-4">
+        <TabsContent value="admins" className="space-y-4 pb-20 md:pb-0">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg md:text-xl">Gerenciar Administradores</CardTitle>
@@ -693,7 +693,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
           </Card>
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
+        <TabsContent value="analytics" className="space-y-4 pb-20 md:pb-0">
           {/* Export buttons */}
           <Card>
             <CardHeader>
