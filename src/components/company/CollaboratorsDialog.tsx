@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -7,12 +8,20 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, UserPlus, Trash2, User } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Loader2, UserPlus, Trash2, Users } from 'lucide-react';
 
 interface Company {
   id: string;
   name: string;
-  owner_id: string; // CORRIGIDO: usar owner_id
+  owner_uid: string; // CORRIGIDO: usar owner_uid conforme tipos TypeScript gerados
   owner_email: string;
   owner_name?: string;
   status: string;
@@ -52,7 +61,7 @@ const CollaboratorsDialog: React.FC<CollaboratorsDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl mx-4">
+      <DialogContent className="max-w-4xl mx-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -61,70 +70,82 @@ const CollaboratorsDialog: React.FC<CollaboratorsDialogProps> = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex justify-between items-center">
             <p className="text-sm text-gray-600">
-              {collaborators.length} colaborador{collaborators.length !== 1 ? 'es' : ''}
+              Total de colaboradores: {collaborators.length}
             </p>
             <Button
-              size="sm"
               onClick={() => onInviteCollaborator(company)}
-              className="flex items-center gap-2"
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
             >
-              <UserPlus className="h-4 w-4" />
-              Adicionar
+              <UserPlus className="h-4 w-4 mr-2" />
+              Convidar Colaborador
             </Button>
           </div>
 
           {loadingCollaborators ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Carregando colaboradores...</p>
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <p className="ml-2 text-gray-600">Carregando colaboradores...</p>
             </div>
           ) : collaborators.length === 0 ? (
             <div className="text-center py-8">
               <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500">Nenhum colaborador encontrado</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Adicione pessoas para colaborar nesta empresa
-              </p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {collaborators.map((collaborator) => (
-                <div
-                  key={collaborator.id}
-                  className="flex items-center justify-between p-3 border rounded-lg bg-white"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="p-2 bg-gray-100 rounded-full flex-shrink-0">
-                      <User className="h-4 w-4 text-gray-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{collaborator.email}</p>
-                      {collaborator.name && collaborator.name !== 'N/A' && (
-                        <p className="text-sm text-gray-600 truncate">{collaborator.name}</p>
-                      )}
-                      <p className="text-xs text-gray-400">
-                        Adicionado em {new Date(collaborator.added_at).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Badge variant="outline">{collaborator.role}</Badge>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => onRemoveCollaborator(collaborator.id, collaborator.email)}
-                      className="p-2"
-                      title="Remover colaborador"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Função</TableHead>
+                    <TableHead>Adicionado em</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {collaborators.map((collaborator) => (
+                    <TableRow key={collaborator.id}>
+                      <TableCell className="font-medium">
+                        {collaborator.email}
+                      </TableCell>
+                      <TableCell>
+                        {collaborator.name || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {collaborator.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(collaborator.added_at).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onRemoveCollaborator(collaborator.id, collaborator.email)}
+                          className="p-2"
+                          title="Remover colaborador"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
+
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Fechar
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -7,12 +8,11 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UserPlus } from 'lucide-react';
 
 interface Company {
   id: string;
   name: string;
-  owner_id: string;
+  owner_uid: string; // CORRIGIDO: usar owner_uid conforme tipos TypeScript gerados
   owner_email: string;
   owner_name?: string;
   status: string;
@@ -33,12 +33,14 @@ const InviteCollaboratorDialog: React.FC<InviteCollaboratorDialogProps> = ({
   company,
   onInviteCollaborator
 }) => {
-  const [inviteEmail, setInviteEmail] = useState('');
+  const [email, setEmail] = useState('');
 
   const handleInvite = async () => {
-    await onInviteCollaborator(inviteEmail);
-    onOpenChange(false);
-    setInviteEmail('');
+    if (email.trim()) {
+      await onInviteCollaborator(email);
+      setEmail('');
+      onOpenChange(false);
+    }
   };
 
   return (
@@ -47,33 +49,32 @@ const InviteCollaboratorDialog: React.FC<InviteCollaboratorDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Convidar Colaborador</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <p className="text-sm text-gray-600">Empresa:</p>
-            <p className="font-medium">{company?.name}</p>
+        {company && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-2">
+                Empresa: <span className="font-medium">{company.name}</span>
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Email do Colaborador</label>
+              <Input
+                type="email"
+                placeholder="Digite o email do colaborador"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col md:flex-row justify-end gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleInvite} disabled={!email.trim()}>
+                Convidar
+              </Button>
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium">Email do Colaborador</label>
-            <Input
-              type="email"
-              placeholder="Digite o email do colaborador"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              O usuário deve estar cadastrado no sistema
-            </p>
-          </div>
-          <div className="flex flex-col md:flex-row justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleInvite}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Adicionar
-            </Button>
-          </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );
