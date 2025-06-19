@@ -18,6 +18,8 @@ import {
   UserPlus,
   Eye
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 
 interface Company {
   id: string;
