@@ -33,7 +33,7 @@ import {
   Trash2,
   UserMinus,
   Download,
-  User, Building, BarChart,
+  User, Building, BarChart, ShieldCheck,
   FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -484,13 +484,29 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         </Card>
       </div>
 
-        <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-1 md:gap-2 w-full">
-          <TabsTrigger value="users" className="text-xs md:text-sm">Usuários</TabsTrigger>
-          <TabsTrigger value="companies" className="text-xs md:text-sm">Empresas</TabsTrigger>
-          <TabsTrigger value="admins" className="text-xs md:text-sm">Administradores</TabsTrigger>
-          <TabsTrigger value="analytics" className="text-xs md:text-sm">Analytics</TabsTrigger>
-        </TabsList>
+<Tabs defaultValue="users" className="space-y-4">
+  <TabsList className="grid grid-cols-4 gap-1 md:gap-2 w-full">
+    <TabsTrigger value="users" className="flex flex-col items-center text-xs md:text-sm">
+      <User className="w-6 h-6 md:hidden" />  {/* Ícone só no mobile */}
+      <span className="hidden md:block">Usuários</span> {/* Texto só no desktop */}
+    </TabsTrigger>
+
+    <TabsTrigger value="companies" className="flex flex-col items-center text-xs md:text-sm">
+      <Building className="w-6 h-6 md:hidden" />
+      <span className="hidden md:block">Empresas</span>
+    </TabsTrigger>
+
+    <TabsTrigger value="admins" className="flex flex-col items-center text-xs md:text-sm">
+      <ShieldCheck className="w-6 h-6 md:hidden" />
+      <span className="hidden md:block">Administradores</span>
+    </TabsTrigger>
+
+    <TabsTrigger value="analytics" className="flex flex-col items-center text-xs md:text-sm">
+      <BarChart className="w-6 h-6 md:hidden" />
+      <span className="hidden md:block">Analytics</span>
+    </TabsTrigger>
+  </TabsList>
+</Tabs>
 
         {/* USERS */}
         <TabsContent value="users" className="space-y-4">
