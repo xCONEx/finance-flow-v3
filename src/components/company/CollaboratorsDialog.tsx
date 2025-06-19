@@ -18,6 +18,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Loader2, UserPlus, Trash2, Users } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 
 interface Company {
   id: string;
