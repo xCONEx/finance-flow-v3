@@ -121,85 +121,87 @@ const MonthlyCosts = () => {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-3xl font-bold flex items-center gap-2">
-            <DollarSign className="text-purple-600" />
-            Custos Mensais
-          </h2>
-          <p className="text-gray-600">
-            Gerencie suas despesas e custos fixos mensais
-            {monthlyCosts.length > 0 && (
-              <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                {monthlyCosts.length} {monthlyCosts.length === 1 ? 'despesa importada' : 'despesas importadas'}
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+return (
+  <div className="space-y-6">
+    {/* Header */}
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h2 className="text-3xl font-bold flex items-center gap-2">
+          <DollarSign className="text-purple-600" />
+          Custos Mensais
+        </h2>
+        <p className="text-gray-600">
+          Gerencie suas despesas e custos fixos mensais
           {monthlyCosts.length > 0 && (
-            <>
-              <Button onClick={handleGeneratePDF} variant="outline" className="hidden sm:flex">
-                <FileText className="h-4 w-4 mr-2" />
-                Gerar PDF
-              </Button>
-              <Button onClick={handleGeneratePDF} variant="outline" className="sm:hidden" size="sm">
-                <FileText className="h-4 w-4" />
-              </Button>
-            </>
+            <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+              {monthlyCosts.length} {monthlyCosts.length === 1 ? 'despesa importada' : 'despesas importadas'}
+            </span>
           )}
-          <Button onClick={() => setShowExpenseModal(true)} disabled={submitting} className="hidden sm:flex">
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Custo
-          </Button>
-          <Button onClick={() => setShowExpenseModal(true)} disabled={submitting} className="sm:hidden flex-1" size="sm">
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+        </p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-r from-red-50 to-pink-50 border-red-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
-          <CardContent className="p-4 sm:p-6">
-            <div className="text-center">
-              <h3 className="text-sm sm:text-lg font-semibold text-red-800">Total Mensal</h3>
-              <div className="text-xl sm:text-3xl font-bold text-red-600">
-                R$ {totalMonthlyCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
-          <CardContent className="p-4 sm:p-6">
-            <div className="text-center">
-              <h3 className="text-sm sm:text-lg font-semibold text-orange-800">Mês Atual</h3>
-              <div className="text-xl sm:text-3xl font-bold text-orange-600">
-                R$ {currentMonthCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex gap-2 w-full sm:w-auto">
+        {monthlyCosts.length > 0 && (
+          <>
+            <Button onClick={handleGeneratePDF} variant="outline" className="hidden sm:flex">
+              <FileText className="h-4 w-4 mr-2" />
+              Gerar PDF
+            </Button>
+            <Button onClick={handleGeneratePDF} variant="outline" className="sm:hidden" size="sm">
+              <FileText className="h-4 w-4" />
+            </Button>
+          </>
+        )}
 
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
-          <CardContent className="p-4 sm:p-6">
-            <div className="text-center">
-              <h3 className="text-sm sm:text-lg font-semibold text-blue-800">Vencimentos</h3>
-              <div className="text-xl sm:text-3xl font-bold text-blue-600">
-                {upcomingCosts}
-              </div>
-              <p className="text-xs text-blue-600">próximos 7 dias</p>
-            </div>
-          </CardContent>
-        </Card>
+        <Button onClick={() => setShowExpenseModal(true)} disabled={submitting} className="hidden sm:flex">
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Custo
+        </Button>
+        <Button onClick={() => setShowExpenseModal(true)} disabled={submitting} className="sm:hidden flex-1" size="sm">
+          <Plus className="h-4 w-4" />
+        </Button>
       </div>
+    </div>
 
-      {/* Costs List */}
-      <div className="grid gap-4">
-        {monthlyCosts.map((cost) => (
+    {/* Summary Cards */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Card className="bg-gradient-to-r from-red-50 to-pink-50 border-red-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
+        <CardContent className="p-4 sm:p-6">
+          <div className="text-center">
+            <h3 className="text-sm sm:text-lg font-semibold text-red-800">Total Mensal</h3>
+            <div className="text-xl sm:text-3xl font-bold text-red-600">
+              R$ {totalMonthlyCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
+        <CardContent className="p-4 sm:p-6">
+          <div className="text-center">
+            <h3 className="text-sm sm:text-lg font-semibold text-orange-800">Mês Atual</h3>
+            <div className="text-xl sm:text-3xl font-bold text-orange-600">
+              R$ {currentMonthCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 transition-all duration-300 hover:scale-105 hover:shadow-lg">
+        <CardContent className="p-4 sm:p-6">
+          <div className="text-center">
+            <h3 className="text-sm sm:text-lg font-semibold text-blue-800">Vencimentos</h3>
+            <div className="text-xl sm:text-3xl font-bold text-blue-600">{upcomingCosts}</div>
+            <p className="text-xs text-blue-600">próximos 7 dias</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+
+    {/* Costs List */}
+    <div className="grid gap-4">
+      {monthlyCosts.length > 0 ? (
+        monthlyCosts.map((cost) => (
           <Card key={cost.id} className="transition-all duration-300 hover:shadow-lg">
             <CardContent className="p-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -227,22 +229,21 @@ const MonthlyCosts = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   <p className="text-sm text-gray-600">Categoria: {cost.category}</p>
                   <p className="text-xs text-gray-500">
                     Mês: {new Date(cost.month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                   </p>
-                  
+
                   {cost.dueDate && (
                     <div className="flex items-center gap-2 mt-2">
                       <Calendar className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">
-                        Vence em: {formatDueDate(cost.dueDate)}
-                      </span>
+                      <span className="text-sm text-gray-600">Vence em: {formatDueDate(cost.dueDate)}</span>
                       {getDueDateBadge(cost.dueDate)}
                     </div>
                   )}
                 </div>
+
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <div className="text-right flex-1 sm:flex-none">
                     <div className="text-lg font-bold text-red-600">
@@ -271,28 +272,24 @@ const MonthlyCosts = () => {
               </div>
             </CardContent>
           </Card>
-        ))}
-        
-        {monthlyCosts.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center text-gray-500">
-              <DollarSign className="mx-auto h-12 w-12 mb-4" />
-              <p>Nenhum custo cadastrado ainda</p>
-              <Button variant="outline" className="mt-4" onClick={() => setShowExpenseModal(true)}>
-                Adicionar Primeiro Custo
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <ExpenseModal 
-        open={showExpenseModal} 
-        onOpenChange={handleCloseModal}
-        editingCost={editingCost}
-      />
+        ))
+      ) : (
+        <Card>
+          <CardContent className="p-8 text-center text-gray-500">
+            <DollarSign className="mx-auto h-12 w-12 mb-4" />
+            <p>Nenhum custo cadastrado ainda</p>
+            <Button variant="outline" className="mt-4" onClick={() => setShowExpenseModal(true)}>
+              Adicionar Primeiro Custo
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
-  );
+
+    <ExpenseModal open={showExpenseModal} onOpenChange={handleCloseModal} editingCost={editingCost} />
+  </div>
+);
+
 };
 
 export default MonthlyCosts;
