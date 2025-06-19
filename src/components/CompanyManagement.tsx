@@ -5,16 +5,19 @@ import { Building2, Users, Plus, Loader2 } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+
+// Componentes
 import CompanyTable from './company/CompanyTable';
 import CreateCompanyDialog from './company/CreateCompanyDialog';
 import EditCompanyDialog from './company/EditCompanyDialog';
 import InviteCollaboratorDialog from './company/InviteCollaboratorDialog';
 import CollaboratorsDialog from './company/CollaboratorsDialog';
 
+// Tipagens
 interface Company {
   id: string;
   name: string;
-  owner_id: string; // CORRIGIDO: usar owner_id conforme schema SQL
+  owner_id: string;
   owner_email: string;
   owner_name?: string;
   status: string;
@@ -40,53 +43,33 @@ interface Collaborator {
 
 const CompanyManagement = () => {
   const { user, profile } = useSupabaseAuth();
+
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingCollaborators, setLoadingCollaborators] = useState(false);
+
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showCollaboratorsDialog, setShowCollaboratorsDialog] = useState(false);
+
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
   const isAdmin = profile?.user_type === 'admin';
 
+  // 🔍 Fetch Companies
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-      
-      console.log('🔍 Buscando empresas via RPC get_all_companies_admin...');
-      
-      // Usar a função RPC correta com tipo any para evitar problemas de tipo
-      const { data: companiesData, error: companiesError } = await (supabase as any)
-        .rpc('get_all_companies_admin');
-
-      if (companiesError) {
-        console.error('❌ Erro ao buscar empresas:', companiesError);
-        toast({
-          title: "Erro",
-          description: `Erro ao carregar empresas: ${companiesError.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('✅ Empresas carregadas com sucesso:', companiesData?.length || 0);
-      console.log('📊 Dados das empresas:', companiesData);
-
-      // Os dados já vêm enriquecidos da função RPC
-      if (companiesData && Array.isArray(companiesData) && companiesData.length > 0) {
-        setCompanies(companiesData as Company[]);
-      } else {
-        setCompanies([]);
-      }
-    } catch (error) {
-      console.error('❌ Erro inesperado ao buscar empresas:', error);
+      const { data, error } = await (supabase as any).rpc('get_all_companies_admin');
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro inesperado ao carregar empresas.",
+        title: "Erro ao carregar empresas",
+        description: error.message || "Erro inesperado.",
         variant: "destructive"
       });
     } finally {
@@ -94,291 +77,189 @@ const CompanyManagement = () => {
     }
   };
 
+  // 🔍 Fetch Users
   const fetchUsers = async () => {
     try {
-      console.log('🔍 Buscando usuários...');
-      
       const { data, error } = await supabase
         .from('profiles')
         .select('id, email, name, user_type')
         .order('email');
-
-      if (error) {
-        console.error('❌ Erro ao buscar usuários:', error);
-        return;
-      }
-
-      console.log('✅ Usuários carregados:', data?.length || 0);
+      if (error) throw error;
       setUsers(data || []);
-    } catch (error) {
-      console.error('❌ Erro inesperado ao buscar usuários:', error);
+    } catch (error: any) {
+      console.error(error);
     }
   };
 
+  // 🔍 Fetch Collaborators
   const fetchCollaborators = async (companyId: string) => {
     try {
       setLoadingCollaborators(true);
-      console.log('🔍 Buscando colaboradores para empresa:', companyId);
-      
       const { data, error } = await (supabase as any)
         .rpc('get_company_collaborators_admin', { company_id: companyId });
-
-      if (error) {
-        console.error('❌ Erro ao buscar colaboradores:', error);
-        toast({
-          title: "Erro",
-          description: `Erro ao carregar colaboradores: ${error.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('✅ Colaboradores carregados:', data?.length || 0);
+      if (error) throw error;
       setCollaborators(data || []);
-    } catch (error) {
-      console.error('❌ Erro inesperado ao buscar colaboradores:', error);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar colaboradores",
+        description: error.message || "Erro inesperado.",
+        variant: "destructive"
+      });
     } finally {
       setLoadingCollaborators(false);
     }
   };
 
+  // ➕ Create Company
   const handleCreateCompany = async (name: string, ownerEmail: string) => {
+    const owner = users.find(u => u.email === ownerEmail);
+    if (!owner) {
+      return toast({
+        title: "Erro",
+        description: "Usuário não encontrado.",
+        variant: "destructive"
+      });
+    }
     try {
-      console.log('➕ Criando empresa:', { name, ownerEmail });
-      
-      const selectedUser = users.find(u => u.email === ownerEmail);
-      if (!selectedUser) {
-        toast({
-          title: "Erro",
-          description: "Usuário não encontrado.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('agencies')
         .insert({
           name,
-          owner_id: selectedUser.id, // CORRIGIDO: usar owner_id conforme schema SQL
+          owner_id: owner.id,
           status: 'active'
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ Erro ao criar empresa:', error);
-        toast({
-          title: "Erro",
-          description: `Erro ao criar empresa: ${error.message}`,
-          variant: "destructive"
         });
-        return;
-      }
-
-      console.log('✅ Empresa criada com sucesso:', data);
+      if (error) throw error;
       toast({
         title: "Sucesso",
         description: "Empresa criada com sucesso.",
       });
-
       fetchCompanies();
-    } catch (error) {
-      console.error('❌ Erro inesperado ao criar empresa:', error);
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro inesperado ao criar empresa.",
+        title: "Erro ao criar empresa",
+        description: error.message || "Erro inesperado.",
         variant: "destructive"
       });
     }
   };
 
+  // ✏️ Edit Company
   const handleEditCompany = async (name: string, ownerEmail: string) => {
     if (!selectedCompany) return;
-
+    const owner = users.find(u => u.email === ownerEmail);
+    if (!owner) {
+      return toast({
+        title: "Erro",
+        description: "Usuário não encontrado.",
+        variant: "destructive"
+      });
+    }
     try {
-      console.log('✏️ Editando empresa:', { id: selectedCompany.id, name, ownerEmail });
-      
-      const selectedUser = users.find(u => u.email === ownerEmail);
-      if (!selectedUser) {
-        toast({
-          title: "Erro",
-          description: "Usuário não encontrado.",
-          variant: "destructive"
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('agencies')
         .update({
           name,
-          owner_id: selectedUser.id // CORRIGIDO: usar owner_id conforme schema SQL
+          owner_id: owner.id
         })
         .eq('id', selectedCompany.id);
-
-      if (error) {
-        console.error('❌ Erro ao editar empresa:', error);
-        toast({
-          title: "Erro",
-          description: `Erro ao editar empresa: ${error.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('✅ Empresa editada com sucesso');
+      if (error) throw error;
       toast({
         title: "Sucesso",
-        description: "Empresa editada com sucesso.",
+        description: "Empresa atualizada com sucesso.",
       });
-
       fetchCompanies();
-    } catch (error) {
-      console.error('❌ Erro inesperado ao editar empresa:', error);
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro inesperado ao editar empresa.",
+        title: "Erro ao editar empresa",
+        description: error.message || "Erro inesperado.",
         variant: "destructive"
       });
     }
   };
 
+  // 🗑️ Delete Company
   const handleDeleteCompany = async (companyId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.')) {
-      return;
-    }
-
+    const confirmDelete = confirm('Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.');
+    if (!confirmDelete) return;
     try {
-      console.log('🗑️ Excluindo empresa:', companyId);
-      
       const { error } = await supabase
         .from('agencies')
         .delete()
         .eq('id', companyId);
-
-      if (error) {
-        console.error('❌ Erro ao excluir empresa:', error);
-        toast({
-          title: "Erro",
-          description: `Erro ao excluir empresa: ${error.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('✅ Empresa excluída com sucesso');
+      if (error) throw error;
       toast({
         title: "Sucesso",
         description: "Empresa excluída com sucesso.",
       });
-
       fetchCompanies();
-    } catch (error) {
-      console.error('❌ Erro inesperado ao excluir empresa:', error);
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro inesperado ao excluir empresa.",
+        title: "Erro ao excluir empresa",
+        description: error.message || "Erro inesperado.",
         variant: "destructive"
       });
     }
   };
 
+  // 📩 Invite Collaborator
   const handleInviteCollaborator = async (email: string) => {
     if (!selectedCompany) return;
-
     try {
-      console.log('📨 Convidando colaborador:', { companyId: selectedCompany.id, email });
-      
-      const { data, error } = await (supabase as any)
+      const { error } = await (supabase as any)
         .rpc('invite_collaborator_admin', {
           company_id: selectedCompany.id,
           collaborator_email: email
         });
-
-      if (error) {
-        console.error('❌ Erro ao convidar colaborador:', error);
-        toast({
-          title: "Erro",
-          description: `Erro ao convidar colaborador: ${error.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('✅ Colaborador convidado com sucesso:', data);
+      if (error) throw error;
       toast({
         title: "Sucesso",
-        description: "Colaborador adicionado com sucesso.",
+        description: "Colaborador convidado com sucesso.",
       });
-
       fetchCompanies();
-      if (showCollaboratorsDialog) {
-        fetchCollaborators(selectedCompany.id);
-      }
-    } catch (error) {
-      console.error('❌ Erro inesperado ao convidar colaborador:', error);
+      if (showCollaboratorsDialog) fetchCollaborators(selectedCompany.id);
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro inesperado ao convidar colaborador.",
+        title: "Erro ao convidar colaborador",
+        description: error.message || "Erro inesperado.",
         variant: "destructive"
       });
     }
   };
 
+  // 🗑️ Remove Collaborator
   const handleRemoveCollaborator = async (collaboratorId: string, email: string) => {
-    if (!confirm(`Tem certeza que deseja remover ${email} da empresa?`)) {
-      return;
-    }
-
+    const confirmRemove = confirm(`Tem certeza que deseja remover ${email} da empresa?`);
+    if (!confirmRemove) return;
     try {
-      console.log('🗑️ Removendo colaborador:', collaboratorId);
-      
-      const { data, error } = await (supabase as any)
-        .rpc('remove_collaborator_admin', {
-          collaborator_id: collaboratorId
-        });
-
-      if (error) {
-        console.error('❌ Erro ao remover colaborador:', error);
-        toast({
-          title: "Erro",
-          description: `Erro ao remover colaborador: ${error.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('✅ Colaborador removido com sucesso');
+      const { error } = await (supabase as any)
+        .rpc('remove_collaborator_admin', { collaborator_id: collaboratorId });
+      if (error) throw error;
       toast({
         title: "Sucesso",
         description: "Colaborador removido com sucesso.",
       });
-
       fetchCompanies();
       if (showCollaboratorsDialog && selectedCompany) {
         fetchCollaborators(selectedCompany.id);
       }
-    } catch (error) {
-      console.error('❌ Erro inesperado ao remover colaborador:', error);
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro inesperado ao remover colaborador.",
+        title: "Erro ao remover colaborador",
+        description: error.message || "Erro inesperado.",
         variant: "destructive"
       });
     }
   };
 
+  // 🚀 Load initial data
   useEffect(() => {
     if (isAdmin) {
-      console.log('👮 Usuário é admin, carregando dados...');
       fetchCompanies();
       fetchUsers();
-    } else {
-      console.log('⚠️ Usuário não é admin');
     }
   }, [isAdmin]);
 
+  // 🔒 Not admin
   if (!isAdmin) {
     return (
       <div className="container mx-auto p-6">
@@ -399,6 +280,7 @@ const CompanyManagement = () => {
     );
   }
 
+  // ✅ Render
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -411,8 +293,8 @@ const CompanyManagement = () => {
             Gerencie empresas e colaboradores do sistema
           </p>
         </div>
-        
-        <Button 
+
+        <Button
           onClick={() => setShowCreateDialog(true)}
           className="bg-blue-600 hover:bg-blue-700"
         >
@@ -442,12 +324,14 @@ const CompanyManagement = () => {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{companies.length}</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {companies.length}
+                  </div>
                   <div className="text-sm text-gray-600">Empresas Cadastradas</div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
-                    {companies.reduce((sum, company) => sum + (company.collaborators_count || 0), 0)}
+                    {companies.reduce((sum, c) => sum + (c.collaborators_count || 0), 0)}
                   </div>
                   <div className="text-sm text-gray-600">Total de Colaboradores</div>
                 </div>
