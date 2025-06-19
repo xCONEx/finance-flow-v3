@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,8 @@ interface Company {
   owner_id: string;
   owner_email: string;
   owner_name?: string;
+  cnpj?: string;
+  description?: string;
   status: string;
   created_at: string;
   collaborators_count: number;
@@ -29,7 +30,7 @@ interface EditCompanyDialogProps {
   onOpenChange: (open: boolean) => void;
   company: Company | null;
   users: UserProfile[];
-  onEditCompany: (name: string, ownerEmail: string) => Promise<void>;
+  onEditCompany: (id: string, name: string, ownerEmail: string, cnpj: string, description: string) => Promise<void>;
 }
 
 const EditCompanyDialog: React.FC<EditCompanyDialogProps> = ({
@@ -41,28 +42,36 @@ const EditCompanyDialog: React.FC<EditCompanyDialogProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
+  const [cnpj, setCnpj] = useState('');
+  const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (company) {
       setName(company.name);
       setOwnerEmail(company.owner_email);
+      setCnpj(company.cnpj || '');
+      setDescription(company.description || '');
     }
   }, [company]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim() || !ownerEmail.trim()) {
       return;
     }
 
     try {
       setLoading(true);
-      await onEditCompany(name.trim(), ownerEmail.trim());
-      onOpenChange(false);
-      setName('');
-      setOwnerEmail('');
+      if (company) {
+        await onEditCompany(company.id, name.trim(), ownerEmail.trim(), cnpj.trim(), description.trim());
+        onOpenChange(false);
+        setName('');
+        setOwnerEmail('');
+        setCnpj('');
+        setDescription('');
+      }
     } catch (error) {
       console.error('❌ Erro ao editar empresa:', error);
     } finally {
@@ -75,6 +84,8 @@ const EditCompanyDialog: React.FC<EditCompanyDialogProps> = ({
     if (company) {
       setName(company.name);
       setOwnerEmail(company.owner_email);
+      setCnpj(company.cnpj || '');
+      setDescription(company.description || '');
     }
   };
 
@@ -84,7 +95,7 @@ const EditCompanyDialog: React.FC<EditCompanyDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Editar Empresa</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="edit-name">Nome da Empresa</Label>
@@ -112,6 +123,29 @@ const EditCompanyDialog: React.FC<EditCompanyDialogProps> = ({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-cnpj">CNPJ</Label>
+            <Input
+              id="edit-cnpj"
+              type="text"
+              placeholder="00.000.000/0000-00"
+              value={cnpj}
+              onChange={(e) => setCnpj(e.target.value)}
+              maxLength={18}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-description">Descrição</Label>
+            <Input
+              id="edit-description"
+              type="text"
+              placeholder="Descrição da empresa"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
 
           <div className="flex gap-2 pt-4">
