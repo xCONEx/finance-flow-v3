@@ -1,18 +1,14 @@
 
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface Company {
   id: string;
   name: string;
-  owner_id: string; // CORRIGIDO: usar owner_id conforme schema SQL
+  owner_id: string;
   owner_email: string;
   owner_name?: string;
   status: string;
@@ -34,47 +30,78 @@ const InviteCollaboratorDialog: React.FC<InviteCollaboratorDialogProps> = ({
   onInviteCollaborator
 }) => {
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleInvite = async () => {
-    if (email.trim()) {
-      await onInviteCollaborator(email);
-      setEmail('');
-      onOpenChange(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email.trim()) {
+      return;
     }
+
+    try {
+      setLoading(true);
+      await onInviteCollaborator(email.trim());
+      onOpenChange(false);
+      setEmail('');
+    } catch (error) {
+      console.error('❌ Erro ao convidar colaborador:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    onOpenChange(false);
+    setEmail('');
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md mx-4">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Convidar Colaborador</DialogTitle>
+          <DialogTitle>
+            Convidar Colaborador
+            {company && (
+              <span className="block text-sm font-normal text-gray-500 mt-1">
+                Para: {company.name}
+              </span>
+            )}
+          </DialogTitle>
         </DialogHeader>
-        {company && (
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">
-                Empresa: <span className="font-medium">{company.name}</span>
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Email do Colaborador</label>
-              <Input
-                type="email"
-                placeholder="Digite o email do colaborador"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col md:flex-row justify-end gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleInvite} disabled={!email.trim()}>
-                Convidar
-              </Button>
-            </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="collaborator-email">Email do Colaborador</Label>
+            <Input
+              id="collaborator-email"
+              type="email"
+              placeholder="Digite o email do colaborador"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
-        )}
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              className="flex-1"
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1"
+              disabled={loading || !email.trim()}
+            >
+              {loading ? 'Convidando...' : 'Enviar Convite'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
