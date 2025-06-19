@@ -7,6 +7,7 @@ import {
   DollarSign, 
   Package, 
   Calendar,
+  CreditCard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
@@ -23,12 +24,14 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTea
   const { currentTheme } = useTheme();
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
+  const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'calculator', label: 'Calculadora', icon: Calculator },
     ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
     { id: 'costs', label: 'Custos', icon: DollarSign },
+    ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
     { id: 'items', label: 'Itens', icon: Package },
     { id: 'routine', label: 'Rotina', icon: Calendar },
   ];

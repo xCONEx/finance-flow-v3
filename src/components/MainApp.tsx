@@ -13,6 +13,7 @@ import AdminPanel from './AdminPanel';
 import TeamManagement from './TeamManagement';
 import EntregaFlowKanban from './EntregaFlowKanban_old';
 import SubscriptionPlans from './SubscriptionPlans';
+import FinancialManagement from './financial/FinancialManagement';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 
 const MainApp = () => {
@@ -38,6 +39,8 @@ const MainApp = () => {
         return <WorkItems />;
       case 'routine':
         return <WorkRoutine />;
+      case 'financial':
+        return <FinancialManagement />;
       case 'team':
         return <TeamManagement />;
       case 'settings':
