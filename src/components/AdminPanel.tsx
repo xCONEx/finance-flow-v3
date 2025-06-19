@@ -33,13 +33,14 @@ import {
   Trash2,
   UserMinus,
   Download,
+  User, Building, BarChart,
   FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import CompanyManagement from './CompanyManagement';
-import { User, Building, BarChart } from 'react-feather';
+
 
 type SubscriptionPlan = 'free' | 'basic' | 'premium' | 'enterprise' | 'enterprise-annual';
 type UserType = 'individual' | 'company_owner' | 'employee' | 'admin';
