@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 interface Company {
   id: string;
   name: string;
-  owner_uid: string; // CORRIGIDO: usar owner_uid conforme tipos TypeScript gerados
+  owner_id: string; // CORRIGIDO: usar owner_id conforme schema SQL
   owner_email: string;
   owner_name?: string;
   status: string;
