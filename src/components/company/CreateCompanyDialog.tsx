@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -8,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { supabase } from '@/lib/supabaseClient'; // ajuste o caminho se necessário
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfile {
   id: string;
