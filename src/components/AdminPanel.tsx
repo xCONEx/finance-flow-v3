@@ -506,7 +506,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
       <span className="hidden md:block">Analytics</span>
     </TabsTrigger>
   </TabsList>
-</Tabs>
+
 
         {/* USERS */}
         <TabsContent value="users" className="space-y-4 pb-20 md:pb-0">
