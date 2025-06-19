@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ import CollaboratorsDialog from './company/CollaboratorsDialog';
 interface Company {
   id: string;
   name: string;
-  owner_id: string; // Keep interface as owner_id for consistency with existing code
+  owner_id: string; // CORRIGIDO: usar owner_id conforme schema SQL
   owner_email: string;
   owner_name?: string;
   status: string;
@@ -161,7 +160,7 @@ const CompanyManagement = () => {
         .from('agencies')
         .insert({
           name,
-          owner_id: selectedUser.id, // Use owner_id para corresponder aos tipos TypeScript
+          owner_id: selectedUser.id, // CORRIGIDO: usar owner_id conforme schema SQL
           status: 'active'
         })
         .select()
@@ -214,7 +213,7 @@ const CompanyManagement = () => {
         .from('agencies')
         .update({
           name,
-          owner_id: selectedUser.id // Use owner_id para corresponder aos tipos TypeScript
+          owner_id: selectedUser.id // CORRIGIDO: usar owner_id conforme schema SQL
         })
         .eq('id', selectedCompany.id);
 
