@@ -64,7 +64,7 @@ export const UsageLimitWarning: React.FC<UsageLimitWarningProps> = ({
               size="sm"
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90"
               onClick={() => {
-                window.location.hash = '#/subscription';
+                window.open('https://lpfinanceflow.vercel.app', '_blank');
               }}
             >
               <Crown className="h-4 w-4 mr-2" />
