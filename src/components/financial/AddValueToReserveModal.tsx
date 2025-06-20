@@ -94,7 +94,7 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({ isOpen,
   <div className="space-y-2">
     <Label htmlFor="amount">Valor a Adicionar (R$) *</Label>
     <Input
-      id="amount"
+      id="target_amount"
   type="text"
   value={new Intl.NumberFormat('pt-BR', {
     style: 'currency',
