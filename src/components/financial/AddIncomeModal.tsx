@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface AddIncomeModalProps {
   isOpen: boolean;
@@ -17,21 +18,21 @@ interface AddIncomeModalProps {
 }
 
 const incomeCategories = [
+  'Ensaio Fotográfico',
   'Casamento',
-  'Ensaio Casamento',
-  'Ensaio Família',
-  'Ensaio Individual',
-  'Ensaio Gestante',
-  'Ensaio Newborn',
+  'Aniversário/Festa',
+  'Corporativo/Empresarial',
+  'Book Pessoal',
   'Evento Social',
-  'Evento Corporativo',
-  'Fotografia de Produto',
-  'Fotografia Publicitária',
-  'Venda de Prints/Álbuns',
-  'Consultoria/Workshop',
-  'Sinal de Agendamento',
-  'Pagamento Restante',
-  'Outras Receitas'
+  'Produto/Comercial',
+  'Arquitetônico',
+  'Newborn/Gestante',
+  'Edição de Vídeo',
+  'Design Gráfico',
+  'Consultoria',
+  'Curso/Workshop',
+  'Aluguel de Equipamento',
+  'Outros Serviços'
 ];
 
 const paymentMethods = [
@@ -51,14 +52,16 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
     amount: '',
     category: '',
     payment_method: '',
-    client_name: '',
+    client: '',
     date: new Date().toISOString().split('T')[0],
-    work_id: '',
-    is_paid: true
+    due_date: '',
+    is_paid: false,
+    notification_enabled: true
   });
   const [loading, setLoading] = useState(false);
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
+  const { scheduleNotification } = useNotifications();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,20 +69,35 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
 
     setLoading(true);
     try {
-      // Using expenses table temporarily with financial income data structure
       const currentMonth = new Date().toISOString().slice(0, 7);
       
-      const { error } = await supabase
+      const expenseData = {
+        user_id: user.id,
+        description: `FINANCIAL_INCOME: ${formData.description} | Payment: ${formData.payment_method} | Client: ${formData.client || 'N/A'} | Date: ${formData.date} | Paid: ${formData.is_paid}`,
+        value: -(parseFloat(formData.amount) || 0), // Negative for income
+        category: formData.category,
+        month: currentMonth,
+        due_date: formData.due_date || null,
+        notification_enabled: formData.notification_enabled
+      };
+
+      const { data, error } = await supabase
         .from('expenses')
-        .insert({
-          user_id: user.id,
-          description: `FINANCIAL_INCOME: ${formData.description} | Payment: ${formData.payment_method} | Client: ${formData.client_name || 'N/A'} | Date: ${formData.date} | Paid: ${formData.is_paid}`,
-          value: -(parseFloat(formData.amount) || 0), // Negative value to represent income
-          category: formData.category,
-          month: currentMonth
-        });
+        .insert(expenseData)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Schedule notifications if enabled and has due date
+      if (formData.notification_enabled && formData.due_date && !formData.is_paid) {
+        await scheduleNotification({
+          ...data,
+          description: formData.description,
+          value: parseFloat(formData.amount) || 0,
+          due_date: formData.due_date
+        });
+      }
 
       toast({
         title: "Sucesso",
@@ -93,10 +111,11 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
         amount: '',
         category: '',
         payment_method: '',
-        client_name: '',
+        client: '',
         date: new Date().toISOString().split('T')[0],
-        work_id: '',
-        is_paid: true
+        due_date: '',
+        is_paid: false,
+        notification_enabled: true
       });
     } catch (error) {
       console.error('Erro ao adicionar entrada:', error);
@@ -112,7 +131,7 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-green-600">Adicionar Entrada</DialogTitle>
         </DialogHeader>
@@ -183,17 +202,18 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="client_name">Cliente Vinculado (Opcional)</Label>
+            <Label htmlFor="client">Cliente *</Label>
             <Input
-              id="client_name"
+              id="client"
               placeholder="Nome do cliente"
-              value={formData.client_name}
-              onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+              value={formData.client}
+              onChange={(e) => setFormData({ ...formData, client: e.target.value })}
+              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date">Data *</Label>
+            <Label htmlFor="date">Data do Serviço *</Label>
             <Input
               id="date"
               type="date"
@@ -203,13 +223,35 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="due_date">Data de Vencimento (Opcional)</Label>
+            <Input
+              id="due_date"
+              type="date"
+              value={formData.due_date}
+              onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+            />
+            <p className="text-xs text-gray-500">
+              Se preenchido, você receberá notificações 1 dia antes e no dia do vencimento
+            </p>
+          </div>
+
           <div className="flex items-center space-x-2">
             <Checkbox
               id="is_paid"
               checked={formData.is_paid}
               onCheckedChange={(checked) => setFormData({ ...formData, is_paid: !!checked })}
             />
-            <Label htmlFor="is_paid">Marcar como pago</Label>
+            <Label htmlFor="is_paid">Marcar como recebido</Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="notification_enabled"
+              checked={formData.notification_enabled}
+              onCheckedChange={(checked) => setFormData({ ...formData, notification_enabled: !!checked })}
+            />
+            <Label htmlFor="notification_enabled">Ativar notificações de cobrança</Label>
           </div>
 
           <div className="flex gap-2 pt-4">
@@ -224,7 +266,7 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 flex-1"
               disabled={loading}
             >
               {loading ? 'Adicionando...' : 'Adicionar Entrada'}
