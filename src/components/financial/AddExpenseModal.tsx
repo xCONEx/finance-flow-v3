@@ -74,20 +74,29 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
 
     setLoading(true);
     try {
-      // Inserir diretamente usando SQL raw devido às tabelas customizadas
-      const { error } = await supabase.rpc('exec_sql', {
-        sql: `
-          INSERT INTO financial_transactions (
-            user_id, type, description, amount, category, payment_method, 
-            supplier, date, time, is_paid
-          ) VALUES (
-            '${user.id}', 'expense', '${formData.description}', 
-            ${parseFloat(formData.amount) || 0}, '${formData.category}', 
-            '${formData.payment_method}', ${formData.supplier ? `'${formData.supplier}'` : 'NULL'}, 
-            '${formData.date}', ${formData.time ? `'${formData.time}'` : 'NULL'}, ${formData.is_paid}
-          )
-        `
-      });
+      // Usar SQL direto através de uma query personalizada
+      const { error } = await supabase
+        .rpc('exec_sql', {
+          query: `
+            INSERT INTO financial_transactions (
+              user_id, type, description, amount, category, payment_method, 
+              supplier, date, time, is_paid
+            ) VALUES (
+              $1, 'expense', $2, $3, $4, $5, $6, $7, $8, $9
+            )
+          `,
+          params: [
+            user.id,
+            formData.description,
+            parseFloat(formData.amount) || 0,
+            formData.category,
+            formData.payment_method,
+            formData.supplier || null,
+            formData.date,
+            formData.time || null,
+            formData.is_paid
+          ]
+        });
 
       if (error) throw error;
 
