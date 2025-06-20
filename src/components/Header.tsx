@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Shield, Settings, Eye, EyeOff, Home, Calculator, Video, DollarSign, Package, Calendar, Users, Building2, User as UserIcon, ChevronDown } from 'lucide-react';
+import { Shield, Settings, Eye, EyeOff, Home, Calculator, Video, DollarSign, Package, Calendar, Users, Building2, User as UserIcon, ChevronDown, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,12 +23,14 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
 
   const isAdmin = profile?.user_type === 'admin';
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
+  const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'calculator', label: 'Calculadora', icon: Calculator },
     ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
     { id: 'costs', label: 'Custos', icon: DollarSign },
+    ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
     { id: 'items', label: 'Itens', icon: Package },
     { id: 'routine', label: 'Rotina', icon: Calendar },
     ...(showTeamOption ? [{ id: 'team', label: 'Equipe', icon: Users }] : []),
