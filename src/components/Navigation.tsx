@@ -39,24 +39,25 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTea
   return (
     <>
       {/* Mobile Bottom Navigation - fixo no bottom */}
-<div className="fixed bottom-4 left-4 right-4 z-50 bg-white/90 backdrop-blur-md border border-gray-200 dark:bg-gray-800/80 dark:border-gray-700 rounded-2xl shadow-xl">
+<div className="md:hidden fixed bottom-4 left-4 right-4 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl">
   <div className="flex items-center justify-around py-3">
     {navigationItems.map((item) => (
       <button
         key={item.id}
         onClick={() => onTabChange(item.id)}
-        className={`flex flex-col items-center justify-center ${
+        className={`flex flex-col items-center ${
           activeTab === item.id
             ? 'text-blue-600'
             : 'text-gray-500 dark:text-gray-400'
         }`}
       >
         <item.icon className="w-6 h-6 mb-1" />
-        <span className="text-[11px]">{item.label}</span>
+        <span className="text-[10px]">{item.label}</span>
       </button>
     ))}
   </div>
 </div>
+
     </>
   );
 };
