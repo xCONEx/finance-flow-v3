@@ -1,14 +1,16 @@
+
 import React, { useState } from 'react';
 import { CheckCircle, Circle, Plus, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApp } from '../contexts/AppContext';
+import { toast } from '@/hooks/use-toast';
 import TasksModal from './TasksModal';
 import AddTaskModal from './AddTaskModal';
 import EditTaskModal from './EditTaskModal';
 
 const TaskList = () => {
-  const { tasks } = useApp();
+  const { tasks, updateTask } = useApp();
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -24,6 +26,23 @@ const TaskList = () => {
       revision: { label: 'Alteração', color: 'bg-yellow-500' }
     };
     return statusMap[status] || { label: 'A fazer', color: 'bg-gray-500' };
+  };
+
+  const toggleTask = async (taskId: string, completed: boolean) => {
+    try {
+      await updateTask(taskId, { completed });
+      toast({
+        title: completed ? "Tarefa Concluída" : "Tarefa Reaberta",
+        description: completed ? "A tarefa foi marcada como concluída." : "A tarefa foi reaberta.",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar task:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar tarefa.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (recentTasks.length === 0) {
@@ -51,17 +70,22 @@ const TaskList = () => {
         return (
           <div 
             key={task.id} 
-            className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
-            onClick={() => setEditingTaskId(task.id)}
+            className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded transition-colors"
           >
-            <div className="text-purple-600">
+            <button
+              onClick={() => toggleTask(task.id, !task.completed)}
+              className="text-purple-600 hover:text-purple-700 transition"
+            >
               {task.completed ? (
                 <CheckCircle className="h-5 w-5" />
               ) : (
                 <Circle className="h-5 w-5" />
               )}
-            </div>
-            <div className="flex-1">
+            </button>
+            <div 
+              className="flex-1 cursor-pointer"
+              onClick={() => setEditingTaskId(task.id)}
+            >
               <div className="flex items-center gap-2 mb-1">
                 <p className={`text-sm ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                   {task.title}
