@@ -40,18 +40,18 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTea
     <>
       {/* Mobile Bottom Navigation - fixo no bottom */}
 <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-md">
-  <div className="flex items-center justify-between">
+  <div className="flex items-center justify-between pb-4 pt-2">
     {navigationItems.map((item) => (
       <button
         key={item.id}
         onClick={() => onTabChange(item.id)}
-        className={`flex flex-col items-center justify-center flex-1 py-2 transition-colors ${
+        className={`flex flex-col items-center justify-center flex-1 transition-colors ${
           activeTab === item.id
-            ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
+            ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl'
             : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'
-        }`}
+        } py-2`}
       >
-        <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white' : ''}`} />
+        <item.icon className="w-5 h-5" />
         <span className="text-[10px] font-medium mt-1">
           {item.label.length > 8 ? item.label.slice(0, 8) + '…' : item.label}
         </span>
@@ -59,8 +59,6 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTea
     ))}
   </div>
 </div>
-
-
     </>
   );
 };
