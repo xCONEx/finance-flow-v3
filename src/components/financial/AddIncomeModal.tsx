@@ -143,18 +143,6 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="work_id">Vincular Trabalho (Opcional)</Label>
-            <Select value={formData.work_id} onValueChange={(value) => setFormData({ ...formData, work_id: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um trabalho..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Nenhum trabalho vinculado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="category">Categoria *</Label>
             <Select 
               value={formData.category} 
