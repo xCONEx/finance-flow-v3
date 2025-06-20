@@ -67,21 +67,30 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
 
     setLoading(true);
     try {
-      // Inserir diretamente usando SQL raw devido às tabelas customizadas
-      const { error } = await supabase.rpc('exec_sql', {
-        sql: `
-          INSERT INTO financial_transactions (
-            user_id, type, description, amount, category, payment_method, 
-            client_name, date, time, work_id, is_paid
-          ) VALUES (
-            '${user.id}', 'income', '${formData.description}', 
-            ${parseFloat(formData.amount) || 0}, '${formData.category}', 
-            '${formData.payment_method}', ${formData.client_name ? `'${formData.client_name}'` : 'NULL'}, 
-            '${formData.date}', ${formData.time ? `'${formData.time}'` : 'NULL'}, 
-            ${formData.work_id ? `'${formData.work_id}'` : 'NULL'}, ${formData.is_paid}
-          )
-        `
-      });
+      // Usar SQL direto através de uma query personalizada
+      const { error } = await supabase
+        .rpc('exec_sql', {
+          query: `
+            INSERT INTO financial_transactions (
+              user_id, type, description, amount, category, payment_method, 
+              client_name, date, time, work_id, is_paid
+            ) VALUES (
+              $1, 'income', $2, $3, $4, $5, $6, $7, $8, $9, $10
+            )
+          `,
+          params: [
+            user.id,
+            formData.description,
+            parseFloat(formData.amount) || 0,
+            formData.category,
+            formData.payment_method,
+            formData.client_name || null,
+            formData.date,
+            formData.time || null,
+            formData.work_id || null,
+            formData.is_paid
+          ]
+        });
 
       if (error) throw error;
 
