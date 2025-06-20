@@ -39,26 +39,27 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTea
   return (
     <>
       {/* Mobile Bottom Navigation - fixo no bottom */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg">
-        <div className="flex items-center justify-around p-2">
-          {navigationItems.map((item) => (
-            <Button
-              key={item.id}
-              variant="ghost"
-              size="sm"
-              className={`flex flex-col items-center h-16 w-full p-2 transition-colors ${
-                activeTab === item.id 
-                  ? `bg-gradient-to-r ${currentTheme.primary} text-white` 
-                  : `hover:bg-gradient-to-r hover:${currentTheme.secondary} hover:text-${currentTheme.accent}`
-              }`}
-              onClick={() => onTabChange(item.id)}
-            >
-              <item.icon className="h-5 w-5 mb-1" />
-              <span className="text-xs leading-tight text-center">{item.label}</span>
-            </Button>
-          ))}
-        </div>
-      </div>
+<div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg">
+  <div className="flex items-center justify-between overflow-x-auto whitespace-nowrap">
+    {navigationItems.map((item) => (
+      <Button
+        key={item.id}
+        variant="ghost"
+        size="sm"
+        className={`flex flex-col items-center justify-center h-16 flex-1 min-w-[64px] p-2 transition-colors ${
+          activeTab === item.id 
+            ? `bg-gradient-to-r ${currentTheme.primary} text-white` 
+            : `hover:bg-gradient-to-r hover:${currentTheme.secondary} hover:text-${currentTheme.accent}`
+        }`}
+        onClick={() => onTabChange(item.id)}
+      >
+        <item.icon className="h-5 w-5 mb-1" />
+        <span className="text-xs leading-tight text-center">{item.label}</span>
+      </Button>
+    ))}
+  </div>
+</div>
+
     </>
   );
 };
