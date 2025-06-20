@@ -151,18 +151,23 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
      <div className="space-y-2">
   <Label htmlFor="amount">Valor Total (R$) *</Label>
   <Input
-    id="amount"
-    type="number"
-    step="0.01"
-    placeholder="0,00"
-    value={formData.amount ?? ''}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        amount: e.target.value === '' ? '' : parseFloat(e.target.value),
-      })
-    }
-    required
+      id="amount"
+  type="text"
+  value={new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(formData.value || 0)}
+  onChange={(e) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    const numericValue = Number(rawValue) / 100;
+
+    setFormData({
+      ...formData,
+      value: numericValue,
+    });
+  }}
+  placeholder="R$ 0,00"
+  required
   />
 </div>
 
