@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Settings as SettingsIcon, Palette, Database, Crown, Moon, Sun, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -219,7 +218,12 @@ const Settings = () => {
                       Para acessar as funcionalidades de empresa (logo, equipe, projetos), 
                       entre em contato conosco para ativar o plano empresarial.
                     </p>
-                    <Button className="mt-3 text-xs md:text-sm" variant="outline" size="sm">
+                    <Button 
+                      className="mt-3 text-xs md:text-sm" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open('https://lpfinanceflow.vercel.app', '_blank')}
+                    >
                       Entrar em Contato
                     </Button>
                   </div>
@@ -254,7 +258,10 @@ const Settings = () => {
                       <div className="text-xs text-gray-500 mt-1">ou R$ 970/ano (2 meses grátis)</div>
                     </div>
                     
-                    <Button className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 text-xs md:text-sm`}>
+                    <Button 
+                      className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 text-xs md:text-sm`}
+                      onClick={() => window.open('https://lpfinanceflow.vercel.app', '_blank')}
+                    >
                       Entrar em Contato
                     </Button>
                     
