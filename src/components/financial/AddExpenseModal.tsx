@@ -138,7 +138,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
 <div className="space-y-2">
   <Label htmlFor="amount">Valor Total (R$) *</Label>
   <Input
-  id="value"
+id="amount"
   type="text"
   value={new Intl.NumberFormat('pt-BR', {
     style: 'currency',
