@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,17 +10,14 @@ import { useToast } from '@/hooks/use-toast';
 import AddIncomeModal from './AddIncomeModal';
 import AddExpenseModal from './AddExpenseModal';
 
-interface Transaction {
+interface FinancialTransaction {
   id: string;
-  type: 'income' | 'expense';
   description: string;
-  amount: number;
+  value: number;
   category: string;
-  payment_method: string;
-  date: string;
-  is_paid: boolean;
-  client_name?: string;
-  supplier?: string;
+  month: string;
+  created_at: string;
+  user_id: string;
 }
 
 interface FinancialSummary {
@@ -31,7 +29,7 @@ interface FinancialSummary {
 }
 
 const FinancialOverview: React.FC = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [summary, setSummary] = useState<FinancialSummary>({
     totalIncome: 0,
     totalExpenses: 0,
@@ -49,31 +47,32 @@ const FinancialOverview: React.FC = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase.rpc('exec_sql', {
-        query: 'SELECT * FROM financial_transactions WHERE user_id = $1 ORDER BY date DESC LIMIT 50',
-        params: [user.id]
-      });
+      // Load transactions from expenses table
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       if (error) throw error;
 
       const transactionData = data || [];
       setTransactions(transactionData);
 
-      // Calcular resumo
-      const income = transactionData.filter((t: Transaction) => t.type === 'income');
-      const expenses = transactionData.filter((t: Transaction) => t.type === 'expense');
+      // Calculate summary based on description prefixes
+      const income = transactionData.filter((t) => t.description.startsWith('[ENTRADA]'));
+      const expenses = transactionData.filter((t) => t.description.startsWith('[SAÍDA]'));
 
-      const totalIncome = income.filter((t: Transaction) => t.is_paid).reduce((sum, t) => sum + Number(t.amount), 0);
-      const totalExpenses = expenses.filter((t: Transaction) => t.is_paid).reduce((sum, t) => sum + Number(t.amount), 0);
-      const pendingIncome = income.filter((t: Transaction) => !t.is_paid).reduce((sum, t) => sum + Number(t.amount), 0);
-      const pendingExpenses = expenses.filter((t: Transaction) => !t.is_paid).reduce((sum, t) => sum + Number(t.amount), 0);
+      const totalIncome = income.reduce((sum, t) => sum + Number(t.value || 0), 0);
+      const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.value || 0), 0);
 
       setSummary({
         totalIncome,
         totalExpenses,
         balance: totalIncome - totalExpenses,
-        pendingIncome,
-        pendingExpenses
+        pendingIncome: 0, // We'll implement this later
+        pendingExpenses: 0 // We'll implement this later
       });
     } catch (error) {
       console.error('Erro ao carregar transações:', error);
@@ -96,6 +95,17 @@ const FinancialOverview: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const getTransactionType = (description: string) => {
+    if (description.startsWith('[ENTRADA]')) return 'income';
+    if (description.startsWith('[SAÍDA]')) return 'expense';
+    if (description.startsWith('[META]')) return 'goal';
+    return 'other';
+  };
+
+  const cleanDescription = (description: string) => {
+    return description.replace(/^\[(ENTRADA|SAÍDA|META)\]\s*/, '');
   };
 
   if (loading) {
@@ -192,36 +202,32 @@ const FinancialOverview: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {transactions.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium">{transaction.description}</h4>
-                      <Badge variant={transaction.type === 'income' ? 'default' : 'destructive'}>
-                        {transaction.type === 'income' ? 'Entrada' : 'Saída'}
-                      </Badge>
-                      {!transaction.is_paid && (
-                        <Badge variant="outline">Pendente</Badge>
-                      )}
+              {transactions.map((transaction) => {
+                const type = getTransactionType(transaction.description);
+                return (
+                  <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium">{cleanDescription(transaction.description)}</h4>
+                        <Badge variant={type === 'income' ? 'default' : type === 'expense' ? 'destructive' : 'secondary'}>
+                          {type === 'income' ? 'Entrada' : type === 'expense' ? 'Saída' : 'Meta'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {transaction.category} • {formatDate(transaction.created_at)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Mês: {transaction.month}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {transaction.category} • {formatDate(transaction.date)}
-                    </p>
-                    {transaction.client_name && (
-                      <p className="text-sm text-muted-foreground">Cliente: {transaction.client_name}</p>
-                    )}
-                    {transaction.supplier && (
-                      <p className="text-sm text-muted-foreground">Fornecedor: {transaction.supplier}</p>
-                    )}
+                    <div className="text-right">
+                      <p className={`font-bold ${type === 'income' ? 'text-green-600' : type === 'expense' ? 'text-red-600' : 'text-purple-600'}`}>
+                        {type === 'income' ? '+' : type === 'expense' ? '-' : ''}{formatCurrency(transaction.value || 0)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`font-bold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{transaction.payment_method}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
