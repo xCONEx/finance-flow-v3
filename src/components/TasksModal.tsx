@@ -1,10 +1,12 @@
-import React from 'react';
-import { CheckCircle, Circle, Calendar, AlertCircle } from 'lucide-react';
+
+import React, { useState } from 'react';
+import { CheckCircle, Circle, Calendar, AlertCircle, Edit } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useApp } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import EditTaskModal from './EditTaskModal';
 
 interface TasksModalProps {
   open: boolean;
@@ -13,6 +15,7 @@ interface TasksModalProps {
 
 const TasksModal = ({ open, onOpenChange }: TasksModalProps) => {
   const { tasks, updateTask } = useApp();
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const toggleTask = async (taskId: string, completed: boolean) => {
     try {
@@ -45,114 +48,143 @@ const TasksModal = ({ open, onOpenChange }: TasksModalProps) => {
     return statusMap[status] || statusMap.todo;
   };
 
+  const handleEditTask = (taskId: string) => {
+    setEditingTaskId(taskId);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Todas as Tarefas ({tasks.length})</DialogTitle>
-          <DialogDescription>Gerencie todas as suas tarefas em um só lugar</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Todas as Tarefas ({tasks.length})</DialogTitle>
+            <DialogDescription>Gerencie todas as suas tarefas em um só lugar</DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Tarefas Pendentes */}
-          {pendingTasks.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-orange-500" />
-                Pendentes ({pendingTasks.length})
-              </h3>
-              <div className="space-y-2">
-                {pendingTasks.map((task) => {
-                  const statusInfo = getStatusInfo(task.status);
-                  return (
-                    <div key={task.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50">
-                      <button
-                        onClick={() => toggleTask(task.id, true)}
-                        className="text-purple-600 hover:text-purple-700 transition"
-                      >
-                        <Circle className="h-5 w-5" />
-                      </button>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{task.title}</p>
-                        {task.description && <p className="text-xs text-gray-500 mt-1">{task.description}</p>}
-                        {task.dueDate && (
-                          <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(task.dueDate).toLocaleDateString('pt-BR')}
-                          </p>
-                        )}
+          <div className="space-y-6">
+            {/* Tarefas Pendentes */}
+            {pendingTasks.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-orange-500" />
+                  Pendentes ({pendingTasks.length})
+                </h3>
+                <div className="space-y-2">
+                  {pendingTasks.map((task) => {
+                    const statusInfo = getStatusInfo(task.status);
+                    return (
+                      <div key={task.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50">
+                        <button
+                          onClick={() => toggleTask(task.id, true)}
+                          className="text-purple-600 hover:text-purple-700 transition"
+                        >
+                          <Circle className="h-5 w-5" />
+                        </button>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{task.title}</p>
+                          {task.description && <p className="text-xs text-gray-500 mt-1">{task.description}</p>}
+                          {task.dueDate && (
+                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEditTask(task.id)}
+                            className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <div className="flex flex-col items-end gap-1">
+                            <div className={`w-2 h-2 rounded-full ${
+                              task.priority === 'alta' ? 'bg-red-500' :
+                              task.priority === 'média' ? 'bg-yellow-500' :
+                              'bg-green-500'
+                            }`} />
+                            <Badge variant="outline" className={`text-xs text-white ${statusInfo.color}`}>
+                              {statusInfo.label}
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className={`w-2 h-2 rounded-full ${
-                          task.priority === 'alta' ? 'bg-red-500' :
-                          task.priority === 'média' ? 'bg-yellow-500' :
-                          'bg-green-500'
-                        }`} />
-                        <Badge variant="outline" className={`text-xs text-white ${statusInfo.color}`}>
-                          {statusInfo.label}
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Tarefas Concluídas */}
-          {completedTasks.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                Concluídas ({completedTasks.length})
-              </h3>
-              <div className="space-y-2">
-                {completedTasks.map((task) => {
-                  const statusInfo = getStatusInfo(task.status);
-                  return (
-                    <div key={task.id} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
-                      <button
-                        onClick={() => toggleTask(task.id, false)}
-                        className="text-green-600 hover:text-green-700 transition"
-                      >
-                        <CheckCircle className="h-5 w-5" />
-                      </button>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium line-through text-gray-500">{task.title}</p>
-                        {task.description && <p className="text-xs text-gray-400 mt-1 line-through">{task.description}</p>}
-                        {task.dueDate && (
-                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(task.dueDate).toLocaleDateString('pt-BR')}
-                          </p>
-                        )}
+            {/* Tarefas Concluídas */}
+            {completedTasks.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  Concluídas ({completedTasks.length})
+                </h3>
+                <div className="space-y-2">
+                  {completedTasks.map((task) => {
+                    const statusInfo = getStatusInfo(task.status);
+                    return (
+                      <div key={task.id} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
+                        <button
+                          onClick={() => toggleTask(task.id, false)}
+                          className="text-green-600 hover:text-green-700 transition"
+                        >
+                          <CheckCircle className="h-5 w-5" />
+                        </button>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium line-through text-gray-500">{task.title}</p>
+                          {task.description && <p className="text-xs text-gray-400 mt-1 line-through">{task.description}</p>}
+                          {task.dueDate && (
+                            <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEditTask(task.id)}
+                            className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors opacity-50 hover:opacity-100"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <div className="flex flex-col items-end gap-1">
+                            <div className={`w-2 h-2 rounded-full opacity-50 ${
+                              task.priority === 'alta' ? 'bg-red-500' :
+                              task.priority === 'média' ? 'bg-yellow-500' :
+                              'bg-green-500'
+                            }`} />
+                            <Badge variant="outline" className={`text-xs text-white opacity-50 ${statusInfo.color}`}>
+                              {statusInfo.label}
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className={`w-2 h-2 rounded-full opacity-50 ${
-                          task.priority === 'alta' ? 'bg-red-500' :
-                          task.priority === 'média' ? 'bg-yellow-500' :
-                          'bg-green-500'
-                        }`} />
-                        <Badge variant="outline" className={`text-xs text-white opacity-50 ${statusInfo.color}`}>
-                          {statusInfo.label}
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Nenhuma tarefa */}
-          {tasks.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <p>Nenhuma tarefa cadastrada ainda.</p>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+            {/* Nenhuma tarefa */}
+            {tasks.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <p>Nenhuma tarefa cadastrada ainda.</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de edição de tarefa */}
+      <EditTaskModal 
+        open={editingTaskId !== null} 
+        onOpenChange={(open) => !open && setEditingTaskId(null)}
+        taskId={editingTaskId}
+      />
+    </>
   );
 };
 
