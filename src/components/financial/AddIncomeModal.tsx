@@ -148,18 +148,23 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="amount">Valor Total (R$) *</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              placeholder="0,00"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              required
-            />
-          </div>
+     <div className="space-y-2">
+  <Label htmlFor="amount">Valor Total (R$) *</Label>
+  <Input
+    id="amount"
+    type="number"
+    step="0.01"
+    placeholder="0,00"
+    value={formData.amount ?? ''}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        amount: e.target.value === '' ? '' : parseFloat(e.target.value),
+      })
+    }
+    required
+  />
+</div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Categoria *</Label>
