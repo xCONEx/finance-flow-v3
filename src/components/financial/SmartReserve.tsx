@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,10 +11,9 @@ import AddReserveGoalModal from './AddReserveGoalModal';
 
 interface ReserveGoal {
   id: string;
-  name: string;
-  target_amount: number;
-  current_amount: number;
-  icon: string;
+  description: string;
+  value: number;
+  category: string;
   created_at: string;
 }
 
@@ -28,10 +28,13 @@ const SmartReserve: React.FC = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase.rpc('exec_sql', {
-        query: 'SELECT * FROM reserve_goals WHERE user_id = $1 ORDER BY created_at DESC',
-        params: [user.id]
-      });
+      // Load reserve goals from expenses table
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('category', 'Reserva Inteligente')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setGoals(data || []);
@@ -56,6 +59,14 @@ const SmartReserve: React.FC = () => {
 
   const getProgressPercentage = (current: number, target: number) => {
     return target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  };
+
+  const extractGoalInfo = (description: string) => {
+    const cleaned = description.replace(/^\[META\]\s*/, '');
+    const parts = cleaned.split(' ');
+    const icon = parts[parts.length - 1];
+    const name = parts.slice(0, -1).join(' ');
+    return { name: name || cleaned, icon: icon || '🎯' };
   };
 
   if (loading) {
@@ -94,7 +105,7 @@ const SmartReserve: React.FC = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">Nenhuma meta de reserva criada ainda.</h3>
             <p className="text-muted-foreground text-center mb-4">
-              {loading ? 'Carregando...' : 'Clique em "+ Nova Meta" para começar a planejar seus sonhos!'}
+              Clique em "+ Nova Meta" para começar a planejar seus sonhos!
             </p>
             <Button onClick={() => setShowAddGoalModal(true)} className="bg-purple-600 hover:bg-purple-700">
               <Plus className="h-4 w-4 mr-2" />
@@ -104,56 +115,59 @@ const SmartReserve: React.FC = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {goals.map((goal) => (
-            <Card key={goal.id} className="relative overflow-hidden">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <span className="text-2xl">{goal.icon}</span>
-                  {goal.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progresso</span>
-                    <span>{getProgressPercentage(goal.current_amount, goal.target_amount).toFixed(1)}%</span>
+          {goals.map((goal) => {
+            const { name, icon } = extractGoalInfo(goal.description);
+            return (
+              <Card key={goal.id} className="relative overflow-hidden">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <span className="text-2xl">{icon}</span>
+                    {name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Progresso</span>
+                      <span>{getProgressPercentage(0, goal.value || 0).toFixed(1)}%</span>
+                    </div>
+                    <Progress value={getProgressPercentage(0, goal.value || 0)} />
                   </div>
-                  <Progress value={getProgressPercentage(goal.current_amount, goal.target_amount)} />
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Valor Atual</span>
-                    <span className="font-semibold text-green-600">
-                      {formatCurrency(goal.current_amount)}
-                    </span>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Valor Atual</span>
+                      <span className="font-semibold text-green-600">
+                        {formatCurrency(0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Meta</span>
+                      <span className="font-semibold">
+                        {formatCurrency(goal.value || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Restante</span>
+                      <span className="font-semibold text-orange-600">
+                        {formatCurrency(goal.value || 0)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Meta</span>
-                    <span className="font-semibold">
-                      {formatCurrency(goal.target_amount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Restante</span>
-                    <span className="font-semibold text-orange-600">
-                      {formatCurrency(Math.max(0, goal.target_amount - goal.current_amount))}
-                    </span>
-                  </div>
-                </div>
 
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  disabled
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Valor
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    disabled
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Valor
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
