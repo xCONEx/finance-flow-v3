@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,22 +28,15 @@ const SmartReserve: React.FC = () => {
     if (!user) return;
 
     try {
-      // Usar SQL direto através de uma query personalizada
-      const { data, error } = await supabase
-        .rpc('exec_sql', {
-          query: `
-            SELECT * FROM reserve_goals 
-            WHERE user_id = $1 
-            ORDER BY created_at DESC
-          `,
-          params: [user.id]
-        });
+      const { data, error } = await supabase.rpc('exec_sql', {
+        query: 'SELECT * FROM reserve_goals WHERE user_id = $1 ORDER BY created_at DESC',
+        params: [user.id]
+      });
 
       if (error) throw error;
       setGoals(data || []);
     } catch (error) {
       console.error('Erro ao carregar metas:', error);
-      // Não mostrar erro se as tabelas ainda não existem
       setGoals([]);
     } finally {
       setLoading(false);
