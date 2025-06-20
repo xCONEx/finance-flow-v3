@@ -56,11 +56,11 @@ const paymentMethods = [
 const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     description: '',
-    value: '',
+    amount: '',
     category: '',
     payment_method: '',
     supplier: '',
-    month: new Date().toISOString().slice(0, 7), // YYYY-MM format
+    date: new Date().toISOString().split('T')[0],
     is_paid: true
   });
   const [loading, setLoading] = useState(false);
@@ -73,15 +73,17 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
 
     setLoading(true);
     try {
-      // Insert into expenses table with correct schema
+      // Using expenses table temporarily with financial data structure
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
       const { error } = await supabase
         .from('expenses')
         .insert({
           user_id: user.id,
-          description: `[SAÍDA] ${formData.description}${formData.supplier ? ` - ${formData.supplier}` : ''}`,
-          value: parseFloat(formData.value) || 0,
+          description: `FINANCIAL_EXPENSE: ${formData.description} | Payment: ${formData.payment_method} | Supplier: ${formData.supplier || 'N/A'} | Date: ${formData.date} | Paid: ${formData.is_paid}`,
+          value: parseFloat(formData.amount) || 0,
           category: formData.category,
-          month: formData.month
+          month: currentMonth
         });
 
       if (error) throw error;
@@ -95,11 +97,11 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
       onClose();
       setFormData({
         description: '',
-        value: '',
+        amount: '',
         category: '',
         payment_method: '',
         supplier: '',
-        month: new Date().toISOString().slice(0, 7),
+        date: new Date().toISOString().split('T')[0],
         is_paid: true
       });
     } catch (error) {
@@ -134,14 +136,15 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="value">Valor Total (R$) (Opcional)</Label>
+            <Label htmlFor="amount">Valor Total (R$) *</Label>
             <Input
-              id="value"
+              id="amount"
               type="number"
               step="0.01"
               placeholder="0,00"
-              value={formData.value}
-              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              required
             />
           </div>
 
@@ -196,12 +199,12 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="month">Mês *</Label>
+            <Label htmlFor="date">Data *</Label>
             <Input
-              id="month"
-              type="month"
-              value={formData.month}
-              onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               required
             />
           </div>
