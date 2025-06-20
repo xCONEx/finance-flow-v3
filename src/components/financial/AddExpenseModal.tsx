@@ -74,29 +74,23 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
 
     setLoading(true);
     try {
-      // Usar SQL direto através de uma query personalizada
-      const { error } = await supabase
-        .rpc('exec_sql', {
-          query: `
-            INSERT INTO financial_transactions (
-              user_id, type, description, amount, category, payment_method, 
-              supplier, date, time, is_paid
-            ) VALUES (
-              $1, 'expense', $2, $3, $4, $5, $6, $7, $8, $9
-            )
-          `,
-          params: [
-            user.id,
-            formData.description,
-            parseFloat(formData.amount) || 0,
-            formData.category,
-            formData.payment_method,
-            formData.supplier || null,
-            formData.date,
-            formData.time || null,
-            formData.is_paid
-          ]
-        });
+      const { error } = await supabase.rpc('exec_sql', {
+        sql: `
+          INSERT INTO financial_transactions (user_id, type, description, amount, category, payment_method, supplier, date, time, is_paid)
+          VALUES ($1, 'expense', $2, $3, $4, $5, $6, $7, $8, $9)
+        `,
+        params: [
+          user.id,
+          formData.description,
+          parseFloat(formData.amount) || 0,
+          formData.category,
+          formData.payment_method,
+          formData.supplier || null,
+          formData.date,
+          formData.time || null,
+          formData.is_paid
+        ]
+      });
 
       if (error) throw error;
 
@@ -121,7 +115,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
       console.error('Erro ao adicionar saída:', error);
       toast({
         title: "Erro",
-        description: "Erro ao adicionar saída. Certifique-se de que executou o SQL das tabelas financeiras.",
+        description: "Erro ao adicionar saída. Verifique se as tabelas financeiras foram criadas.",
         variant: "destructive",
       });
     } finally {
