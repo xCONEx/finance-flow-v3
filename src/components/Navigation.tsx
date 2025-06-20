@@ -39,26 +39,27 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTea
   return (
     <>
       {/* Mobile Bottom Navigation - fixo no bottom */}
-<div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg">
-  <div className="flex items-center justify-between overflow-x-auto whitespace-nowrap">
+<div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-md">
+  <div className="flex items-center justify-between">
     {navigationItems.map((item) => (
-      <Button
+      <button
         key={item.id}
-        variant="ghost"
-        size="sm"
-        className={`flex flex-col items-center justify-center h-16 flex-1 min-w-[64px] p-2 transition-colors ${
-          activeTab === item.id 
-            ? `bg-gradient-to-r ${currentTheme.primary} text-white` 
-            : `hover:bg-gradient-to-r hover:${currentTheme.secondary} hover:text-${currentTheme.accent}`
-        }`}
         onClick={() => onTabChange(item.id)}
+        className={`flex flex-col items-center justify-center flex-1 py-2 transition-colors ${
+          activeTab === item.id
+            ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
+            : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'
+        }`}
       >
-        <item.icon className="h-5 w-5 mb-1" />
-        <span className="text-xs leading-tight text-center">{item.label}</span>
-      </Button>
+        <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white' : ''}`} />
+        <span className="text-[10px] font-medium mt-1">
+          {item.label.length > 8 ? item.label.slice(0, 8) + '…' : item.label}
+        </span>
+      </button>
     ))}
   </div>
 </div>
+
 
     </>
   );
