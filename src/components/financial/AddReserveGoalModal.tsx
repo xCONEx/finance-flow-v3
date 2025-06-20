@@ -95,17 +95,22 @@ const AddReserveGoalModal: React.FC<AddReserveGoalModalProps> = ({ isOpen, onClo
   <Label htmlFor="target_amount">Valor da Meta (R$) *</Label>
   <Input
     id="target_amount"
-    type="number"
-    step="0.01"
-    placeholder="Ex: 15000"
-    value={formData.target_amount ?? ''}
-    onChange={(e) =>
-      setFormData({
-        ...formData,
-        target_amount: e.target.value === '' ? '' : parseFloat(e.target.value),
-      })
-    }
-    required
+  type="text"
+  value={new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(formData.value || 0)}
+  onChange={(e) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    const numericValue = Number(rawValue) / 100;
+
+    setFormData({
+      ...formData,
+      value: numericValue,
+    });
+  }}
+  placeholder="R$ 0,00"
+  required
   />
 </div>
 
