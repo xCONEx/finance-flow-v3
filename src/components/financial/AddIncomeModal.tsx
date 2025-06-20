@@ -48,11 +48,11 @@ const paymentMethods = [
 const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     description: '',
-    value: '',
+    amount: '',
     category: '',
     payment_method: '',
     client_name: '',
-    month: new Date().toISOString().slice(0, 7), // YYYY-MM format
+    date: new Date().toISOString().split('T')[0],
     work_id: '',
     is_paid: true
   });
@@ -66,15 +66,17 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
 
     setLoading(true);
     try {
-      // Insert into expenses table with correct schema
+      // Using expenses table temporarily with financial income data structure
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
       const { error } = await supabase
         .from('expenses')
         .insert({
           user_id: user.id,
-          description: `[ENTRADA] ${formData.description}${formData.client_name ? ` - ${formData.client_name}` : ''}`,
-          value: parseFloat(formData.value) || 0,
+          description: `FINANCIAL_INCOME: ${formData.description} | Payment: ${formData.payment_method} | Client: ${formData.client_name || 'N/A'} | Date: ${formData.date} | Paid: ${formData.is_paid}`,
+          value: -(parseFloat(formData.amount) || 0), // Negative value to represent income
           category: formData.category,
-          month: formData.month
+          month: currentMonth
         });
 
       if (error) throw error;
@@ -88,11 +90,11 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
       onClose();
       setFormData({
         description: '',
-        value: '',
+        amount: '',
         category: '',
         payment_method: '',
         client_name: '',
-        month: new Date().toISOString().slice(0, 7),
+        date: new Date().toISOString().split('T')[0],
         work_id: '',
         is_paid: true
       });
@@ -128,14 +130,15 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="value">Valor Total (R$) (Opcional)</Label>
+            <Label htmlFor="amount">Valor Total (R$) *</Label>
             <Input
-              id="value"
+              id="amount"
               type="number"
               step="0.01"
               placeholder="0,00"
-              value={formData.value}
-              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              required
             />
           </div>
 
@@ -149,15 +152,6 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
                 <SelectItem value="">Nenhum trabalho vinculado</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="partial_payment"
-              checked={false}
-              disabled
-            />
-            <Label htmlFor="partial_payment">Pagamento Parcial / Agendar Restante</Label>
           </div>
 
           <div className="space-y-2">
@@ -211,12 +205,12 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="month">Mês *</Label>
+            <Label htmlFor="date">Data *</Label>
             <Input
-              id="month"
-              type="month"
-              value={formData.month}
-              onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               required
             />
           </div>
