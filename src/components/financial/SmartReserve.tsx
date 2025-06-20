@@ -29,12 +29,16 @@ const SmartReserve: React.FC = () => {
     if (!user) return;
 
     try {
-      // Usar select direto da tabela
+      // Usar SQL direto através de uma query personalizada
       const { data, error } = await supabase
-        .from('reserve_goals')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .rpc('exec_sql', {
+          query: `
+            SELECT * FROM reserve_goals 
+            WHERE user_id = $1 
+            ORDER BY created_at DESC
+          `,
+          params: [user.id]
+        });
 
       if (error) throw error;
       setGoals(data || []);
