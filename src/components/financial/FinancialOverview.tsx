@@ -48,14 +48,13 @@ const FinancialOverview: React.FC = () => {
     if (!user) return;
 
     try {
-      // Usar SQL direto para buscar as transações
-      const { data, error } = await supabase.rpc('exec_sql', {
-        sql: `
-          SELECT * FROM financial_transactions 
-          WHERE user_id = '${user.id}' 
-          ORDER BY date DESC, created_at DESC
-        `
-      });
+      // Usar select direto da tabela
+      const { data, error } = await supabase
+        .from('financial_transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setTransactions(data || []);
