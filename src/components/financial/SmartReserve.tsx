@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { PiggyBank, Plus, Target, Trash2, Eye, EyeOff } from 'lucide-react';
+import { PiggyBank, Plus, Target, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -28,7 +27,7 @@ const SmartReserve: React.FC = () => {
   const [selectedGoal, setSelectedGoal] = useState<ReserveGoal | null>(null);
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
-  const { valuesHidden, toggleValuesVisibility, formatValue } = usePrivacy();
+  const { formatValue } = usePrivacy();
 
   const loadGoals = async () => {
     if (!user) return;
@@ -125,30 +124,11 @@ const SmartReserve: React.FC = () => {
             Crie suas "caixinhas" de economia e acompanhe o progresso para alcançar seus objetivos financeiros.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleValuesVisibility}
-            className="flex items-center gap-2"
-          >
-            {valuesHidden ? (
-              <>
-                <EyeOff className="h-4 w-4" />
-                Mostrar Valores
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4" />
-                Ocultar Valores
-              </>
-            )}
-          </Button>
-          <Button onClick={() => setShowAddGoalModal(true)} className="bg-purple-600 hover:bg-purple-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Meta
-          </Button>
-        </div>
+        <Button onClick={() => setShowAddGoalModal(true)} className="bg-purple-600 hover:bg-purple-700">
+          <Plus className="h-4 w-4 mr-2" />
+          <span className="hidden sm:inline">Nova Meta</span>
+          <span className="sm:hidden">Meta</span>
+        </Button>
       </div>
 
       {/* Lista de Metas */}
