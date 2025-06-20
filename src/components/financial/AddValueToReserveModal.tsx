@@ -95,14 +95,22 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({ isOpen,
     <Label htmlFor="amount">Valor a Adicionar (R$) *</Label>
     <Input
       id="amount"
-      type="number"
-      step="0.01"
-      placeholder="0,00"
-      value={amount ?? ''}
-      onChange={(e) =>
-        setAmount(e.target.value === '' ? '' : parseFloat(e.target.value))
-      }
-      required
+  type="text"
+  value={new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(formData.value || 0)}
+  onChange={(e) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    const numericValue = Number(rawValue) / 100;
+
+    setFormData({
+      ...formData,
+      value: numericValue,
+    });
+  }}
+  placeholder="R$ 0,00"
+  required
     />
   </div>
 
