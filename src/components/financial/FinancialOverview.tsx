@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, TrendingDown, DollarSign, Plus, ArrowUpDown, Edit, FileText, Filter, Eye, EyeOff } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Plus, ArrowUpDown, Edit, FileText, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -56,7 +56,7 @@ const FinancialOverview: React.FC = () => {
 
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
-  const { valuesHidden, toggleValuesVisibility, formatValue } = usePrivacy();
+  const { formatValue } = usePrivacy();
 
   const loadTransactions = async () => {
     if (!user) return;
@@ -250,28 +250,6 @@ const FinancialOverview: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Privacy Toggle */}
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleValuesVisibility}
-          className="flex items-center gap-2"
-        >
-          {valuesHidden ? (
-            <>
-              <EyeOff className="h-4 w-4" />
-              Mostrar Valores
-            </>
-          ) : (
-            <>
-              <Eye className="h-4 w-4" />
-              Ocultar Valores
-            </>
-          )}
-        </Button>
-      </div>
-
       {/* Header com Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -405,19 +383,33 @@ const FinancialOverview: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Botões de Ação */}
-      <div className="flex gap-4">
-        <Button onClick={() => setShowIncomeModal(true)} className="bg-green-600 hover:bg-green-700">
+      {/* Botões de Ação - Responsivos */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+        <Button 
+          onClick={() => setShowIncomeModal(true)} 
+          className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
+        >
           <Plus className="h-4 w-4 mr-2" />
-          Nova Entrada
+          <span className="hidden sm:inline">Nova Entrada</span>
+          <span className="sm:hidden">Entrada</span>
         </Button>
-        <Button onClick={() => setShowExpenseModal(true)} variant="destructive">
+        <Button 
+          onClick={() => setShowExpenseModal(true)} 
+          variant="destructive"
+          className="flex-1 sm:flex-none"
+        >
           <Plus className="h-4 w-4 mr-2" />
-          Nova Saída
+          <span className="hidden sm:inline">Nova Saída</span>
+          <span className="sm:hidden">Saída</span>
         </Button>
-        <Button onClick={exportToPDF} variant="outline">
+        <Button 
+          onClick={exportToPDF} 
+          variant="outline"
+          className="flex-1 sm:flex-none"
+        >
           <FileText className="h-4 w-4 mr-2" />
-          Exportar PDF
+          <span className="hidden sm:inline">Exportar PDF</span>
+          <span className="sm:hidden">PDF</span>
         </Button>
       </div>
 
