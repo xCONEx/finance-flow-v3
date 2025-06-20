@@ -90,31 +90,19 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({ isOpen,
           </p>
         </DialogHeader>
 
-    <form onSubmit={handleSubmit} className="space-y-4">
-  <div className="space-y-2">
-    <Label htmlFor="amount">Valor a Adicionar (R$) *</Label>
-    <Input
-  id="tamount"
-  type="text"
-  value={new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(formData.target_amount || 0)}
-  onChange={(e) => {
-    const rawValue = e.target.value.replace(/\D/g, ''); // Remove tudo que não for número
-    const numericValue = Number(rawValue) / 100; // Divide por 100 para ajustar casas decimais
-
-    setFormData({
-      ...formData,
-      target_amount: numericValue,
-    });
-  }}
-  placeholder="R$ 0,00"
-  required
-    />
-  </div>
-
-
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="amount">Valor a Adicionar (R$) *</Label>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              placeholder="0,00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
 
           <div className="bg-gray-50 p-3 rounded-lg">
             <p className="text-sm text-gray-600">
