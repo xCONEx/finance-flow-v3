@@ -94,7 +94,6 @@ const AddReserveGoalModal: React.FC<AddReserveGoalModalProps> = ({ isOpen, onClo
 <div className="space-y-2">
   <Label htmlFor="target_amount">Valor da Meta (R$) *</Label>
   <Input
-<Input
               id="amount"
               type="number"
               step="0.01"
