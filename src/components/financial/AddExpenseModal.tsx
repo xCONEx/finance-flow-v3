@@ -56,12 +56,11 @@ const paymentMethods = [
 const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     description: '',
-    amount: '',
+    value: '',
     category: '',
     payment_method: '',
     supplier: '',
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().split(' ')[0].slice(0, 5),
+    month: new Date().toISOString().slice(0, 7), // YYYY-MM format
     is_paid: true
   });
   const [loading, setLoading] = useState(false);
@@ -74,23 +73,16 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
 
     setLoading(true);
     try {
-      const { error } = await supabase.rpc('exec_sql', {
-        sql: `
-          INSERT INTO financial_transactions (user_id, type, description, amount, category, payment_method, supplier, date, time, is_paid)
-          VALUES ($1, 'expense', $2, $3, $4, $5, $6, $7, $8, $9)
-        `,
-        params: [
-          user.id,
-          formData.description,
-          parseFloat(formData.amount) || 0,
-          formData.category,
-          formData.payment_method,
-          formData.supplier || null,
-          formData.date,
-          formData.time || null,
-          formData.is_paid
-        ]
-      });
+      // Insert into expenses table with correct schema
+      const { error } = await supabase
+        .from('expenses')
+        .insert({
+          user_id: user.id,
+          description: `[SAÍDA] ${formData.description}${formData.supplier ? ` - ${formData.supplier}` : ''}`,
+          value: parseFloat(formData.value) || 0,
+          category: formData.category,
+          month: formData.month
+        });
 
       if (error) throw error;
 
@@ -103,19 +95,18 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
       onClose();
       setFormData({
         description: '',
-        amount: '',
+        value: '',
         category: '',
         payment_method: '',
         supplier: '',
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toTimeString().split(' ')[0].slice(0, 5),
+        month: new Date().toISOString().slice(0, 7),
         is_paid: true
       });
     } catch (error) {
       console.error('Erro ao adicionar saída:', error);
       toast({
         title: "Erro",
-        description: "Erro ao adicionar saída. Verifique se as tabelas financeiras foram criadas.",
+        description: "Erro ao adicionar saída. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -143,14 +134,14 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Valor Total (R$) (Opcional)</Label>
+            <Label htmlFor="value">Valor Total (R$) (Opcional)</Label>
             <Input
-              id="amount"
+              id="value"
               type="number"
               step="0.01"
               placeholder="0,00"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              value={formData.value}
+              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
             />
           </div>
 
@@ -204,26 +195,15 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Data *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="time">Horário (Opcional)</Label>
-              <Input
-                id="time"
-                type="time"
-                value={formData.time}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="month">Mês *</Label>
+            <Input
+              id="month"
+              type="month"
+              value={formData.month}
+              onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+              required
+            />
           </div>
 
           <div className="flex items-center space-x-2">
