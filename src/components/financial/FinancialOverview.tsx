@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { usePrivacy } from '@/contexts/PrivacyContext';
+import { useNotifications } from '@/hooks/useNotifications';
 import AddIncomeModal from './AddIncomeModal';
 import AddExpenseModal from './AddExpenseModal';
 import EditTransactionModal from './EditTransactionModal';
@@ -20,6 +21,8 @@ interface FinancialTransaction {
   value: number;
   category: string;
   month: string;
+  due_date?: string;
+  notification_enabled?: boolean;
   created_at: string;
 }
 
@@ -57,6 +60,7 @@ const FinancialOverview: React.FC = () => {
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
   const { formatValue } = usePrivacy();
+  const { scheduleNotification } = useNotifications();
 
   const loadTransactions = async () => {
     if (!user) return;
@@ -74,6 +78,16 @@ const FinancialOverview: React.FC = () => {
       const transactionData = data || [];
       setTransactions(transactionData);
       applyFilters(transactionData);
+
+      // Schedule notifications for transactions with due dates
+      transactionData.forEach(async (transaction: FinancialTransaction) => {
+        if (transaction.due_date && transaction.notification_enabled) {
+          const transactionDetails = parseTransactionData(transaction.description);
+          if (!transactionDetails.isPaid) {
+            await scheduleNotification(transaction);
+          }
+        }
+      });
 
       // Calculate summary from financial transactions
       const incomeTransactions = transactionData.filter((t: FinancialTransaction) => 
@@ -429,6 +443,9 @@ const FinancialOverview: React.FC = () => {
             <div className="space-y-4">
               {filteredTransactions.map((transaction) => {
                 const transactionData = parseTransactionData(transaction.description);
+                const hasDueDate = transaction.due_date && !transactionData.isPaid;
+                const isOverdue = hasDueDate && new Date(transaction.due_date!) < new Date();
+                
                 return (
                   <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
@@ -440,6 +457,16 @@ const FinancialOverview: React.FC = () => {
                         {!transactionData.isPaid && (
                           <Badge variant="outline">Pendente</Badge>
                         )}
+                        {hasDueDate && (
+                          <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
+                            {isOverdue ? 'Vencido' : 'A vencer'}
+                          </Badge>
+                        )}
+                        {transaction.notification_enabled && hasDueDate && (
+                          <Badge variant="outline" className="text-blue-600">
+                            🔔 Notificações
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
@@ -447,6 +474,11 @@ const FinancialOverview: React.FC = () => {
                       {transactionData.clientOrSupplier && (
                         <p className="text-sm text-muted-foreground">
                           {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
+                        </p>
+                      )}
+                      {transaction.due_date && (
+                        <p className="text-sm text-blue-600">
+                          Vencimento: {formatDate(transaction.due_date)}
                         </p>
                       )}
                     </div>
