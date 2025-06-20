@@ -94,19 +94,19 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({ isOpen,
   <div className="space-y-2">
     <Label htmlFor="amount">Valor a Adicionar (R$) *</Label>
     <Input
-      id="target_amount"
+  id="target_amount"
   type="text"
   value={new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  }).format(formData.value || 0)}
+  }).format(formData.target_amount || 0)}
   onChange={(e) => {
-    const rawValue = e.target.value.replace(/\D/g, '');
-    const numericValue = Number(rawValue) / 100;
+    const rawValue = e.target.value.replace(/\D/g, ''); // Remove tudo que não for número
+    const numericValue = Number(rawValue) / 100; // Divide por 100 para ajustar casas decimais
 
     setFormData({
       ...formData,
-      value: numericValue,
+      target_amount: numericValue,
     });
   }}
   placeholder="R$ 0,00"
