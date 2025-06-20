@@ -48,12 +48,11 @@ const paymentMethods = [
 const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     description: '',
-    amount: '',
+    value: '',
     category: '',
     payment_method: '',
     client_name: '',
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().split(' ')[0].slice(0, 5),
+    month: new Date().toISOString().slice(0, 7), // YYYY-MM format
     work_id: '',
     is_paid: true
   });
@@ -67,24 +66,16 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
 
     setLoading(true);
     try {
-      const { error } = await supabase.rpc('exec_sql', {
-        sql: `
-          INSERT INTO financial_transactions (user_id, type, description, amount, category, payment_method, client_name, date, time, work_id, is_paid)
-          VALUES ($1, 'income', $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        `,
-        params: [
-          user.id,
-          formData.description,
-          parseFloat(formData.amount) || 0,
-          formData.category,
-          formData.payment_method,
-          formData.client_name || null,
-          formData.date,
-          formData.time || null,
-          formData.work_id || null,
-          formData.is_paid
-        ]
-      });
+      // Insert into expenses table with correct schema
+      const { error } = await supabase
+        .from('expenses')
+        .insert({
+          user_id: user.id,
+          description: `[ENTRADA] ${formData.description}${formData.client_name ? ` - ${formData.client_name}` : ''}`,
+          value: parseFloat(formData.value) || 0,
+          category: formData.category,
+          month: formData.month
+        });
 
       if (error) throw error;
 
@@ -97,12 +88,11 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
       onClose();
       setFormData({
         description: '',
-        amount: '',
+        value: '',
         category: '',
         payment_method: '',
         client_name: '',
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toTimeString().split(' ')[0].slice(0, 5),
+        month: new Date().toISOString().slice(0, 7),
         work_id: '',
         is_paid: true
       });
@@ -110,7 +100,7 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
       console.error('Erro ao adicionar entrada:', error);
       toast({
         title: "Erro",
-        description: "Erro ao adicionar entrada. Verifique se as tabelas financeiras foram criadas.",
+        description: "Erro ao adicionar entrada. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -138,14 +128,14 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Valor Total (R$) (Opcional)</Label>
+            <Label htmlFor="value">Valor Total (R$) (Opcional)</Label>
             <Input
-              id="amount"
+              id="value"
               type="number"
               step="0.01"
               placeholder="0,00"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              value={formData.value}
+              onChange={(e) => setFormData({ ...formData, value: e.target.value })}
             />
           </div>
 
@@ -156,7 +146,7 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
                 <SelectValue placeholder="Selecione um trabalho..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Nenhum trabalho vinculado</SelectItem>
+                <SelectItem value="">Nenhum trabalho vinculado</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -220,26 +210,15 @@ const AddIncomeModal: React.FC<AddIncomeModalProps> = ({ isOpen, onClose, onSucc
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Data *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="time">Horário (Opcional)</Label>
-              <Input
-                id="time"
-                type="time"
-                value={formData.time}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="month">Mês *</Label>
+            <Input
+              id="month"
+              type="month"
+              value={formData.month}
+              onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+              required
+            />
           </div>
 
           <div className="flex items-center space-x-2">
