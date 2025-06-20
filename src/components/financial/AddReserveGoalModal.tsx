@@ -30,15 +30,17 @@ const AddReserveGoalModal: React.FC<AddReserveGoalModalProps> = ({ isOpen, onClo
 
     setLoading(true);
     try {
-      // Insert into expenses table with special category for reserve goals
+      // Using expenses table temporarily to store reserve goals
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
       const { error } = await supabase
         .from('expenses')
         .insert({
           user_id: user.id,
-          description: `[META] ${formData.name} ${formData.icon || '🎯'}`,
-          value: parseFloat(formData.target_amount) || 0,
-          category: 'Reserva Inteligente',
-          month: new Date().toISOString().slice(0, 7)
+          description: `RESERVE_GOAL: ${formData.name} | Target: ${formData.target_amount} | Icon: ${formData.icon || '🎯'} | Current: 0`,
+          value: 0, // Initial current amount
+          category: 'Meta de Reserva',
+          month: currentMonth
         });
 
       if (error) throw error;
