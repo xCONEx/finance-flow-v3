@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -7,9 +8,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
   User, 
@@ -17,14 +15,10 @@ import {
   Settings, 
   Crown, 
   Users,
-  ChevronDown,
   Home,
   Calculator,
   Video,
-  DollarSign,
   CreditCard,
-  Package,
-  Calendar,
   UserCheck,
   Building,
   FileText
@@ -42,7 +36,6 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption }) => {
   const { signOut, user, profile } = useSupabaseAuth();
   const { currentTheme } = useTheme();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const isAdmin = profile?.user_type === 'admin';
 
   const handleLogout = async () => {
@@ -58,12 +51,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
     ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
     ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
     ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
-    { id: 'routine', label: 'Rotina', icon: Calendar },
-  ];
-
-  const managementMenuItems = [
-    { id: 'costs', label: 'Custos Mensais', icon: DollarSign },
-    { id: 'items', label: 'Itens de Trabalho', icon: Package },
+    { id: 'management', label: 'Gerenciamento', icon: Building },
   ];
 
   return (
@@ -99,36 +87,6 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                 <span>{item.label}</span>
               </Button>
             ))}
-
-            {/* Submenu Gerenciamento */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={`flex items-center space-x-2 ${
-                    ['costs', 'items'].includes(activeTab)
-                      ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90` 
-                      : `hover:bg-gradient-to-r hover:${currentTheme.secondary}`
-                  }`}
-                >
-                  <Building className="w-4 h-4" />
-                  <span>Gerenciamento</span>
-                  <ChevronDown className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {managementMenuItems.map((item) => (
-                  <DropdownMenuItem
-                    key={item.id}
-                    onClick={() => onTabChange(item.id)}
-                    className="flex items-center space-x-2 cursor-pointer"
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
 
             {/* Team Option */}
             {showTeamOption && (
