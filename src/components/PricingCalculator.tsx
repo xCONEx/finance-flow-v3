@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calculator, Save, DollarSign, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +13,10 @@ import { useApp } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { formatCurrency } from '../utils/formatters';
+import { supabase } from '@/integrations/supabase/client';
+import { Client } from '@/types/client';
+import { ClientSelector } from './ClientSelector';
+import { AddClientModal } from './clients/AddClientModal';
 import ManualValueModal from './ManualValueModal';
 
 const PricingCalculator = () => {
@@ -21,6 +24,8 @@ const PricingCalculator = () => {
   const { currentTheme } = useTheme();
   const { user } = useSupabaseAuth();
   const [showManualValue, setShowManualValue] = useState(false);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -54,6 +59,13 @@ const PricingCalculator = () => {
     "Edição Complexa",
     "Motion Graphics"
   ];
+
+  // Atualizar cliente quando selecionado
+  useEffect(() => {
+    if (selectedClient) {
+      setFormData(prev => ({ ...prev, client: selectedClient.name }));
+    }
+  }, [selectedClient]);
 
   const calculatePrice = () => {
     if (!workRoutine) {
@@ -148,6 +160,7 @@ const PricingCalculator = () => {
     const newJob = {
       description: formData.description,
       client: formData.client,
+      client_id: selectedClient?.id || null,
       eventDate: formData.eventDate || new Date().toISOString().split('T')[0],
       estimatedHours: formData.estimatedHours,
       difficultyLevel: formData.difficultyLevel,
@@ -195,6 +208,7 @@ const PricingCalculator = () => {
         discountPercentage: 0
       });
       
+      setSelectedClient(null);
       setCalculatedPrice({
         totalCosts: 0,
         serviceValue: 0,
@@ -217,10 +231,15 @@ const PricingCalculator = () => {
     }
   };
 
+  const handleClientSuccess = () => {
+    setShowAddClient(false);
+    // Refresh da lista de clientes pode ser necessário
+  };
+
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold flex items-center justify-center gap-2">
+        <h2 className="text-2xl md:text-3xl font-bold flex items-center justify-center gap-2">
           <Calculator className={`text-${currentTheme.accent}`} />
           Calculadora Inteligente
         </h2>
@@ -253,20 +272,27 @@ const PricingCalculator = () => {
                 placeholder="Descreva o projeto..."
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
+                className="min-h-[80px]"
               />
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="client">Cliente *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="client">Cliente *</Label>
+              <ClientSelector
+                selectedClient={selectedClient}
+                onSelectClient={setSelectedClient}
+                onCreateNew={() => setShowAddClient(true)}
+              />
+              {!selectedClient && (
                 <Input
-                  id="client"
-                  placeholder="Nome do cliente"
+                  placeholder="Ou digite o nome do cliente"
                   value={formData.client}
                   onChange={(e) => setFormData({...formData, client: e.target.value})}
                 />
-              </div>
+              )}
+            </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="eventDate">Data do Evento</Label>
                 <Input
@@ -328,7 +354,7 @@ const PricingCalculator = () => {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="logisticsValue">Logística (R$)</Label>
                 <CurrencyInput
@@ -375,7 +401,7 @@ const PricingCalculator = () => {
                 <div className="space-y-4">
                   <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
                     <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor Total</h3>
-                    <div className={`text-2xl font-bold text-${currentTheme.accent}`}>
+                    <div className={`text-xl md:text-2xl font-bold text-${currentTheme.accent}`}>
                       {formatCurrency(calculatedPrice.totalCosts)}
                     </div>
                   </div>
@@ -383,7 +409,7 @@ const PricingCalculator = () => {
                   {formData.discountPercentage > 0 && (
                     <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200">
                       <h3 className="font-semibold text-green-700 dark:text-green-300 mb-2">Valor com Desconto</h3>
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      <div className="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">
                         {formatCurrency(calculatedPrice.valueWithDiscount)}
                       </div>
                     </div>
@@ -423,7 +449,7 @@ const PricingCalculator = () => {
             ) : (
               <div className="space-y-2">
                 <DollarSign className={`mx-auto h-12 w-12 text-${currentTheme.accent}`} />
-                <h3 className={`text-2xl font-bold text-${currentTheme.accent}`}>Calculadora</h3>
+                <h3 className={`text-xl md:text-2xl font-bold text-${currentTheme.accent}`}>Calculadora</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Configure sua rotina de trabalho para usar a calculadora.
                 </p>
@@ -433,7 +459,13 @@ const PricingCalculator = () => {
         </Card>
       </div>
 
-      {/* NOVO: Modal para valores manuais */}
+      {/* Modals */}
+      <AddClientModal
+        isOpen={showAddClient}
+        onClose={() => setShowAddClient(false)}
+        onSuccess={handleClientSuccess}
+      />
+
       <ManualValueModal 
         open={showManualValue} 
         onOpenChange={setShowManualValue}
