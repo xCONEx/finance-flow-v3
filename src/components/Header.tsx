@@ -11,30 +11,25 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  Shield, 
+  User, 
+  LogOut, 
   Settings, 
-  Eye, 
-  EyeOff, 
-  Home, 
-  Calculator, 
-  Video, 
-  DollarSign, 
-  Package, 
-  Calendar, 
-  Users, 
-  Building2, 
-  User as UserIcon, 
-  ChevronDown, 
+  Crown, 
+  Users,
+  ChevronDown,
+  Home,
+  Calculator,
+  Video,
+  DollarSign,
   CreditCard,
-  User,
-  LogOut,
-  Crown
+  Package,
+  Calendar,
+  UserCheck,
+  Building,
+  FileText
 } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
-import { useAgency } from '../contexts/AgencyContext';
-import { usePrivacy } from '../contexts/PrivacyContext';
 import { useTheme } from '../contexts/ThemeContext';
 import NotificationBell from './NotificationBell';
 
@@ -47,8 +42,6 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption }) => {
   const { signOut, user, profile } = useSupabaseAuth();
   const { currentTheme } = useTheme();
-  const { valuesHidden, toggleValuesVisibility } = usePrivacy();
-  const { agencies, currentContext, setCurrentContext } = useAgency();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const isAdmin = profile?.user_type === 'admin';
 
@@ -64,56 +57,14 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
     { id: 'calculator', label: 'Calculadora', icon: Calculator },
     ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
     ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
-    ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserIcon }] : []),
+    ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
     { id: 'routine', label: 'Rotina', icon: Calendar },
   ];
 
   const managementMenuItems = [
     { id: 'costs', label: 'Custos Mensais', icon: DollarSign },
     { id: 'items', label: 'Itens de Trabalho', icon: Package },
-    { id: 'routine', label: 'Rotina de Trabalho', icon: Calendar },
   ];
-
-  const getProfileImageUrl = () => {
-    if (profile?.image_user) return profile.image_user;
-    if (user?.user_metadata?.avatar_url) return user.user_metadata.avatar_url;
-    return '';
-  };
-
-  const handleContextChange = (value: string) => {
-    if (value === 'individual') {
-      setCurrentContext('individual');
-    } else {
-      const agency = agencies.find(a => a.id === value);
-      if (agency) {
-        setCurrentContext(agency);
-      }
-    }
-  };
-
-  const getCurrentContextValue = () => {
-    return currentContext === 'individual' ? 'individual' : currentContext.id;
-  };
-
-  const getCurrentContextLabel = () => {
-    if (currentContext === 'individual') {
-      return (
-        <div className="flex items-center gap-2">
-          <UserIcon className="h-4 w-4" />
-          <span>Individual</span>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-center gap-2">
-        <Building2 className="h-4 w-4" />
-        <span className="truncate max-w-[120px]">{currentContext.name}</span>
-        {currentContext.is_owner && (
-          <span className="text-xs bg-purple-100 text-purple-800 px-1 rounded flex-shrink-0">Owner</span>
-        )}
-      </div>
-    );
-  };
 
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
@@ -160,17 +111,17 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                       : `hover:bg-gradient-to-r hover:${currentTheme.secondary}`
                   }`}
                 >
-                  <Building2 className="w-4 h-4" />
+                  <Building className="w-4 h-4" />
                   <span>Gerenciamento</span>
                   <ChevronDown className="w-3 h-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-gray-800 border shadow-lg z-50">
+              <DropdownMenuContent align="end" className="w-48">
                 {managementMenuItems.map((item) => (
                   <DropdownMenuItem
                     key={item.id}
                     onClick={() => onTabChange(item.id)}
-                    className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="flex items-center space-x-2 cursor-pointer"
                   >
                     <item.icon className="w-4 h-4" />
                     <span>{item.label}</span>
@@ -186,8 +137,8 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                 className={`flex items-center space-x-2 ${
                   activeTab === 'team' 
                     ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90` 
-                    : `hover:bg-gradient-to-r hover:${current Theme.secondary}`
-                }`
+                    : `hover:bg-gradient-to-r hover:${currentTheme.secondary}`
+                }`}
                 onClick={() => onTabChange('team')}
               >
                 <Users className="w-4 h-4" />
@@ -198,63 +149,20 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
 
           {/* User Menu */}
           <div className="flex items-center space-x-3">
-            {/* Seletor de Contexto Individual/Empresa */}
-            {hasEnterprisePlan && agencies.length > 0 && (
-              <Select value={getCurrentContextValue()} onValueChange={handleContextChange}>
-                <SelectTrigger className="w-auto min-w-[120px] max-w-[160px] h-9">
-                  <SelectValue>
-                    {getCurrentContextLabel()}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border shadow-lg z-50">
-                  <SelectItem value="individual">
-                    <div className="flex items-center gap-2">
-                      <UserIcon className="h-4 w-4" />
-                      <span>Individual</span>
-                    </div>
-                  </SelectItem>
-                  {agencies.map((agency) => (
-                    <SelectItem key={agency.id} value={agency.id}>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        <span className="truncate max-w-[100px]">{agency.name}</span>
-                        {agency.is_owner && (
-                          <span className="text-xs bg-purple-100 text-purple-800 px-1 rounded ml-1 flex-shrink-0">
-                            Owner
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {/* Privacy Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleValuesVisibility}
-              title={valuesHidden ? "Mostrar valores" : "Ocultar valores"}
-              className="flex"
-            >
-              {valuesHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </Button>
-
             <NotificationBell />
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={getProfileImageUrl()} alt={user?.email} />
+                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
                     <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white`}>
-                      {profile?.name?.charAt(0) || user?.email?.charAt(0).toUpperCase()}
+                      {user?.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white dark:bg-gray-800 border shadow-lg z-50" align="end" forceMount>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
                 <div className="flex flex-col space-y-1 p-2">
                   <p className="text-sm font-medium leading-none">{user?.email}</p>
                   <p className="text-xs leading-none text-muted-foreground">
@@ -278,7 +186,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem onClick={() => onTabChange('admin')}>
-                    <Shield className="mr-2 h-4 w-4" />
+                    <FileText className="mr-2 h-4 w-4" />
                     <span>Admin</span>
                   </DropdownMenuItem>
                 )}
