@@ -1,21 +1,29 @@
 
-import React, { useState, useEffect } from 'react';
-import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
+import React, { useState } from 'react';
+import Header from './Header';
+import Navigation from './Navigation';
 import Dashboard from './Dashboard';
 import PricingCalculator from './PricingCalculator';
-import EntregaFlowKanban from './EntregaFlowKanban';
-import Settings from './Settings';
 import ManagementSection from './ManagementSection';
+import Settings from './Settings';
+import UserProfile from './UserProfile';
+import AdminPanel from './AdminPanel';
+import TeamManagement from './TeamManagement';
+import EntregaFlowKanban from './EntregaFlowKanban_old';
+import SubscriptionPlans from './SubscriptionPlans';
 import FinancialManagement from './financial/FinancialManagement';
 import ClientsManagement from './clients/ClientsManagement';
-import Navigation from './Navigation';
 import { AnimatedSidebar } from './AnimatedSidebar';
-import { Toaster } from './ui/toaster';
-import { useTheme } from '../contexts/ThemeContext';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 
-const MainApp: React.FC = () => {
+const MainApp = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { profile } = useSupabaseAuth();
+  const { user, profile, agency } = useSupabaseAuth();
+
+  // Verificar se é admin ou tem acesso ao team
+  const isAdmin = profile?.user_type === 'admin';
+  const isCompanyUser = (profile?.user_type === 'company_owner' || profile?.user_type === 'employee') && !!agency;
+  const showTeamOption = isCompanyUser;
 
   const renderContent = () => {
     switch (activeTab) {
@@ -31,8 +39,16 @@ const MainApp: React.FC = () => {
         return <ClientsManagement />;
       case 'management':
         return <ManagementSection />;
+      case 'team':
+        return <TeamManagement />;
       case 'settings':
         return <Settings />;
+      case 'profile':
+        return <UserProfile />;
+      case 'subscription':
+        return <SubscriptionPlans />;
+      case 'admin':
+        return isAdmin ? <AdminPanel /> : <Dashboard />;
       default:
         return <Dashboard />;
     }
