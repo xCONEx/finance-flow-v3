@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -156,7 +155,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                 <Button
                   variant="ghost"
                   className={`flex items-center space-x-2 ${
-                    ['costs', 'items'].includes(activeTab)
+                    ['costs', 'items', 'management'].includes(activeTab)
                       ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90` 
                       : `hover:bg-gradient-to-r hover:${currentTheme.secondary}`
                   }`}
