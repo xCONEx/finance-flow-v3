@@ -101,167 +101,168 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[90vw] max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-blue-600">Detalhes do Cliente</DialogTitle>
-        </DialogHeader>
+  <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+    <DialogHeader>
+      <DialogTitle className="text-blue-600">Detalhes do Cliente</DialogTitle>
+    </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Informações do Cliente */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="w-5 h-5" />
-                {client.name}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {client.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm">{client.phone}</span>
-                  </div>
-                )}
-                {client.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm">{client.email}</span>
-                  </div>
-                )}
+    <div className="space-y-6">
+      {/* Informações do Cliente */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building className="w-5 h-5" />
+            {client.name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {client.phone && (
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-gray-500" />
+                <span className="text-sm">{client.phone}</span>
               </div>
-
-              {client.address && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-gray-500 mt-1" />
-                  <span className="text-sm">{client.address}</span>
-                </div>
-              )}
-
-              {client.cnpj && (
-                <div>
-                  <Badge variant="outline">{client.cnpj}</Badge>
-                </div>
-              )}
-
-              {client.description && (
-                <div>
-                  <h4 className="font-medium mb-2">Descrição:</h4>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">{client.description}</p>
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-500">
-                <span>Cliente desde: {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
-                <span className="hidden sm:inline">•</span>
-                <span>{totalJobs} trabalho{totalJobs !== 1 ? 's' : ''}</span>
-                <span className="hidden sm:inline">•</span>
-                <span>Total faturado: {formatCurrency(totalValue)}</span>
+            )}
+            {client.email && (
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-gray-500" />
+                <span className="text-sm">{client.email}</span>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Histórico de Trabalhos */}
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Histórico de Trabalhos ({totalJobs})
-                </CardTitle>
-                {totalValue > 0 && (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <DollarSign className="w-4 h-4" />
-                    <span className="font-semibold text-sm sm:text-base">
-                      Total: {formatCurrency(totalValue)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">Carregando histórico...</div>
-              ) : jobHistory.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Nenhum trabalho encontrado para este cliente.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[200px]">Descrição</TableHead>
-                        <TableHead className="min-w-[120px]">Data do Evento</TableHead>
-                        <TableHead className="min-w-[100px]">Categoria</TableHead>
-                        <TableHead className="min-w-[80px]">Horas</TableHead>
-                        <TableHead className="min-w-[100px]">Dificuldade</TableHead>
-                        <TableHead className="min-w-[120px]">Valor Final</TableHead>
-                        <TableHead className="min-w-[100px]">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {jobHistory.map((job) => (
-                        <TableRow key={job.id}>
-                          <TableCell>
-                            <div className="max-w-xs">
-                              <div className="font-medium truncate text-sm">{job.description}</div>
-                              <div className="text-xs text-gray-500">
-                                Criado em {new Date(job.created_at).toLocaleDateString('pt-BR')}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-gray-400" />
-                              <span className="text-sm">
-                                {job.event_date ? new Date(job.event_date).toLocaleDateString('pt-BR') : 'N/A'}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm">{job.category || 'N/A'}</span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-gray-400" />
-                              <span className="text-sm">{job.estimated_hours}h</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className={`text-sm font-medium ${getDifficultyColor(job.difficulty_level)}`}>
-                              {job.difficulty_level}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium text-green-600 text-sm">
-                                {formatCurrency(job.value_with_discount || job.total_costs)}
-                              </div>
-                              {job.discount_value > 0 && (
-                                <div className="text-xs text-gray-500">
-                                  Desc: {formatCurrency(job.discount_value)}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(job.status)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end">
-            <Button onClick={onClose}>Fechar</Button>
+            )}
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+          {client.address && (
+            <div className="flex items-start gap-2">
+              <MapPin className="w-4 h-4 text-gray-500 mt-1" />
+              <span className="text-sm">{client.address}</span>
+            </div>
+          )}
+
+          {client.cnpj && (
+            <div>
+              <Badge variant="outline">{client.cnpj}</Badge>
+            </div>
+          )}
+
+          {client.description && (
+            <div>
+              <h4 className="font-medium mb-2">Descrição:</h4>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">{client.description}</p>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-500">
+            <span>Cliente desde: {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
+            <span className="hidden sm:inline">•</span>
+            <span>{totalJobs} trabalho{totalJobs !== 1 ? 's' : ''}</span>
+            <span className="hidden sm:inline">•</span>
+            <span>Total faturado: {formatCurrency(totalValue)}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Histórico de Trabalhos */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Histórico de Trabalhos ({totalJobs})
+            </CardTitle>
+            {totalValue > 0 && (
+              <div className="flex items-center gap-2 text-green-600">
+                <DollarSign className="w-4 h-4" />
+                <span className="font-semibold text-sm sm:text-base">
+                  Total: {formatCurrency(totalValue)}
+                </span>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">Carregando histórico...</div>
+          ) : jobHistory.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Nenhum trabalho encontrado para este cliente.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[180px]">Descrição</TableHead>
+                    <TableHead className="min-w-[120px]">Data do Evento</TableHead>
+                    <TableHead className="min-w-[100px]">Categoria</TableHead>
+                    <TableHead className="min-w-[80px]">Horas</TableHead>
+                    <TableHead className="min-w-[100px]">Dificuldade</TableHead>
+                    <TableHead className="min-w-[120px]">Valor Final</TableHead>
+                    <TableHead className="min-w-[100px]">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {jobHistory.map((job) => (
+                    <TableRow key={job.id}>
+                      <TableCell>
+                        <div className="max-w-xs">
+                          <div className="font-medium truncate text-sm">{job.description}</div>
+                          <div className="text-xs text-gray-500">
+                            Criado em {new Date(job.created_at).toLocaleDateString('pt-BR')}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-gray-400" />
+                          <span className="text-sm">
+                            {job.event_date ? new Date(job.event_date).toLocaleDateString('pt-BR') : 'N/A'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{job.category || 'N/A'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-gray-400" />
+                          <span className="text-sm">{job.estimated_hours}h</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-sm font-medium ${getDifficultyColor(job.difficulty_level)}`}>
+                          {job.difficulty_level}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium text-green-600 text-sm">
+                            {formatCurrency(job.value_with_discount || job.total_costs)}
+                          </div>
+                          {job.discount_value > 0 && (
+                            <div className="text-xs text-gray-500">
+                              Desc: {formatCurrency(job.discount_value)}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(job.status)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button onClick={onClose}>Fechar</Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
   );
 };
