@@ -63,15 +63,12 @@ const MainApp = () => {
       />
 
       
-      <Header 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab}
-        showTeamOption={showTeamOption}
-      />
-      
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {renderContent()}
-      </main>
+      {/* Conteúdo principal */}
+      <div className="flex-1 md:ml-12 transition-all duration-200">
+        <div className="p-4 md:p-6">
+          {renderContent()}
+        </div>
+      </div>
 
       <Navigation 
         activeTab={activeTab} 
