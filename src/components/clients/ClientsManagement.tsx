@@ -102,7 +102,8 @@ const ClientsManagement = () => {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 pb-20 md:pb-6">
-  <div className="flex flex-col gap-4">
+  {/* Header */}
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
         Gerenciamento de Clientes
@@ -121,6 +122,7 @@ const ClientsManagement = () => {
     </Button>
   </div>
 
+  {/* Card */}
   <Card>
     <CardHeader className="pb-4">
       <div className="flex flex-col gap-4">
@@ -145,8 +147,8 @@ const ClientsManagement = () => {
         <div className="text-center py-8">
           <p className="text-gray-500">
             {searchTerm
-              ? "Nenhum cliente encontrado com os critérios de busca."
-              : "Nenhum cliente cadastrado ainda."}
+              ? 'Nenhum cliente encontrado com os critérios de busca.'
+              : 'Nenhum cliente cadastrado ainda.'}
           </p>
         </div>
       ) : (
@@ -159,23 +161,13 @@ const ClientsManagement = () => {
                   <TableHead>Nome</TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>CNPJ</TableHead>
-                  <TableHead>Criado em</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredClients.map((client) => (
                   <TableRow key={client.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{client.name}</div>
-                        {client.description && (
-                          <div className="text-sm text-gray-500 truncate max-w-xs">
-                            {client.description}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
+                    <TableCell className="font-medium">{client.name}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         {client.phone && (
@@ -196,9 +188,6 @@ const ClientsManagement = () => {
                       {client.cnpj && (
                         <Badge variant="outline">{client.cnpj}</Badge>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(client.created_at).toLocaleDateString("pt-BR")}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -237,19 +226,14 @@ const ClientsManagement = () => {
             {filteredClients.map((client) => (
               <Card key={client.id} className="p-4">
                 <div className="space-y-3">
-                  <div>
-                    <h3 className="font-medium text-lg">{client.name}</h3>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium text-lg">{client.name}</h3>
+                    </div>
                     {client.cnpj && (
-                      <div className="mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          {client.cnpj}
-                        </Badge>
-                      </div>
-                    )}
-                    {client.description && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        {client.description}
-                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        {client.cnpj}
+                      </Badge>
                     )}
                   </div>
 
@@ -268,38 +252,30 @@ const ClientsManagement = () => {
                     )}
                   </div>
 
-                  <div className="text-xs text-gray-500">
-                    Cliente desde:{" "}
-                    {new Date(client.created_at).toLocaleDateString("pt-BR")}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+                  <div className="flex justify-center gap-2 pt-2">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleViewDetails(client)}
-                      className="w-full"
+                      className="flex-1"
                     >
-                      <Eye className="w-4 h-4 mr-2" />
-                      Ver
+                      <Eye className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEdit(client)}
-                      className="w-full"
+                      className="flex-1"
                     >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Editar
+                      <Edit className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(client.id)}
-                      className="w-full text-red-600 hover:text-red-700"
+                      className="flex-1 text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Excluir
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -310,6 +286,8 @@ const ClientsManagement = () => {
       )}
     </CardContent>
   </Card>
+
+
 
 
       <AddClientModal
