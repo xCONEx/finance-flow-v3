@@ -1,28 +1,21 @@
 
-import React, { useState } from 'react';
-import Header from './Header';
-import Navigation from './Navigation';
+import React, { useState, useEffect } from 'react';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import Dashboard from './Dashboard';
 import PricingCalculator from './PricingCalculator';
-import ManagementSection from './ManagementSection';
+import EntregaFlowKanban from './EntregaFlowKanban';
 import Settings from './Settings';
-import UserProfile from './UserProfile';
-import AdminPanel from './AdminPanel';
-import TeamManagement from './TeamManagement';
-import EntregaFlowKanban from './EntregaFlowKanban_old';
-import SubscriptionPlans from './SubscriptionPlans';
+import ManagementSection from './ManagementSection';
 import FinancialManagement from './financial/FinancialManagement';
 import ClientsManagement from './clients/ClientsManagement';
-import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
+import Navigation from './Navigation';
+import { AnimatedSidebar } from './AnimatedSidebar';
+import { Toaster } from './ui/toaster';
+import { useTheme } from '../contexts/ThemeContext';
 
-const MainApp = () => {
+const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { user, profile, agency } = useSupabaseAuth();
-
-  // Verificar se é admin ou tem acesso ao team
-  const isAdmin = profile?.user_type === 'admin';
-  const isCompanyUser = (profile?.user_type === 'company_owner' || profile?.user_type === 'employee') && !!agency;
-  const showTeamOption = isCompanyUser;
+  const { profile } = useSupabaseAuth();
 
   const renderContent = () => {
     switch (activeTab) {
@@ -38,38 +31,36 @@ const MainApp = () => {
         return <ClientsManagement />;
       case 'management':
         return <ManagementSection />;
-      case 'team':
-        return <TeamManagement />;
       case 'settings':
         return <Settings />;
-      case 'profile':
-        return <UserProfile />;
-      case 'subscription':
-        return <SubscriptionPlans />;
-      case 'admin':
-        return isAdmin ? <AdminPanel /> : <Dashboard />;
       default:
         return <Dashboard />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header 
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+      {/* Sidebar animada para desktop */}
+      <AnimatedSidebar 
         activeTab={activeTab} 
-        onTabChange={setActiveTab}
-        showTeamOption={showTeamOption}
+        onTabChange={setActiveTab} 
       />
       
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {renderContent()}
-      </main>
+      {/* Conteúdo principal */}
+      <div className="flex-1 md:ml-12 transition-all duration-200">
+        <div className="p-4 md:p-6">
+          {renderContent()}
+        </div>
+      </div>
 
+      {/* Navegação mobile (mantém a original) */}
       <Navigation 
         activeTab={activeTab} 
-        onTabChange={setActiveTab}
-        showTeamOption={showTeamOption}
+        onTabChange={setActiveTab} 
+        showTeamOption={profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual'}
       />
+      
+      <Toaster />
     </div>
   );
 };
