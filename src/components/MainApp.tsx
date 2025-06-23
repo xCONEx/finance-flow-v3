@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Header from './Header';
 import Navigation from './Navigation';
+import { AnimatedSidebar } from './AnimatedSidebar';
 import Dashboard from './Dashboard';
 import PricingCalculator from './PricingCalculator';
 import ManagementSection from './ManagementSection';
@@ -55,11 +56,13 @@ const MainApp = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header 
+
+            {/* Sidebar animada para desktop */}
+      <AnimatedSidebar 
         activeTab={activeTab} 
-        onTabChange={setActiveTab}
-        showTeamOption={showTeamOption}
+        onTabChange={setActiveTab} 
       />
+      
       
       <main className="max-w-7xl mx-auto px-4 py-6">
         {renderContent()}
