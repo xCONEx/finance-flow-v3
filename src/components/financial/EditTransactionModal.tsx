@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -75,7 +76,7 @@ const paymentMethods = [
 const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onClose, onSuccess, transaction }) => {
   const [formData, setFormData] = useState({
     description: '',
-    amount: '',
+    amount: 0,
     category: '',
     payment_method: '',
     client_supplier: '',
@@ -110,7 +111,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onC
       const transactionData = parseTransactionData(transaction.description);
       setFormData({
         description: transactionData.description,
-        amount: Math.abs(transaction.value).toString(),
+        amount: Math.abs(transaction.value),
         category: transaction.category,
         payment_method: transactionData.paymentMethod,
         client_supplier: transactionData.clientOrSupplier,
@@ -120,9 +121,22 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onC
     }
   }, [transaction]);
 
+  const handleAmountChange = (value: number) => {
+    setFormData({ ...formData, amount: value });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !transaction) return;
+
+    if (formData.amount <= 0) {
+      toast({
+        title: "Erro",
+        description: "O valor deve ser maior que zero.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -131,7 +145,14 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onC
       const clientSupplierLabel = isIncome ? 'Client:' : 'Supplier:';
       
       const updatedDescription = `${prefix} ${formData.description} | Payment: ${formData.payment_method} | ${clientSupplierLabel} ${formData.client_supplier || 'N/A'} | Date: ${formData.date} | Paid: ${formData.is_paid}`;
-      const updatedValue = isIncome ? -(parseFloat(formData.amount) || 0) : (parseFloat(formData.amount) || 0);
+      const updatedValue = isIncome ? -(formData.amount) : formData.amount;
+
+      console.log('💰 Editando transação:', { 
+        isIncome,
+        amount: formData.amount, 
+        finalValue: updatedValue,
+        description: formData.description 
+      });
 
       const { error } = await supabase
         .from('expenses')
@@ -152,7 +173,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onC
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Erro ao atualizar transação:', error);
+      console.error('❌ Erro ao atualizar transação:', error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar transação. Tente novamente.",
@@ -189,29 +210,15 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onC
             />
           </div>
 
-<div className="space-y-2">
-  <Label htmlFor="amount">Valor Total (R$) *</Label>
-  <Input
-    id="amount"
-  type="text"
-  value={new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(formData.value || 0)}
-  onChange={(e) => {
-    const rawValue = e.target.value.replace(/\D/g, '');
-    const numericValue = Number(rawValue) / 100;
-
-    setFormData({
-      ...formData,
-      value: numericValue,
-    });
-  }}
-  placeholder="R$ 0,00"
-  required
-  />
-</div>
-
+          <div className="space-y-2">
+            <Label htmlFor="amount">Valor Total (R$) *</Label>
+            <CurrencyInput
+              id="amount"
+              value={formData.amount}
+              onChange={handleAmountChange}
+              placeholder="R$ 0,00"
+            />
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Categoria *</Label>
@@ -296,7 +303,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onC
             <Button
               type="submit"
               className={`flex-1 ${isIncome ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
-              disabled={loading}
+              disabled={loading || formData.amount <= 0}
             >
               {loading ? 'Salvando...' : 'Salvar Alterações'}
             </Button>

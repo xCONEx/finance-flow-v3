@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -56,7 +57,7 @@ const paymentMethods = [
 const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     description: '',
-    amount: '',
+    amount: 0,
     category: '',
     payment_method: '',
     supplier: '',
@@ -67,21 +68,39 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
 
+  const handleAmountChange = (value: number) => {
+    setFormData({ ...formData, amount: value });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
+    if (formData.amount <= 0) {
+      toast({
+        title: "Erro",
+        description: "O valor deve ser maior que zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Using expenses table temporarily with financial data structure
       const currentMonth = new Date().toISOString().slice(0, 7);
       
+      console.log('💳 Adicionando saída:', { 
+        amount: formData.amount, 
+        finalValue: formData.amount,
+        description: formData.description 
+      });
+
       const { error } = await supabase
         .from('expenses')
         .insert({
           user_id: user.id,
           description: `FINANCIAL_EXPENSE: ${formData.description} | Payment: ${formData.payment_method} | Supplier: ${formData.supplier || 'N/A'} | Date: ${formData.date} | Paid: ${formData.is_paid}`,
-          value: parseFloat(formData.amount) || 0,
+          value: formData.amount, // Positive for expense
           category: formData.category,
           month: currentMonth
         });
@@ -97,7 +116,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
       onClose();
       setFormData({
         description: '',
-        amount: '',
+        amount: 0,
         category: '',
         payment_method: '',
         supplier: '',
@@ -105,7 +124,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
         is_paid: true
       });
     } catch (error) {
-      console.error('Erro ao adicionar saída:', error);
+      console.error('❌ Erro ao adicionar saída:', error);
       toast({
         title: "Erro",
         description: "Erro ao adicionar saída. Tente novamente.",
@@ -135,28 +154,15 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ isOpen, onClose, onSu
             />
           </div>
 
-<div className="space-y-2">
-  <Label htmlFor="amount">Valor Total (R$) *</Label>
-  <Input
-id="amount"
-  type="text"
-  value={new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(formData.value || 0)}
-  onChange={(e) => {
-    const rawValue = e.target.value.replace(/\D/g, '');
-    const numericValue = Number(rawValue) / 100;
-
-    setFormData({
-      ...formData,
-      value: numericValue,
-    });
-  }}
-  placeholder="R$ 0,00"
-  required
-  />
-</div>
+          <div className="space-y-2">
+            <Label htmlFor="amount">Valor Total (R$) *</Label>
+            <CurrencyInput
+              id="amount"
+              value={formData.amount}
+              onChange={handleAmountChange}
+              placeholder="R$ 0,00"
+            />
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Categoria *</Label>
@@ -242,7 +248,7 @@ id="amount"
               type="submit"
               variant="destructive"
               className="flex-1"
-              disabled={loading}
+              disabled={loading || formData.amount <= 0}
             >
               {loading ? 'Adicionando...' : 'Adicionar Saída'}
             </Button>

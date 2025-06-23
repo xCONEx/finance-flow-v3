@@ -1,10 +1,6 @@
+
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,13 +15,8 @@ interface AddValueToReserveModalProps {
   goal: any;
 }
 
-const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-  goal
-}) => {
-  const [amount, setAmount] = useState(''); // Valor armazenado em centavos como string
+const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({ isOpen, onClose, onSuccess, goal }) => {
+  const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
@@ -33,15 +24,9 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({
   const parseGoalData = (description: string) => {
     const parts = description.replace('RESERVE_GOAL: ', '').split(' | ');
     const name = parts[0];
-    const target = parseFloat(
-      parts.find((p) => p.startsWith('Target:'))?.replace('Target: ', '') || '0'
-    );
-    const icon =
-      parts.find((p) => p.startsWith('Icon:'))?.replace('Icon: ', '') || '🎯';
-    const current = parseFloat(
-      parts.find((p) => p.startsWith('Current:'))?.replace('Current: ', '') ||
-        '0'
-    );
+    const target = parseFloat(parts.find(p => p.startsWith('Target:'))?.replace('Target: ', '') || '0');
+    const icon = parts.find(p => p.startsWith('Icon:'))?.replace('Icon: ', '') || '🎯';
+    const current = parseFloat(parts.find(p => p.startsWith('Current:'))?.replace('Current: ', '') || '0');
 
     return { name, target, icon, current };
   };
@@ -50,24 +35,14 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({
     e.preventDefault();
     if (!user || !goal) return;
 
-    const amountValue = Number(amount) / 100;
-
-    if (amountValue <= 0) {
-      toast({
-        title: 'Valor inválido',
-        description: 'Informe um valor maior que zero.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       const goalData = parseGoalData(goal.description);
-      const newCurrentValue = goalData.current + amountValue;
-
+      const newCurrentValue = goalData.current + parseFloat(amount);
+      
+      // Update the goal with new current value
       const updatedDescription = `RESERVE_GOAL: ${goalData.name} | Target: ${goalData.target} | Icon: ${goalData.icon} | Current: ${newCurrentValue}`;
-
+      
       const { error } = await supabase
         .from('expenses')
         .update({
@@ -79,11 +54,8 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({
       if (error) throw error;
 
       toast({
-        title: 'Sucesso',
-        description: `Valor de ${new Intl.NumberFormat('pt-BR', {
-          style: 'currency',
-          currency: 'BRL'
-        }).format(amountValue)} adicionado à meta "${goalData.name}"!`
+        title: "Sucesso",
+        description: `Valor de R$ ${parseFloat(amount).toFixed(2)} adicionado à meta "${goalData.name}"!`,
       });
 
       onSuccess();
@@ -92,9 +64,9 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({
     } catch (error) {
       console.error('Erro ao adicionar valor:', error);
       toast({
-        title: 'Erro',
-        description: 'Erro ao adicionar valor à meta. Tente novamente.',
-        variant: 'destructive'
+        title: "Erro",
+        description: "Erro ao adicionar valor à meta. Tente novamente.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -104,9 +76,6 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({
   if (!goal) return null;
 
   const goalData = parseGoalData(goal.description);
-  const amountValue = Number(amount) / 100;
-  const newTotal = goalData.current + amountValue;
-  const remaining = Math.max(0, goalData.target - newTotal);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -117,16 +86,7 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({
             Adicionar Valor - {goalData.name}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Valor atual:{' '}
-            {new Intl.NumberFormat('pt-BR', {
-              style: 'currency',
-              currency: 'BRL'
-            }).format(goalData.current)}{' '}
-            / Meta:{' '}
-            {new Intl.NumberFormat('pt-BR', {
-              style: 'currency',
-              currency: 'BRL'
-            }).format(goalData.target)}
+            Valor atual: R$ {goalData.current.toFixed(2)} / Meta: R$ {goalData.target.toFixed(2)}
           </p>
         </DialogHeader>
 
@@ -135,38 +95,21 @@ const AddValueToReserveModal: React.FC<AddValueToReserveModalProps> = ({
             <Label htmlFor="amount">Valor a Adicionar (R$) *</Label>
             <Input
               id="amount"
-              type="text"
-              placeholder="R$ 0,00"
-              value={
-                amount
-                  ? new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    }).format(Number(amount) / 100)
-                  : ''
-              }
-              onChange={(e) => {
-                const rawValue = e.target.value.replace(/\D/g, '');
-                setAmount(rawValue);
-              }}
+              type="number"
+              step="0.01"
+              placeholder="0,00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
               required
             />
           </div>
 
           <div className="bg-gray-50 p-3 rounded-lg">
             <p className="text-sm text-gray-600">
-              <strong>Novo valor:</strong>{' '}
-              {new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-              }).format(newTotal)}
+              <strong>Novo valor:</strong> R$ {(goalData.current + parseFloat(amount || '0')).toFixed(2)}
             </p>
             <p className="text-sm text-gray-600">
-              <strong>Restante para meta:</strong>{' '}
-              {new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-              }).format(remaining)}
+              <strong>Restante para meta:</strong> R$ {Math.max(0, goalData.target - (goalData.current + parseFloat(amount || '0'))).toFixed(2)}
             </p>
           </div>
 
