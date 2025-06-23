@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from './Header';
 import Navigation from './Navigation';
@@ -14,6 +13,7 @@ import TeamManagement from './TeamManagement';
 import EntregaFlowKanban from './EntregaFlowKanban_old';
 import SubscriptionPlans from './SubscriptionPlans';
 import FinancialManagement from './financial/FinancialManagement';
+import ClientsManagement from './clients/ClientsManagement';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 
 const MainApp = () => {
@@ -41,6 +41,8 @@ const MainApp = () => {
         return <WorkRoutine />;
       case 'financial':
         return <FinancialManagement />;
+      case 'clients':
+        return <ClientsManagement />;
       case 'team':
         return <TeamManagement />;
       case 'settings':
