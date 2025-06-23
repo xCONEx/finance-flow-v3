@@ -187,7 +187,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                   activeTab === 'team' 
                     ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90` 
                     : `hover:bg-gradient-to-r hover:${current Theme.secondary}`
-                }`}
+                }`
                 onClick={() => onTabChange('team')}
               >
                 <Users className="w-4 h-4" />
