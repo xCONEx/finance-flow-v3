@@ -55,20 +55,15 @@ const MainApp = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-
-      {/* Sidebar animada para desktop */}
-      <AnimatedSidebar 
+      <Header 
         activeTab={activeTab} 
-        onTabChange={setActiveTab} 
+        onTabChange={setActiveTab}
+        showTeamOption={showTeamOption}
       />
-
       
-      {/* Conteúdo principal */}
-      <div className="flex-1 md:ml-12 transition-all duration-200">
-        <div className="p-4 md:p-6">
-          {renderContent()}
-        </div>
-      </div>
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {renderContent()}
+      </main>
 
       <Navigation 
         activeTab={activeTab} 
