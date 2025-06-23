@@ -11,7 +11,7 @@ const ManagementSection = () => {
   const [activeTab, setActiveTab] = useState('costs');
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-6 pb-20 md:pb-6">
+   <div className="p-4 sm:p-6 space-y-6 pb-20 md:pb-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
           Gerenciamento
