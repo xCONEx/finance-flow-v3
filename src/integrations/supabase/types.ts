@@ -93,6 +93,63 @@ export type Database = {
           },
         ]
       }
+      clients: {
+        Row: {
+          id: string
+          user_id: string
+          company_id: string | null
+          name: string
+          phone: string | null
+          email: string | null
+          address: string | null
+          cnpj: string | null
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          company_id?: string | null
+          name: string
+          phone?: string | null
+          email?: string | null
+          address?: string | null
+          cnpj?: string | null
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          company_id?: string | null
+          name?: string
+          phone?: string | null
+          email?: string | null
+          address?: string | null
+          cnpj?: string | null
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment: {
         Row: {
           agency_id: string | null
@@ -201,6 +258,7 @@ export type Database = {
           assistance: number | null
           category: string | null
           client: string
+          client_id: string | null
           created_at: string | null
           description: string
           difficulty_level:
@@ -225,6 +283,7 @@ export type Database = {
           assistance?: number | null
           category?: string | null
           client: string
+          client_id?: string | null
           created_at?: string | null
           description: string
           difficulty_level?:
@@ -249,6 +308,7 @@ export type Database = {
           assistance?: number | null
           category?: string | null
           client?: string
+          client_id?: string | null
           created_at?: string | null
           description?: string
           difficulty_level?:
@@ -274,6 +334,13 @@ export type Database = {
             columns: ["agency_id"]
             isOneToOne: false
             referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
