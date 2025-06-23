@@ -1,64 +1,55 @@
-import React from 'react';
-import { 
-  Home, 
-  Calculator, 
-  Video,
-  DollarSign, 
-  Package, 
-  Calendar,
-  CreditCard,
-  UserCheck,
+import React from "react";
+import {
+  Home,
+  Search,
+  Music,
+  Heart,
   Settings,
-  Building2
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+  Plus,
+  User
+} from "lucide-react";
+
+interface DockItem {
+  icon: React.ElementType;
+  label: string;
+  id: string;
+}
 
 interface NavigationProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  showTeamOption?: boolean;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTeamOption }) => {
-  const { profile } = useSupabaseAuth();
-  const { currentTheme } = useTheme();
-
-  const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
-  const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
-
-  const navigationItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'calculator', label: 'Calculadora', icon: Calculator },
-    ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
-    ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
-    ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
-    { id: 'management', label: 'Gerenciamento', icon: Building2 },
+const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
+  const items: DockItem[] = [
+    { id: "home", icon: Home, label: "Home" },
+    { id: "search", icon: Search, label: "Search" },
+    { id: "music", icon: Music, label: "Music" },
+    { id: "favorites", icon: Heart, label: "Favorites" },
+    { id: "add", icon: Plus, label: "Add New" },
+    { id: "profile", icon: User, label: "Profile" },
+    { id: "settings", icon: Settings, label: "Settings" }
   ];
 
   return (
-    <>
-      {/* Mobile Bottom Navigation - fixo no bottom */}
-      <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl">
-        <div className="flex items-center justify-around py-3">
-          {navigationItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
-              className={`flex flex-col items-center ${
-                activeTab === item.id
-                  ? 'text-blue-600'
-                  : 'text-gray-500 dark:text-gray-400'
-              }`}
-            >
-              <item.icon className="w-6 h-6 mb-1" />
-              <span className="text-[10px]">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </>
+    <div className="fixed bottom-4 left-4 right-4 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl px-4 py-2 flex justify-between items-center">
+      {items.map((item) => {
+        const Icon = item.icon;
+        const isActive = activeTab === item.id;
+        return (
+          <button
+            key={item.id}
+            onClick={() => onTabChange(item.id)}
+            className={`p-2 rounded-full transition-colors ${
+              isActive ? "text-blue-600" : "text-gray-500 dark:text-gray-400"
+            }`}
+            aria-label={item.label}
+          >
+            <Icon className="w-6 h-6" />
+          </button>
+        );
+      })}
+    </div>
   );
 };
 
