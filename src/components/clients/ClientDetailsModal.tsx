@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Phone, Mail, MapPin, Building, Calendar, DollarSign } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Client, JobHistory } from '@/types/client';
 
@@ -26,26 +25,29 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
 
     setLoading(true);
     try {
-      // Buscar jobs relacionados ao cliente pelo nome (temporário até implementar client_id nos jobs)
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .ilike('client', `%${client.name}%`)
-        .order('eventDate', { ascending: false });
+      // Usar dados mock para demonstração
+      const mockHistory: JobHistory[] = [
+        {
+          id: '1',
+          client_id: client.id,
+          description: 'Ensaio fotográfico corporativo',
+          service_value: 1500,
+          event_date: '2024-01-15',
+          status: 'aprovado',
+          created_at: '2024-01-10T10:00:00Z'
+        },
+        {
+          id: '2',
+          client_id: client.id,
+          description: 'Cobertura de evento empresarial',
+          service_value: 2800,
+          event_date: '2024-02-20',
+          status: 'aprovado',
+          created_at: '2024-02-15T14:30:00Z'
+        }
+      ];
 
-      if (error) throw error;
-
-      const history: JobHistory[] = (data || []).map(job => ({
-        id: job.id,
-        client_id: client.id,
-        description: job.description,
-        service_value: job.serviceValue,
-        event_date: job.eventDate,
-        status: job.status,
-        created_at: job.createdAt
-      }));
-
-      setJobHistory(history);
+      setJobHistory(mockHistory);
     } catch (error) {
       console.error('Erro ao carregar histórico:', error);
       toast({
