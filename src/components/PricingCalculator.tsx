@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Calculator, Save, DollarSign, Plus } from 'lucide-react';
+import { Calculator, Save, DollarSign, Plus, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,15 +15,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { formatCurrency } from '../utils/formatters';
 import ManualValueModal from './ManualValueModal';
-import { ClientSelector } from './clients/ClientSelector';
-
-interface Client {
-  id: string;
-  name: string;
-  phone?: string;
-  email?: string;
-  cnpj?: string;
-}
+import ClientSelector from './clients/ClientSelector';
 
 const PricingCalculator = () => {
   const { addJob, workRoutine, refreshJobs } = useApp();
@@ -31,10 +23,11 @@ const PricingCalculator = () => {
   const { user } = useSupabaseAuth();
   const [showManualValue, setShowManualValue] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedClient, setSelectedClient] = useState(null);
   
   const [formData, setFormData] = useState({
     description: '',
+    client: '',
     eventDate: '',
     estimatedHours: 0,
     difficultyLevel: 'médio' as 'fácil' | 'médio' | 'complicado' | 'difícil',
@@ -63,6 +56,18 @@ const PricingCalculator = () => {
     "Edição Complexa",
     "Motion Graphics"
   ];
+
+  // Atualiza o campo client quando um cliente é selecionado
+  useEffect(() => {
+    if (selectedClient) {
+      setFormData(prev => ({ ...prev, client: selectedClient.name }));
+    }
+  }, [selectedClient]);
+
+  const handleRemoveClient = () => {
+    setSelectedClient(null);
+    setFormData(prev => ({ ...prev, client: '' }));
+  };
 
   const calculatePrice = () => {
     if (!workRoutine) {
@@ -134,10 +139,10 @@ const PricingCalculator = () => {
   };
 
   const saveJob = async () => {
-    if (!formData.description || !selectedClient || calculatedPrice.totalCosts === 0) {
+    if (!formData.description || !formData.client || calculatedPrice.totalCosts === 0) {
       toast({
         title: "Erro",
-        description: "Preencha os campos obrigatórios (descrição, cliente) e calcule o preço primeiro.",
+        description: "Preencha os campos obrigatórios e calcule o preço primeiro.",
         variant: "destructive"
       });
       return;
@@ -156,8 +161,7 @@ const PricingCalculator = () => {
 
     const newJob = {
       description: formData.description,
-      client: selectedClient.name,
-      client_id: selectedClient.id,
+      client: formData.client,
       eventDate: formData.eventDate || new Date().toISOString().split('T')[0],
       estimatedHours: formData.estimatedHours,
       difficultyLevel: formData.difficultyLevel,
@@ -174,7 +178,8 @@ const PricingCalculator = () => {
       id: `job_${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      userId: user.id
+      userId: user.id,
+      clientId: selectedClient?.id || null
     };
 
     try {
@@ -188,12 +193,13 @@ const PricingCalculator = () => {
 
       toast({
         title: "Job Salvo com Sucesso!",
-        description: `Orçamento de "${formData.description}" foi salvo e vinculado ao cliente ${selectedClient.name}.`,
+        description: `Orçamento de "${formData.description}" foi salvo e aparecerá na lista de jobs.`,
       });
 
       // Reset form após salvar com sucesso
       setFormData({
         description: '',
+        client: '',
         eventDate: '',
         estimatedHours: 0,
         difficultyLevel: 'médio',
@@ -204,8 +210,6 @@ const PricingCalculator = () => {
         discountPercentage: 0
       });
       
-      setSelectedClient(null);
-      
       setCalculatedPrice({
         totalCosts: 0,
         serviceValue: 0,
@@ -213,6 +217,8 @@ const PricingCalculator = () => {
         hourlyRate: 0,
         additionalCosts: 0
       });
+
+      setSelectedClient(null);
 
       console.log('✅ Job salvo e form resetado com sucesso');
 
@@ -267,12 +273,38 @@ const PricingCalculator = () => {
               />
             </div>
 
-            <ClientSelector 
-              selectedClient={selectedClient}
-              onClientSelect={setSelectedClient}
-            />
-
             <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="client">Cliente *</Label>
+                {selectedClient ? (
+                  <div className="flex items-center gap-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-900/20">
+                    <span className="flex-1 text-sm">{selectedClient.name}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleRemoveClient}
+                      className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/20"
+                    >
+                      <X className="h-3 w-3 text-red-500" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <ClientSelector
+                      onClientSelect={setSelectedClient}
+                      placeholder="Buscar cliente existente..."
+                    />
+                    <Input
+                      id="client"
+                      placeholder="Ou digite o nome do cliente"
+                      value={formData.client}
+                      onChange={(e) => setFormData({...formData, client: e.target.value})}
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="eventDate">Data do Evento</Label>
                 <Input
@@ -324,15 +356,13 @@ const PricingCalculator = () => {
                 </Select>
               </div>
 
-              <div className="md:col-span-2">
-                <div className="space-y-2">
-                  <Label htmlFor="discountPercentage">Desconto (%)</Label>
-                  <PercentageInput
-                    id="discountPercentage"
-                    value={formData.discountPercentage}
-                    onChange={(value) => setFormData({...formData, discountPercentage: value})}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="discountPercentage">Desconto (%)</Label>
+                <PercentageInput
+                  id="discountPercentage"
+                  value={formData.discountPercentage}
+                  onChange={(value) => setFormData({...formData, discountPercentage: value})}
+                />
               </div>
             </div>
 
