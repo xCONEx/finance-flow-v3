@@ -228,7 +228,7 @@ const UserProfile = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
