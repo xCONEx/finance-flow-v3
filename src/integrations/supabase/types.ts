@@ -40,7 +40,7 @@ export type Database = {
             columns: ["owner_uid"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -82,58 +82,51 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
       clients: {
         Row: {
-          id: string
-          user_id: string
-          company_id: string | null
-          name: string
-          phone: string | null
-          email: string | null
           address: string | null
           cnpj: string | null
-          description: string | null
+          company_id: string | null
           created_at: string
+          description: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
           updated_at: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
+          address?: string | null
+          cnpj?: string | null
           company_id?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
           name: string
           phone?: string | null
-          email?: string | null
-          address?: string | null
-          cnpj?: string | null
-          description?: string | null
-          created_at?: string
           updated_at?: string
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          company_id?: string | null
-          name?: string
-          phone?: string | null
-          email?: string | null
           address?: string | null
           cnpj?: string | null
-          description?: string | null
+          company_id?: string | null
           created_at?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "clients_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "clients_company_id_fkey"
             columns: ["company_id"]
@@ -141,32 +134,45 @@ export type Database = {
             referencedRelation: "agencies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       equipment: {
         Row: {
+          category: string
           created_at: string
-          depreciation_value: number | null
+          depreciation_rate: number | null
           id: string
           name: string
+          purchase_date: string | null
           purchase_value: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          category: string
           created_at?: string
-          depreciation_value?: number | null
+          depreciation_rate?: number | null
           id?: string
           name: string
+          purchase_date?: string | null
           purchase_value: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          category?: string
           created_at?: string
-          depreciation_value?: number | null
+          depreciation_rate?: number | null
           id?: string
           name?: string
+          purchase_date?: string | null
           purchase_value?: number
           updated_at?: string
           user_id?: string
@@ -177,51 +183,61 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
       expenses: {
         Row: {
+          agency_id: string | null
           amount: number
           category: string
           created_at: string
+          date: string
           description: string | null
           id: string
-          recurring: boolean | null
-          transaction_date: string
+          recurrence: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          agency_id?: string | null
           amount: number
           category: string
           created_at?: string
+          date: string
           description?: string | null
           id?: string
-          recurring?: boolean | null
-          transaction_date: string
+          recurrence?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          agency_id?: string | null
           amount?: number
           category?: string
           created_at?: string
+          date?: string
           description?: string | null
           id?: string
-          recurring?: boolean | null
-          transaction_date?: string
+          recurrence?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "expenses_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "expenses_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -241,11 +257,11 @@ export type Database = {
           id: string
           logistics: number | null
           profit_margin: number | null
-          service_value: number
+          service_value: number | null
           status: string
           total_costs: number
           updated_at: string
-          userId: string
+          user_id: string
           value_with_discount: number | null
         }
         Insert: {
@@ -263,11 +279,11 @@ export type Database = {
           id?: string
           logistics?: number | null
           profit_margin?: number | null
-          service_value: number
+          service_value?: number | null
           status?: string
           total_costs: number
           updated_at?: string
-          userId: string
+          user_id: string
           value_with_discount?: number | null
         }
         Update: {
@@ -285,21 +301,14 @@ export type Database = {
           id?: string
           logistics?: number | null
           profit_margin?: number | null
-          service_value?: number
+          service_value?: number | null
           status?: string
           total_costs?: number
           updated_at?: string
-          userId?: string
+          user_id?: string
           value_with_discount?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "jobs_userId_fkey"
-            columns: ["userId"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "jobs_client_id_fkey"
             columns: ["client_id"]
@@ -307,143 +316,176 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       kanban_boards: {
         Row: {
+          agency_id: string | null
+          assignee: string | null
+          client: string
           created_at: string
           description: string | null
+          due_date: string | null
           id: string
-          name: string
+          links: string[] | null
+          priority: string
+          status: string
+          title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          agency_id?: string | null
+          assignee?: string | null
+          client: string
           created_at?: string
           description?: string | null
+          due_date?: string | null
           id?: string
-          name: string
+          links?: string[] | null
+          priority?: string
+          status?: string
+          title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          agency_id?: string | null
+          assignee?: string | null
+          client?: string
           created_at?: string
           description?: string | null
+          due_date?: string | null
           id?: string
-          name?: string
+          links?: string[] | null
+          priority?: string
+          status?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "kanban_boards_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "kanban_boards_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
       profiles: {
         Row: {
           agency_id: string | null
-          banned: boolean
+          banned: boolean | null
           company: string | null
           created_at: string
-          email: string | null
+          email: string
           id: string
           image_user: string | null
           logo_base64: string | null
           name: string | null
           phone: string | null
-          role: "owner" | "editor" | "viewer"
-          subscription: "free" | "premium" | "enterprise" | "enterprise-annual"
+          role: Database["public"]["Enums"]["user_role"] | null
+          subscription: Database["public"]["Enums"]["subscription_type"] | null
           subscription_data: Json | null
           updated_at: string
+          user_id: string
           user_type: string | null
         }
         Insert: {
           agency_id?: string | null
-          banned?: boolean
+          banned?: boolean | null
           company?: string | null
           created_at?: string
-          email?: string | null
-          id: string
+          email: string
+          id?: string
           image_user?: string | null
           logo_base64?: string | null
           name?: string | null
           phone?: string | null
-          role?: "owner" | "editor" | "viewer"
-          subscription?: "free" | "premium" | "enterprise" | "enterprise-annual"
+          role?: Database["public"]["Enums"]["user_role"] | null
+          subscription?: Database["public"]["Enums"]["subscription_type"] | null
           subscription_data?: Json | null
           updated_at?: string
+          user_id: string
           user_type?: string | null
         }
         Update: {
           agency_id?: string | null
-          banned?: boolean
+          banned?: boolean | null
           company?: string | null
           created_at?: string
-          email?: string | null
+          email?: string
           id?: string
           image_user?: string | null
           logo_base64?: string | null
           name?: string | null
           phone?: string | null
-          role?: "owner" | "editor" | "viewer"
-          subscription?: "free" | "premium" | "enterprise" | "enterprise-annual"
+          role?: Database["public"]["Enums"]["user_role"] | null
+          subscription?: Database["public"]["Enums"]["subscription_type"] | null
           subscription_data?: Json | null
           updated_at?: string
+          user_id?: string
           user_type?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_agency_id_fkey"
-            columns: ["agency_id"]
-            isOneToOne: false
-            referencedRelation: "agencies"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       work_routine: {
         Row: {
           created_at: string
-          hours_per_day: number
           id: string
-          monthly_goals: number
+          monthly_costs: number
+          profit_margin: number
           updated_at: string
           user_id: string
           value_per_hour: number
           working_days_per_month: number
+          working_hours_per_day: number
         }
         Insert: {
           created_at?: string
-          hours_per_day: number
           id?: string
-          monthly_goals: number
+          monthly_costs: number
+          profit_margin: number
           updated_at?: string
           user_id: string
           value_per_hour: number
           working_days_per_month: number
+          working_hours_per_day: number
         }
         Update: {
           created_at?: string
-          hours_per_day?: number
           id?: string
-          monthly_goals?: number
+          monthly_costs?: number
+          profit_margin?: number
           updated_at?: string
           user_id?: string
           value_per_hour?: number
           working_days_per_month?: number
+          working_hours_per_day?: number
         }
         Relationships: [
           {
             foreignKeyName: "work_routine_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -455,7 +497,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      subscription_type: "free" | "premium" | "enterprise" | "enterprise-annual"
+      user_role: "owner" | "editor" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
