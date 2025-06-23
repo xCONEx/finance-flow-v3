@@ -147,14 +147,20 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
           {client.description && (
             <div>
               <h4 className="font-medium mb-2">Descrição:</h4>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">{client.description}</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                {client.description}
+              </p>
             </div>
           )}
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-500">
-            <span>Cliente desde: {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
+            <span>
+              Cliente desde: {new Date(client.created_at).toLocaleDateString('pt-BR')}
+            </span>
             <span className="hidden sm:inline">•</span>
-            <span>{totalJobs} trabalho{totalJobs !== 1 ? 's' : ''}</span>
+            <span>
+              {totalJobs} trabalho{totalJobs !== 1 ? 's' : ''}
+            </span>
             <span className="hidden sm:inline">•</span>
             <span>Total faturado: {formatCurrency(totalValue)}</span>
           </div>
@@ -179,6 +185,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
             )}
           </div>
         </CardHeader>
+
         <CardContent>
           {loading ? (
             <div className="text-center py-8">Carregando histórico...</div>
@@ -187,72 +194,98 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
               <p className="text-gray-500">Nenhum trabalho encontrado para este cliente.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table className="min-w-full">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[180px]">Descrição</TableHead>
-                    <TableHead className="min-w-[120px]">Data do Evento</TableHead>
-                    <TableHead className="min-w-[100px]">Categoria</TableHead>
-                    <TableHead className="min-w-[80px]">Horas</TableHead>
-                    <TableHead className="min-w-[100px]">Dificuldade</TableHead>
-                    <TableHead className="min-w-[120px]">Valor Final</TableHead>
-                    <TableHead className="min-w-[100px]">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {jobHistory.map((job) => (
-                    <TableRow key={job.id}>
-                      <TableCell>
-                        <div className="max-w-xs">
-                          <div className="font-medium truncate text-sm">{job.description}</div>
-                          <div className="text-xs text-gray-500">
+            <>
+              {/* Tabela no Desktop */}
+              <div className="hidden sm:block">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Data do Evento</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Horas</TableHead>
+                      <TableHead>Dificuldade</TableHead>
+                      <TableHead>Valor Final</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {jobHistory.map((job) => (
+                      <TableRow key={job.id}>
+                        <TableCell>
+                          <div className="font-medium">{job.description}</div>
+                          <div className="text-xs text-muted-foreground">
                             Criado em {new Date(job.created_at).toLocaleDateString('pt-BR')}
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-gray-400" />
-                          <span className="text-sm">
-                            {job.event_date ? new Date(job.event_date).toLocaleDateString('pt-BR') : 'N/A'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{job.category || 'N/A'}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-gray-400" />
-                          <span className="text-sm">{job.estimated_hours}h</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`text-sm font-medium ${getDifficultyColor(job.difficulty_level)}`}>
-                          {job.difficulty_level}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium text-green-600 text-sm">
+                        </TableCell>
+                        <TableCell>
+                          {job.event_date
+                            ? new Date(job.event_date).toLocaleDateString('pt-BR')
+                            : 'N/A'}
+                        </TableCell>
+                        <TableCell>{job.category || 'N/A'}</TableCell>
+                        <TableCell>{job.estimated_hours}h</TableCell>
+                        <TableCell>{job.difficulty_level}</TableCell>
+                        <TableCell>
+                          <div className="text-green-600 font-medium">
                             {formatCurrency(job.value_with_discount || job.total_costs)}
                           </div>
                           {job.discount_value > 0 && (
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-muted-foreground">
                               Desc: {formatCurrency(job.discount_value)}
                             </div>
                           )}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(job.status)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Lista no Mobile */}
+              <div className="sm:hidden space-y-4">
+                {jobHistory.map((job) => (
+                  <div
+                    key={job.id}
+                    className="border rounded-lg p-4 bg-background shadow-sm space-y-2"
+                  >
+                    <div>
+                      <span className="font-semibold">Descrição:</span> {job.description}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Data do Evento:</span>{' '}
+                      {job.event_date
+                        ? new Date(job.event_date).toLocaleDateString('pt-BR')
+                        : 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Categoria:</span> {job.category || 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Horas:</span> {job.estimated_hours}h
+                    </div>
+                    <div>
+                      <span className="font-semibold">Dificuldade:</span> {job.difficulty_level}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Valor Final:</span>{' '}
+                      <span className="text-green-600 font-medium">
+                        {formatCurrency(job.value_with_discount || job.total_costs)}
+                      </span>
+                      {job.discount_value > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          Desc: {formatCurrency(job.discount_value)}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(job.status)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Status:</span> {getStatusBadge(job.status)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -263,6 +296,5 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
     </div>
   </DialogContent>
 </Dialog>
-
   );
 };
