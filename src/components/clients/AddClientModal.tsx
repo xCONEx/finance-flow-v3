@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -42,7 +43,21 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose,
 
     setLoading(true);
     try {
-      // Implementar lógica de inserção quando a tabela estiver disponível
+      const { error } = await supabase
+        .from('clients')
+        .insert({
+          name: formData.name,
+          phone: formData.phone || null,
+          email: formData.email || null,
+          address: formData.address || null,
+          cnpj: formData.cnpj || null,
+          description: formData.description || null,
+          user_id: user.id,
+          company_id: agency?.id || null
+        });
+
+      if (error) throw error;
+
       toast({
         title: "Sucesso",
         description: "Cliente adicionado com sucesso!",

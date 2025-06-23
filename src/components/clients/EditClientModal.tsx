@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Client } from '@/types/client';
 
@@ -54,8 +55,19 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({ isOpen, onClos
 
     setLoading(true);
     try {
-      // Mock implementation - tabela clients não está disponível no schema
-      console.log('Atualizando cliente:', formData);
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          name: formData.name,
+          phone: formData.phone || null,
+          email: formData.email || null,
+          address: formData.address || null,
+          cnpj: formData.cnpj || null,
+          description: formData.description || null,
+        })
+        .eq('id', client.id);
+
+      if (error) throw error;
       
       toast({
         title: "Sucesso",

@@ -30,24 +30,15 @@ const ClientsManagement = () => {
 
     try {
       setLoading(true);
-      // Usar dados mock enquanto a tabela clients não estiver disponível no schema
-      const mockClients: Client[] = [
-        {
-          id: '1',
-          user_id: user.id,
-          company_id: agency?.id || null,
-          name: 'João Silva',
-          phone: '(11) 99999-9999',
-          email: 'joao@email.com',
-          address: 'Rua das Flores, 123',
-          cnpj: '12.345.678/0001-90',
-          description: 'Cliente corporativo para eventos',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
-      
-      setClients(mockClients);
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setClients(data || []);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
       toast({
@@ -74,7 +65,13 @@ const ClientsManagement = () => {
     if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
 
     try {
-      // Implementar lógica de exclusão quando a tabela estiver disponível
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', clientId);
+
+      if (error) throw error;
+
       toast({
         title: "Sucesso",
         description: "Cliente excluído com sucesso!",
