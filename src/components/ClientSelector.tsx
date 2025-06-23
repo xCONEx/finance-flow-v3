@@ -1,158 +1,195 @@
 import React, { useState, useEffect } from 'react';
+import { Search, X, User, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Search, Plus, User, Phone, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
-import { Client } from '@/types/client';
+import { useAgency } from '@/contexts/AgencyContext';
+import ClientJobHistory from './clients/ClientJobHistory';
+import { AddClientModal } from './clients/AddClientModal';
 
-interface ClientSelectorProps {
-  selectedClient?: Client | null;
-  onSelectClient: (client: Client | null) => void;
-  onCreateNew: () => void;
+interface Client {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company_id?: string;
 }
 
-export const ClientSelector: React.FC<ClientSelectorProps> = ({
-  selectedClient,
-  onSelectClient,
-  onCreateNew
-}) => {
-  const [clients, setClients] = useState<Client[]>([]);
+interface ClientSelectorProps {
+  selectedClient: Client | null;
+  onClientSelect: (client: Client | null) => void;
+}
+
+const ClientSelector: React.FC<ClientSelectorProps> = ({ selectedClient, onClientSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  
   const { user } = useSupabaseAuth();
+  const { currentContext } = useAgency();
 
-  const loadClients = async () => {
-    if (!user || searchTerm.length < 2) {
-      setClients([]);
-      return;
-    }
+  const fetchClients = async () => {
+    if (!user) return;
 
-    setIsSearching(true);
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('clients')
         .select('*')
-        .eq('user_id', user.id)
-        .or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
-        .limit(10);
+        .eq('user_id', user.id);
+
+      if (currentContext !== 'individual' && currentContext.id) {
+        query = query.eq('company_id', currentContext.id);
+      } else {
+        query = query.is('company_id', null);
+      }
+
+      const { data, error } = await query.order('name');
 
       if (error) throw error;
       setClients(data || []);
-      setShowResults(true);
     } catch (error) {
       console.error('Erro ao buscar clientes:', error);
     } finally {
-      setIsSearching(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      loadClients();
-    }, 300);
+    fetchClients();
+  }, [user, currentContext]);
 
-    return () => clearTimeout(delayedSearch);
-  }, [searchTerm, user]);
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const filtered = clients.filter(client =>
+        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredClients(filtered);
+      setShowResults(true);
+    } else {
+      setFilteredClients([]);
+      setShowResults(false);
+    }
+  }, [searchTerm, clients]);
 
-  const handleSelectClient = (client: Client) => {
-    onSelectClient(client);
-    setSearchTerm(client.name);
-    setShowResults(false);
-  };
-
-  const handleClearSelection = () => {
-    onSelectClient(null);
+  const handleClientSelect = (client: Client) => {
+    onClientSelect(client);
     setSearchTerm('');
     setShowResults(false);
   };
 
+  const handleRemoveClient = () => {
+    onClientSelect(null);
+  };
+
   return (
-    <div className="relative">
-      <div className="flex gap-2">
-        <div className="flex-1 relative">
+    <div className="space-y-4">
+      {selectedClient ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-blue-600" />
+              <div>
+                <span className="font-medium text-blue-900">{selectedClient.name}</span>
+                {selectedClient.email && (
+                  <span className="text-sm text-blue-600 ml-2">({selectedClient.email})</span>
+                )}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRemoveClient}
+              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={() => setShowHistory(!showHistory)}
+            className="w-full"
+          >
+            {showHistory ? 'Ocultar' : 'Ver'} Histórico de Trabalhos
+          </Button>
+
+          {showHistory && (
+            <ClientJobHistory clientId={selectedClient.id} />
+          )}
+        </div>
+      ) : (
+        <div className="relative">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Buscar cliente existente..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                if (!e.target.value) {
-                  handleClearSelection();
-                }
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
-              onFocus={() => {
-                if (clients.length > 0) setShowResults(true);
-              }}
             />
           </div>
-          
-          {selectedClient && (
-            <Badge variant="outline" className="mt-2">
-              <User className="w-3 h-3 mr-1" />
-              Cliente selecionado: {selectedClient.name}
-            </Badge>
-          )}
-        </div>
-        
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCreateNew}
-          className="flex items-center gap-2 whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Novo Cliente</span>
-        </Button>
-      </div>
 
-      {/* Resultados da busca */}
-      {showResults && clients.length > 0 && (
-        <Card className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto">
-          <CardContent className="p-0">
-            {clients.map((client) => (
-              <div
-                key={client.id}
-                className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer border-b last:border-b-0"
-                onClick={() => handleSelectClient(client)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{client.name}</div>
-                    <div className="text-xs text-gray-500 space-y-1 mt-1">
-                      {client.email && (
-                        <div className="flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
-                          <span className="truncate">{client.email}</span>
-                        </div>
-                      )}
-                      {client.phone && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          <span>{client.phone}</span>
-                        </div>
-                      )}
-                    </div>
+          {showResults && (
+            <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto">
+              <CardContent className="p-0">
+                {loading ? (
+                  <div className="p-3 text-center text-gray-500">Carregando...</div>
+                ) : filteredClients.length > 0 ? (
+                  filteredClients.map((client) => (
+                    <button
+                      key={client.id}
+                      onClick={() => handleClientSelect(client)}
+                      className="w-full p-3 text-left hover:bg-gray-50 border-b last:border-b-0 flex items-center gap-2"
+                    >
+                      <User className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <div className="font-medium">{client.name}</div>
+                        {client.email && (
+                          <div className="text-sm text-gray-500">{client.email}</div>
+                        )}
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-3 text-center text-gray-500">
+                    Nenhum cliente encontrado
                   </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddModal(true)}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Novo Cliente
+            </Button>
+          </div>
+        </div>
       )}
 
-      {/* Overlay para fechar resultados */}
-      {showResults && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowResults(false)}
-        />
-      )}
+      <AddClientModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => {
+          setShowAddModal(false);
+          fetchClients();
+        }}
+      />
     </div>
   );
 };
+
+export default ClientSelector;
