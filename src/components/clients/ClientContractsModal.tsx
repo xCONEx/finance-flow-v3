@@ -7,21 +7,27 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, FileText, Calendar, DollarSign } from 'lucide-react';
+import { CurrencyInput } from '@/components/ui/currency-input';
+import { Plus, Edit, Trash2, FileText, Calendar, DollarSign, Upload, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Client } from '@/types/client';
+import { generateContractPDF } from '@/utils/contractPdfGenerator';
+import { formatCurrency } from '@/utils/formatters';
 
 interface Contract {
   id: string;
   client_id: string;
+  user_id: string;
   title: string;
   description: string;
   value: number;
   start_date: string;
   end_date: string;
   status: 'ativo' | 'finalizado' | 'cancelado';
+  contract_file_url?: string;
+  contract_file_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -35,12 +41,13 @@ interface ClientContractsModalProps {
 export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOpen, onClose, client }) => {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    value: '',
+    value: 0,
     start_date: '',
     end_date: '',
     status: 'ativo' as const
@@ -53,23 +60,24 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
 
     try {
       setLoading(true);
-      // Simulando dados de contratos já que a tabela não existe ainda
-      const mockContracts: Contract[] = [
-        {
-          id: '1',
-          client_id: client.id,
-          title: 'Contrato de Edição de Vídeo - 2024',
-          description: 'Contrato para edição de vídeos mensais da empresa',
-          value: 2500,
-          start_date: '2024-01-01',
-          end_date: '2024-12-31',
-          status: 'ativo',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
-      
-      setContracts(mockContracts);
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('*')
+        .eq('client_id', client.id)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao carregar contratos:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar contratos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setContracts(data || []);
     } catch (error) {
       console.error('Erro ao carregar contratos:', error);
       toast({
@@ -86,13 +94,13 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
     if (isOpen) {
       loadContracts();
     }
-  }, [isOpen, client.id]);
+  }, [isOpen, client.id, user]);
 
   const resetForm = () => {
     setFormData({
       title: '',
       description: '',
-      value: '',
+      value: 0,
       start_date: '',
       end_date: '',
       status: 'ativo'
@@ -113,29 +121,40 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
       return;
     }
 
+    if (!user) return;
+
     try {
-      // Simulando criação/edição de contrato
       const contractData = {
-        id: editingContract?.id || Date.now().toString(),
         client_id: client.id,
+        user_id: user.id,
         title: formData.title,
         description: formData.description,
-        value: parseFloat(formData.value) || 0,
-        start_date: formData.start_date,
-        end_date: formData.end_date,
-        status: formData.status,
-        created_at: editingContract?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        value: formData.value,
+        start_date: formData.start_date || null,
+        end_date: formData.end_date || null,
+        status: formData.status
       };
 
       if (editingContract) {
-        setContracts(prev => prev.map(c => c.id === editingContract.id ? contractData : c));
+        const { error } = await supabase
+          .from('contracts')
+          .update(contractData)
+          .eq('id', editingContract.id)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
         toast({
           title: "Sucesso",
           description: "Contrato atualizado com sucesso!",
         });
       } else {
-        setContracts(prev => [...prev, contractData]);
+        const { error } = await supabase
+          .from('contracts')
+          .insert([contractData]);
+
+        if (error) throw error;
+
         toast({
           title: "Sucesso",
           description: "Contrato adicionado com sucesso!",
@@ -143,6 +162,7 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
       }
 
       resetForm();
+      loadContracts();
     } catch (error) {
       console.error('Erro ao salvar contrato:', error);
       toast({
@@ -157,7 +177,7 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
     setFormData({
       title: contract.title,
       description: contract.description,
-      value: contract.value.toString(),
+      value: contract.value,
       start_date: contract.start_date,
       end_date: contract.end_date,
       status: contract.status
@@ -169,17 +189,95 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
   const handleDelete = async (contractId: string) => {
     if (!confirm('Tem certeza que deseja excluir este contrato?')) return;
 
+    if (!user) return;
+
     try {
-      setContracts(prev => prev.filter(c => c.id !== contractId));
+      const { error } = await supabase
+        .from('contracts')
+        .delete()
+        .eq('id', contractId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
       toast({
         title: "Sucesso",
         description: "Contrato excluído com sucesso!",
       });
+
+      loadContracts();
     } catch (error) {
       console.error('Erro ao excluir contrato:', error);
       toast({
         title: "Erro",
         description: "Erro ao excluir contrato.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFileUpload = async (contractId: string, file: File) => {
+    if (!user) return;
+
+    try {
+      setUploading(true);
+
+      // Upload do arquivo para o storage do Supabase
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${contractId}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('contracts')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Atualizar o registro do contrato com a URL do arquivo
+      const { data: { publicUrl } } = supabase.storage
+        .from('contracts')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('contracts')
+        .update({
+          contract_file_url: publicUrl,
+          contract_file_name: file.name
+        })
+        .eq('id', contractId)
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Sucesso",
+        description: "Arquivo de contrato enviado com sucesso!",
+      });
+
+      loadContracts();
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao fazer upload do arquivo.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDownloadPDF = async (contract: Contract) => {
+    try {
+      await generateContractPDF(contract, client, user);
+      toast({
+        title: "Sucesso",
+        description: "PDF do contrato baixado com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar PDF do contrato.",
         variant: "destructive",
       });
     }
@@ -245,13 +343,11 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
 
                     <div className="space-y-2">
                       <Label htmlFor="value">Valor (R$)</Label>
-                      <Input
+                      <CurrencyInput
                         id="value"
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
                         value={formData.value}
-                        onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                        onChange={(value) => setFormData({ ...formData, value })}
+                        placeholder="0,00"
                       />
                     </div>
 
@@ -342,6 +438,37 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleDownloadPDF(contract)}
+                          title="Baixar PDF"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleFileUpload(contract.id, file);
+                                e.target.value = '';
+                              }
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            disabled={uploading}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={uploading}
+                            title="Upload do contrato"
+                          >
+                            <Upload className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEdit(contract)}
                         >
                           <Edit className="w-4 h-4" />
@@ -357,10 +484,10 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-green-600" />
-                        <span>R$ {contract.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        <span>{formatCurrency(contract.value)}</span>
                       </div>
                       {contract.start_date && (
                         <div className="flex items-center gap-2">
@@ -372,6 +499,19 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-red-600" />
                           <span>Fim: {new Date(contract.end_date).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      )}
+                      {contract.contract_file_name && (
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-purple-600" />
+                          <a
+                            href={contract.contract_file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline truncate"
+                          >
+                            {contract.contract_file_name}
+                          </a>
                         </div>
                       )}
                     </div>
