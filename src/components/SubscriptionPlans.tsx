@@ -29,7 +29,7 @@ const plans = [
   {
     id: 'basic',
     name: 'Básico',
-    price: 'R$ 29',
+    price: 'R$ 29,90',
     period: '/mês',
     description: 'Para freelancers',
     icon: <Zap className="h-5 w-5" />,
@@ -43,7 +43,7 @@ const plans = [
       'Suporte prioritário'
     ],
     caktoUrl: 'https://pay.cakto.com.br/yppzpjc',
-    popular: true
+    popular: false
   },
   {
     id: 'premium',
@@ -54,7 +54,6 @@ const plans = [
     icon: <Crown className="h-5 w-5" />,
     features: [
       'Inclui tudo do Básico +',
-      'Até 10 membros da equipe',
       '50GB de armazenamento',
       'Colaboração em tempo real',
       'Relatórios personalizados',
@@ -62,7 +61,7 @@ const plans = [
       'Backup automático'
     ],
     caktoUrl: 'https://pay.cakto.com.br/kesq5cb',
-    popular: false
+    popular: true
   },
   {
     id: 'enterprise',
@@ -75,11 +74,11 @@ const plans = [
       'Tudo do Premium +',
       'Equipe ilimitada',
       'Armazenamento ilimitado',
-      'API de integração',
       'Suporte 24/7',
       'Onboarding dedicado',
       'SLA garantido',
-      'Customizações completas'
+      'Customizações completas',
+      'Acesso ContratPro'
     ],
     caktoUrl: 'https://pay.cakto.com.br/34p727v',
     popular: false
