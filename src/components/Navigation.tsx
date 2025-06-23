@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Home, 
@@ -9,7 +8,8 @@ import {
   Calendar,
   CreditCard,
   UserCheck,
-  Settings
+  Settings,
+  Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
@@ -22,7 +22,7 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTeamOption }) => {
-  const { profile, agency } = useSupabaseAuth();
+  const { profile } = useSupabaseAuth();
   const { currentTheme } = useTheme();
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
@@ -34,7 +34,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTea
     ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
     ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
     ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
-    { id: 'management', label: 'Gerenciamento', icon: Settings },
+    { id: 'management', label: 'Gerenciamento', icon: Building2 },
   ];
 
   return (
