@@ -130,6 +130,7 @@ export const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
       });
 
       onSuccess();
+      onClose();
     } catch (error) {
       console.error('Erro ao atualizar transação:', error);
       toast({
@@ -145,7 +146,7 @@ export const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   const handleDelete = async () => {
     if (!expense) return;
 
-    if (!confirm('Tem certeza que deseja remover esta transação?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.')) return;
 
     setDeleteLoading(true);
     try {
@@ -158,15 +159,16 @@ export const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
 
       toast({
         title: "Sucesso",
-        description: "Transação removida com sucesso!",
+        description: "Transação excluída com sucesso!",
       });
 
       onSuccess();
+      onClose();
     } catch (error) {
-      console.error('Erro ao remover transação:', error);
+      console.error('Erro ao excluir transação:', error);
       toast({
         title: "Erro",
-        description: "Erro ao remover transação.",
+        description: "Erro ao excluir transação.",
         variant: "destructive",
       });
     } finally {
@@ -312,7 +314,7 @@ export const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
               className="flex items-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
-              {deleteLoading ? 'Removendo...' : 'Remover'}
+              {deleteLoading ? 'Excluindo...' : 'Excluir'}
             </Button>
             <Button
               type="submit"

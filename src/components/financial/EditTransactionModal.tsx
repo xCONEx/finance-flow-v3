@@ -10,6 +10,7 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Trash2 } from 'lucide-react';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
@@ -84,6 +85,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onC
     is_paid: true
   });
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
 
@@ -181,6 +183,39 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onC
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!transaction) return;
+
+    if (!confirm('Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.')) return;
+
+    setDeleteLoading(true);
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', transaction.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Transação excluída com sucesso!",
+      });
+
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error('❌ Erro ao excluir transação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir transação.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -296,16 +331,26 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onC
               variant="outline"
               onClick={onClose}
               className="flex-1"
-              disabled={loading}
+              disabled={loading || deleteLoading}
             >
               Cancelar
             </Button>
             <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={loading || deleteLoading}
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              {deleteLoading ? 'Excluindo...' : 'Excluir'}
+            </Button>
+            <Button
               type="submit"
               className={`flex-1 ${isIncome ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
-              disabled={loading || formData.amount <= 0}
+              disabled={loading || deleteLoading || formData.amount <= 0}
             >
-              {loading ? 'Salvando...' : 'Salvar Alterações'}
+              {loading ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </form>

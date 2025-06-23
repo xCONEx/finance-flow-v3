@@ -21,10 +21,13 @@ import {
   CreditCard,
   UserCheck,
   Building,
-  FileText
+  FileText,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePrivacy } from '../contexts/PrivacyContext';
 import NotificationBell from './NotificationBell';
 
 interface HeaderProps {
@@ -36,6 +39,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption }) => {
   const { signOut, user, profile } = useSupabaseAuth();
   const { currentTheme } = useTheme();
+  const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   const isAdmin = profile?.user_type === 'admin';
 
   const handleLogout = async () => {
@@ -107,6 +111,21 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
 
           {/* User Menu */}
           <div className="flex items-center space-x-3">
+            {/* Privacy Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleValuesVisibility}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
+            >
+              {valuesHidden ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </Button>
+
             <NotificationBell />
             
             <DropdownMenu>

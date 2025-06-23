@@ -1,11 +1,10 @@
+
 import React, { useState } from 'react';
 import Header from './Header';
 import Navigation from './Navigation';
 import Dashboard from './Dashboard';
 import PricingCalculator from './PricingCalculator';
-import MonthlyCosts from './MonthlyCosts';
-import WorkItems from './WorkItems';
-import WorkRoutine from './WorkRoutine';
+import ManagementSection from './ManagementSection';
 import Settings from './Settings';
 import UserProfile from './UserProfile';
 import AdminPanel from './AdminPanel';
@@ -33,16 +32,12 @@ const MainApp = () => {
         return <PricingCalculator />;
       case 'kanban':
         return <EntregaFlowKanban />;
-      case 'costs':
-        return <MonthlyCosts />;
-      case 'items':
-        return <WorkItems />;
-      case 'routine':
-        return <WorkRoutine />;
       case 'financial':
         return <FinancialManagement />;
       case 'clients':
         return <ClientsManagement />;
+      case 'management':
+        return <ManagementSection />;
       case 'team':
         return <TeamManagement />;
       case 'settings':

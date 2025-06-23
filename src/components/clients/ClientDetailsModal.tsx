@@ -5,9 +5,28 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Phone, Mail, MapPin, Building, Calendar, DollarSign } from 'lucide-react';
+import { Phone, Mail, MapPin, Building, Calendar, DollarSign, Clock, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Client, JobHistory } from '@/types/client';
+import { Client } from '@/types/client';
+import { supabase } from '@/integrations/supabase/client';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { formatCurrency } from '@/utils/formatters';
+
+interface JobHistory {
+  id: string;
+  description: string;
+  client: string;
+  serviceValue: number;
+  totalCosts: number;
+  valueWithDiscount: number;
+  eventDate: string;
+  status: string;
+  estimatedHours: number;
+  difficultyLevel: string;
+  category: string;
+  discountValue: number;
+  createdAt: string;
+}
 
 interface ClientDetailsModalProps {
   isOpen: boolean;
@@ -18,36 +37,24 @@ interface ClientDetailsModalProps {
 export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, onClose, client }) => {
   const [jobHistory, setJobHistory] = useState<JobHistory[]>([]);
   const [loading, setLoading] = useState(false);
+  const { user } = useSupabaseAuth();
   const { toast } = useToast();
 
   const loadJobHistory = async () => {
-    if (!client) return;
+    if (!client || !user) return;
 
     setLoading(true);
     try {
-      // Usar dados mock para demonstração
-      const mockHistory: JobHistory[] = [
-        {
-          id: '1',
-          client_id: client.id,
-          description: 'Ensaio fotográfico corporativo',
-          service_value: 1500,
-          event_date: '2024-01-15',
-          status: 'aprovado',
-          created_at: '2024-01-10T10:00:00Z'
-        },
-        {
-          id: '2',
-          client_id: client.id,
-          description: 'Cobertura de evento empresarial',
-          service_value: 2800,
-          event_date: '2024-02-20',
-          status: 'aprovado',
-          created_at: '2024-02-15T14:30:00Z'
-        }
-      ];
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('userId', user.id)
+        .eq('client', client.name)
+        .order('createdAt', { ascending: false });
 
-      setJobHistory(mockHistory);
+      if (error) throw error;
+      
+      setJobHistory(data || []);
     } catch (error) {
       console.error('Erro ao carregar histórico:', error);
       toast({
@@ -64,13 +71,37 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
     if (isOpen && client) {
       loadJobHistory();
     }
-  }, [isOpen, client]);
+  }, [isOpen, client, user]);
 
-  const totalValue = jobHistory.reduce((sum, job) => sum + job.service_value, 0);
+  const totalValue = jobHistory.reduce((sum, job) => sum + (job.valueWithDiscount || job.totalCosts), 0);
+  const totalJobs = jobHistory.length;
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      'pendente': { variant: 'secondary' as const, label: 'Pendente' },
+      'aprovado': { variant: 'default' as const, label: 'Aprovado' },
+      'em-andamento': { variant: 'outline' as const, label: 'Em Andamento' },
+      'concluido': { variant: 'default' as const, label: 'Concluído' },
+      'cancelado': { variant: 'destructive' as const, label: 'Cancelado' }
+    };
+    
+    const config = statusConfig[status] || { variant: 'secondary' as const, label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getDifficultyColor = (level: string) => {
+    switch (level) {
+      case 'fácil': return 'text-green-600';
+      case 'médio': return 'text-yellow-600';
+      case 'complicado': return 'text-orange-600';
+      case 'difícil': return 'text-red-600';
+      default: return 'text-gray-600';
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-blue-600">Detalhes do Cliente</DialogTitle>
         </DialogHeader>
@@ -120,8 +151,12 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
                 </div>
               )}
 
-              <div className="text-sm text-gray-500">
-                Cliente desde: {new Date(client.created_at).toLocaleDateString('pt-BR')}
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <span>Cliente desde: {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
+                <span>•</span>
+                <span>{totalJobs} trabalho{totalJobs !== 1 ? 's' : ''}</span>
+                <span>•</span>
+                <span>Total faturado: {formatCurrency(totalValue)}</span>
               </div>
             </CardContent>
           </Card>
@@ -132,13 +167,13 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
               <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
-                  Histórico de Trabalhos ({jobHistory.length})
+                  Histórico de Trabalhos ({totalJobs})
                 </CardTitle>
                 {totalValue > 0 && (
                   <div className="flex items-center gap-2 text-green-600">
                     <DollarSign className="w-4 h-4" />
                     <span className="font-semibold">
-                      Total: R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      Total: {formatCurrency(totalValue)}
                     </span>
                   </div>
                 )}
@@ -158,7 +193,10 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
                       <TableRow>
                         <TableHead>Descrição</TableHead>
                         <TableHead>Data do Evento</TableHead>
-                        <TableHead>Valor</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead>Horas</TableHead>
+                        <TableHead>Dificuldade</TableHead>
+                        <TableHead>Valor Final</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -166,22 +204,47 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
                       {jobHistory.map((job) => (
                         <TableRow key={job.id}>
                           <TableCell>
-                            <div className="max-w-xs truncate">{job.description}</div>
+                            <div className="max-w-xs">
+                              <div className="font-medium truncate">{job.description}</div>
+                              <div className="text-xs text-gray-500">
+                                Criado em {new Date(job.createdAt).toLocaleDateString('pt-BR')}
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
-                            {new Date(job.event_date).toLocaleDateString('pt-BR')}
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-gray-400" />
+                              {job.eventDate ? new Date(job.eventDate).toLocaleDateString('pt-BR') : 'N/A'}
+                            </div>
                           </TableCell>
                           <TableCell>
-                            <span className="font-medium text-green-600">
-                              R$ {job.service_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            <span className="text-sm">{job.category || 'N/A'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-gray-400" />
+                              {job.estimatedHours}h
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className={`text-sm font-medium ${getDifficultyColor(job.difficultyLevel)}`}>
+                              {job.difficultyLevel}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <Badge 
-                              variant={job.status === 'aprovado' ? 'default' : 'secondary'}
-                            >
-                              {job.status}
-                            </Badge>
+                            <div className="space-y-1">
+                              <div className="font-medium text-green-600">
+                                {formatCurrency(job.valueWithDiscount || job.totalCosts)}
+                              </div>
+                              {job.discountValue > 0 && (
+                                <div className="text-xs text-gray-500">
+                                  Desc: {formatCurrency(job.discountValue)}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(job.status)}
                           </TableCell>
                         </TableRow>
                       ))}
