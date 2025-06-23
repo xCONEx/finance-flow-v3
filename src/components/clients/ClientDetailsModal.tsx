@@ -16,16 +16,16 @@ interface JobHistory {
   id: string;
   description: string;
   client: string;
-  serviceValue: number;
-  totalCosts: number;
-  valueWithDiscount: number;
-  eventDate: string;
+  service_value: number;
+  total_costs: number;
+  value_with_discount: number;
+  event_date: string;
   status: string;
-  estimatedHours: number;
-  difficultyLevel: string;
+  estimated_hours: number;
+  difficulty_level: string;
   category: string;
-  discountValue: number;
-  createdAt: string;
+  discount_value: number;
+  created_at: string;
 }
 
 interface ClientDetailsModalProps {
@@ -48,9 +48,9 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
-        .eq('userId', user.id)
+        .eq('user_id', user.id)
         .eq('client', client.name)
-        .order('createdAt', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       
@@ -73,7 +73,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
     }
   }, [isOpen, client, user]);
 
-  const totalValue = jobHistory.reduce((sum, job) => sum + (job.valueWithDiscount || job.totalCosts), 0);
+  const totalValue = jobHistory.reduce((sum, job) => sum + (job.value_with_discount || job.total_costs), 0);
   const totalJobs = jobHistory.length;
 
   const getStatusBadge = (status: string) => {
@@ -101,7 +101,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[90vw] max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-blue-600">Detalhes do Cliente</DialogTitle>
         </DialogHeader>
@@ -120,13 +120,13 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
                 {client.phone && (
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-gray-500" />
-                    <span>{client.phone}</span>
+                    <span className="text-sm">{client.phone}</span>
                   </div>
                 )}
                 {client.email && (
                   <div className="flex items-center gap-2">
                     <Mail className="w-4 h-4 text-gray-500" />
-                    <span>{client.email}</span>
+                    <span className="text-sm">{client.email}</span>
                   </div>
                 )}
               </div>
@@ -134,7 +134,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
               {client.address && (
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-gray-500 mt-1" />
-                  <span>{client.address}</span>
+                  <span className="text-sm">{client.address}</span>
                 </div>
               )}
 
@@ -147,15 +147,15 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
               {client.description && (
                 <div>
                   <h4 className="font-medium mb-2">Descrição:</h4>
-                  <p className="text-gray-600 dark:text-gray-400">{client.description}</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">{client.description}</p>
                 </div>
               )}
 
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-500">
                 <span>Cliente desde: {new Date(client.created_at).toLocaleDateString('pt-BR')}</span>
-                <span>•</span>
+                <span className="hidden sm:inline">•</span>
                 <span>{totalJobs} trabalho{totalJobs !== 1 ? 's' : ''}</span>
-                <span>•</span>
+                <span className="hidden sm:inline">•</span>
                 <span>Total faturado: {formatCurrency(totalValue)}</span>
               </div>
             </CardContent>
@@ -164,7 +164,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
           {/* Histórico de Trabalhos */}
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
                   Histórico de Trabalhos ({totalJobs})
@@ -172,7 +172,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
                 {totalValue > 0 && (
                   <div className="flex items-center gap-2 text-green-600">
                     <DollarSign className="w-4 h-4" />
-                    <span className="font-semibold">
+                    <span className="font-semibold text-sm sm:text-base">
                       Total: {formatCurrency(totalValue)}
                     </span>
                   </div>
@@ -191,13 +191,13 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Data do Evento</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead>Horas</TableHead>
-                        <TableHead>Dificuldade</TableHead>
-                        <TableHead>Valor Final</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead className="min-w-[200px]">Descrição</TableHead>
+                        <TableHead className="min-w-[120px]">Data do Evento</TableHead>
+                        <TableHead className="min-w-[100px]">Categoria</TableHead>
+                        <TableHead className="min-w-[80px]">Horas</TableHead>
+                        <TableHead className="min-w-[100px]">Dificuldade</TableHead>
+                        <TableHead className="min-w-[120px]">Valor Final</TableHead>
+                        <TableHead className="min-w-[100px]">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -205,16 +205,18 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
                         <TableRow key={job.id}>
                           <TableCell>
                             <div className="max-w-xs">
-                              <div className="font-medium truncate">{job.description}</div>
+                              <div className="font-medium truncate text-sm">{job.description}</div>
                               <div className="text-xs text-gray-500">
-                                Criado em {new Date(job.createdAt).toLocaleDateString('pt-BR')}
+                                Criado em {new Date(job.created_at).toLocaleDateString('pt-BR')}
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3 text-gray-400" />
-                              {job.eventDate ? new Date(job.eventDate).toLocaleDateString('pt-BR') : 'N/A'}
+                              <span className="text-sm">
+                                {job.event_date ? new Date(job.event_date).toLocaleDateString('pt-BR') : 'N/A'}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -223,22 +225,22 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ isOpen, 
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Clock className="w-3 h-3 text-gray-400" />
-                              {job.estimatedHours}h
+                              <span className="text-sm">{job.estimated_hours}h</span>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span className={`text-sm font-medium ${getDifficultyColor(job.difficultyLevel)}`}>
-                              {job.difficultyLevel}
+                            <span className={`text-sm font-medium ${getDifficultyColor(job.difficulty_level)}`}>
+                              {job.difficulty_level}
                             </span>
                           </TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              <div className="font-medium text-green-600">
-                                {formatCurrency(job.valueWithDiscount || job.totalCosts)}
+                              <div className="font-medium text-green-600 text-sm">
+                                {formatCurrency(job.value_with_discount || job.total_costs)}
                               </div>
-                              {job.discountValue > 0 && (
+                              {job.discount_value > 0 && (
                                 <div className="text-xs text-gray-500">
-                                  Desc: {formatCurrency(job.discountValue)}
+                                  Desc: {formatCurrency(job.discount_value)}
                                 </div>
                               )}
                             </div>
