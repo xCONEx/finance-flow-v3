@@ -1,90 +1,65 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Search, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, ChevronsUpDown, Plus, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
-import { useAgency } from '@/contexts/AgencyContext';
+import { Client } from '@/types/client';
 import { AddClientModal } from './AddClientModal';
-import { useToast } from '@/hooks/use-toast';
-
-interface Client {
-  id: string;
-  name: string;
-  phone?: string;
-  email?: string;
-  cnpj?: string;
-}
 
 interface ClientSelectorProps {
-  selectedClient: Client | null;
-  onClientSelect: (client: Client | null) => void;
+  onClientSelect: (client: Client) => void;
+  placeholder?: string;
 }
 
-export const ClientSelector: React.FC<ClientSelectorProps> = ({ 
-  selectedClient, 
-  onClientSelect 
-}) => {
-  const [open, setOpen] = useState(false);
+const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelect, placeholder = "Buscar cliente..." }) => {
+  const [searchTerm, setSearchTerm] = useState('');
   const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const { user } = useSupabaseAuth();
-  const { currentContext } = useAgency();
-  const { toast } = useToast();
-
-  const loadClients = async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      let query = supabase
-        .from('clients')
-        .select('id, name, phone, email, cnpj')
-        .eq('user_id', user.id);
-
-      if (currentContext !== 'individual' && currentContext.id) {
-        query = query.eq('company_id', currentContext.id);
-      } else {
-        query = query.is('company_id', null);
-      }
-
-      const { data, error } = await query.order('name');
-
-      if (error) {
-        console.error('Erro ao carregar clientes:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar clientes.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      setClients(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     loadClients();
-  }, [user, currentContext]);
+  }, [user]);
+
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = clients.filter(client =>
+        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredClients(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredClients([]);
+      setShowDropdown(false);
+    }
+  }, [searchTerm, clients]);
+
+  const loadClients = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name');
+
+      if (error) throw error;
+      setClients(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
+    }
+  };
 
   const handleClientSelect = (client: Client) => {
     onClientSelect(client);
-    setOpen(false);
-  };
-
-  const handleRemoveClient = () => {
-    onClientSelect(null);
+    setSearchTerm('');
+    setShowDropdown(false);
   };
 
   const handleAddSuccess = () => {
@@ -93,98 +68,50 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
   };
 
   return (
-    <>
-      <div className="space-y-2">
-        <Label>Cliente</Label>
-        
-        {selectedClient ? (
-          <div className="flex items-center gap-2 p-2 border rounded-md bg-gray-50">
-            <div className="flex-1">
-              <div className="font-medium">{selectedClient.name}</div>
-              {selectedClient.email && (
-                <div className="text-sm text-gray-500">{selectedClient.email}</div>
-              )}
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleRemoveClient}
-              className="h-6 w-6 p-0 hover:bg-red-100"
-            >
-              <X className="h-4 w-4 text-red-500" />
-            </Button>
-          </div>
-        ) : (
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-full justify-between"
-              >
-                Selecionar cliente...
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full p-0">
-              <Command>
-                <CommandInput placeholder="Buscar cliente..." />
-                <CommandList>
-                  <CommandEmpty>
-                    <div className="p-2 text-center">
-                      <p className="text-sm text-gray-500 mb-2">Nenhum cliente encontrado</p>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setOpen(false);
-                          setShowAddModal(true);
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Adicionar Cliente
-                      </Button>
+    <div className="relative">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder={placeholder}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+          
+          {showDropdown && filteredClients.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+              {filteredClients.map((client) => (
+                <button
+                  key={client.id}
+                  onClick={() => handleClientSelect(client)}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-600 last:border-b-0"
+                >
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {client.name}
                     </div>
-                  </CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem
-                      onSelect={() => {
-                        setOpen(false);
-                        setShowAddModal(true);
-                      }}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Adicionar novo cliente</span>
-                    </CommandItem>
-                    {clients.map((client) => (
-                      <CommandItem
-                        key={client.id}
-                        onSelect={() => handleClientSelect(client)}
-                        className="cursor-pointer"
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        <div>
-                          <div className="font-medium">{client.name}</div>
-                          {client.email && (
-                            <div className="text-sm text-gray-500">{client.email}</div>
-                          )}
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        )}
+                    {client.email && (
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {client.email}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAddModal(true)}
+          className="px-3"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
       </div>
 
       <AddClientModal
@@ -192,6 +119,8 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
         onClose={() => setShowAddModal(false)}
         onSuccess={handleAddSuccess}
       />
-    </>
+    </div>
   );
 };
+
+export default ClientSelector;
