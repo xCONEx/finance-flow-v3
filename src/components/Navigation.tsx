@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Home, 
@@ -9,7 +8,6 @@ import {
   Settings,
   Building
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -19,7 +17,11 @@ interface NavigationProps {
   showTeamOption?: boolean;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTeamOption }) => {
+const Navigation: React.FC<NavigationProps> = ({
+  activeTab,
+  onTabChange,
+  showTeamOption
+}) => {
   const { profile, agency } = useSupabaseAuth();
   const { currentTheme } = useTheme();
 
@@ -33,30 +35,32 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, showTea
     ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
     ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
     { id: 'management', label: 'Gerenciamento', icon: Building },
+    { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
   return (
-    <>
-      {/* Mobile Bottom Navigation - fixo no bottom */}
-      <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl">
-        <div className="flex items-center justify-around py-3">
-          {navigationItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
-              className={`flex flex-col items-center ${
-                activeTab === item.id
-                  ? 'text-blue-600'
-                  : 'text-gray-500 dark:text-gray-400'
-              }`}
-            >
-              <item.icon className="w-6 h-6 mb-1" />
-              <span className="text-[10px]">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </>
+    <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 
+        bg-white/80 dark:bg-gray-900/80 backdrop-blur-md 
+        border border-gray-200 dark:border-gray-700 
+        rounded-2xl shadow-xl px-4 py-2 flex justify-between items-center">
+      {navigationItems.map((item) => {
+        const Icon = item.icon;
+        const isActive = activeTab === item.id;
+
+        return (
+          <button
+            key={item.id}
+            onClick={() => onTabChange(item.id)}
+            className={`p-2 rounded-full transition-colors ${
+              isActive ? 'text-blue-600' : 'text-gray-500 dark:text-gray-400'
+            }`}
+            aria-label={item.label}
+          >
+            <Icon className="w-6 h-6" />
+          </button>
+        );
+      })}
+    </div>
   );
 };
 
