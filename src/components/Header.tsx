@@ -30,8 +30,7 @@ import {
   CreditCard,
   User,
   LogOut,
-  Crown,
-  FileText
+  Crown
 } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useAgency } from '../contexts/AgencyContext';
@@ -72,6 +71,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
   const managementMenuItems = [
     { id: 'costs', label: 'Custos Mensais', icon: DollarSign },
     { id: 'items', label: 'Itens de Trabalho', icon: Package },
+    { id: 'routine', label: 'Rotina de Trabalho', icon: Calendar },
   ];
 
   const getProfileImageUrl = () => {
@@ -155,7 +155,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                 <Button
                   variant="ghost"
                   className={`flex items-center space-x-2 ${
-                    ['costs', 'items', 'management'].includes(activeTab)
+                    ['costs', 'items'].includes(activeTab)
                       ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90` 
                       : `hover:bg-gradient-to-r hover:${currentTheme.secondary}`
                   }`}
@@ -165,12 +165,12 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                   <ChevronDown className="w-3 h-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-gray-800 border shadow-lg z-50">
                 {managementMenuItems.map((item) => (
                   <DropdownMenuItem
                     key={item.id}
                     onClick={() => onTabChange(item.id)}
-                    className="flex items-center space-x-2 cursor-pointer"
+                    className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     <item.icon className="w-4 h-4" />
                     <span>{item.label}</span>
@@ -186,7 +186,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                 className={`flex items-center space-x-2 ${
                   activeTab === 'team' 
                     ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90` 
-                    : `hover:bg-gradient-to-r hover:${currentTheme.secondary}`
+                    : `hover:bg-gradient-to-r hover:${current Theme.secondary}`
                 }`}
                 onClick={() => onTabChange('team')}
               >
@@ -206,7 +206,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                     {getCurrentContextLabel()}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-gray-800 border shadow-lg z-50">
                   <SelectItem value="individual">
                     <div className="flex items-center gap-2">
                       <UserIcon className="h-4 w-4" />
@@ -254,7 +254,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuContent className="w-56 bg-white dark:bg-gray-800 border shadow-lg z-50" align="end" forceMount>
                 <div className="flex flex-col space-y-1 p-2">
                   <p className="text-sm font-medium leading-none">{user?.email}</p>
                   <p className="text-xs leading-none text-muted-foreground">
@@ -278,7 +278,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem onClick={() => onTabChange('admin')}>
-                    <FileText className="mr-2 h-4 w-4" />
+                    <Shield className="mr-2 h-4 w-4" />
                     <span>Admin</span>
                   </DropdownMenuItem>
                 )}
