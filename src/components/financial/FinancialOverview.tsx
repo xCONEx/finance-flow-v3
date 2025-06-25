@@ -451,12 +451,14 @@ const FinancialOverview: React.FC = () => {
           return (
             <div
               key={transaction.id}
-              className="flex items-start justify-between p-4 border rounded-lg flex-col sm:flex-row sm:items-center gap-2"
+              className="flex items-center justify-between p-4 border rounded-lg flex-col sm:flex-row sm:items-center gap-4"
             >
-              {/* Esquerda: informações principais */}
+              {/* Esquerda: nome + badges + categoria/data */}
               <div className="flex-1 w-full">
-                <div className="flex items-center flex-wrap gap-2">
-                  <h4 className="font-medium">{transactionData.description}</h4>
+                <h4 className="font-medium">{transactionData.description}</h4>
+
+                {/* Badges abaixo do nome */}
+                <div className="flex flex-wrap gap-2 mt-1 mb-2">
                   <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
                     {transactionData.isIncome ? 'Entrada' : 'Saída'}
                   </Badge>
@@ -480,11 +482,13 @@ const FinancialOverview: React.FC = () => {
                   )}
                 </div>
 
-                <p className="text-sm text-muted-foreground mt-1">
+                {/* Categoria e Data */}
+                <p className="text-sm text-muted-foreground">
                   {transaction.category} •{' '}
                   {formatDate(transactionData.date || transaction.created_at)}
                 </p>
 
+                {/* Cliente/Fornecedor */}
                 {transactionData.clientOrSupplier && (
                   <p className="text-sm text-muted-foreground">
                     {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}:{' '}
@@ -492,6 +496,7 @@ const FinancialOverview: React.FC = () => {
                   </p>
                 )}
 
+                {/* Vencimento */}
                 {transaction.due_date && (
                   <p className="text-sm text-blue-600">
                     Vencimento: {formatDate(transaction.due_date)}
@@ -499,8 +504,8 @@ const FinancialOverview: React.FC = () => {
                 )}
               </div>
 
-              {/* Direita: valor e ações */}
-              <div className="flex flex-col items-end min-w-[120px]">
+              {/* Direita: valor, método pagamento e botão editar */}
+              <div className="flex flex-col items-end min-w-[140px] gap-1">
                 <p
                   className={`font-bold ${
                     transactionData.isIncome ? 'text-green-600' : 'text-red-600'
@@ -516,7 +521,6 @@ const FinancialOverview: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => handleEditTransaction(transaction)}
-                  className="mt-1"
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -528,6 +532,7 @@ const FinancialOverview: React.FC = () => {
     )}
   </CardContent>
 </Card>
+
 
 
       {/* Modais */}
