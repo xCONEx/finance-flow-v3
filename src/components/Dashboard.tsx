@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,7 +36,20 @@ const Dashboard = () => {
 
   // Filtrar apenas jobs pessoais (sem companyId)
   const filteredJobs = jobs.filter(job => !job.companyId);
-  const filteredMonthlyCosts = monthlyCosts.filter(cost => !cost.companyId);
+  
+  // Filter only regular monthly costs (exclude financial transactions and reserves)
+  const regularMonthlyCosts = monthlyCosts.filter(cost => 
+    !cost.description?.includes('FINANCIAL_INCOME:') && 
+    !cost.description?.includes('FINANCIAL_EXPENSE:') &&
+    !cost.description?.includes('RESERVE_') &&
+    !cost.description?.includes('Reserva:') &&
+    !cost.description?.includes('SMART_RESERVE') &&
+    cost.category !== 'Reserva' &&
+    cost.category !== 'Smart Reserve' &&
+    cost.category !== 'Reserve' &&
+    !cost.companyId // Only personal costs
+  );
+
   const filteredWorkItems = workItems.filter(item => !item.companyId);
 
   // Calcular apenas jobs aprovados pessoais
@@ -48,7 +60,8 @@ const Dashboard = () => {
     return sum + jobValue;
   }, 0);
   
-  const totalMonthlyCosts = filteredMonthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
+  // Use only regular monthly costs for the total
+  const totalMonthlyCosts = regularMonthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
   const totalEquipmentValue = filteredWorkItems.reduce((sum, item) => sum + item.value, 0);
   const hourlyRate = workRoutine?.valuePerHour || 0;
 
@@ -56,7 +69,7 @@ const Dashboard = () => {
   const totalTasks = tasks.length;
 
   // Log para debug
-  console.log('📊 Dashboard - Sempre pessoal:', 'Jobs aprovados:', approvedJobs.length, 'Total value:', totalJobsValue);
+  console.log('📊 Dashboard - Monthly Costs Only:', 'Regular costs:', regularMonthlyCosts.length, 'Total value:', totalMonthlyCosts);
 
   const metrics = [
     {
