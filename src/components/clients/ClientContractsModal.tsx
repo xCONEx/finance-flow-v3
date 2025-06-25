@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { Plus, Edit, Trash2, FileText, Calendar, DollarSign, Upload, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, FileText, Calendar, DollarSign, Upload, Download, File, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +44,7 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
   const [uploading, setUploading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const [uploadingFile, setUploadingFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -107,6 +108,42 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
     });
     setEditingContract(null);
     setShowAddForm(false);
+    setUploadingFile(null);
+  };
+
+  const handleFileSelect = (file: File) => {
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Erro",
+        description: "Tipo de arquivo não suportado. Use PDF, DOC, DOCX ou TXT.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Erro",
+        description: "Arquivo muito grande. Máximo 10MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingFile(file);
+  };
+
+  const removeSelectedFile = () => {
+    setUploadingFile(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,6 +161,33 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
     if (!user) return;
 
     try {
+      setUploading(true);
+
+      let fileUrl = null;
+      let fileName = null;
+
+      // Upload file if selected
+      if (uploadingFile) {
+        const fileExt = uploadingFile.name.split('.').pop();
+        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('contracts')
+          .upload(filePath, uploadingFile);
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error('Erro ao fazer upload do arquivo');
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('contracts')
+          .getPublicUrl(filePath);
+
+        fileUrl = publicUrl;
+        fileName = uploadingFile.name;
+      }
+
       const contractData = {
         client_id: client.id,
         user_id: user.id,
@@ -132,7 +196,9 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
         value: formData.value,
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
-        status: formData.status
+        status: formData.status,
+        ...(fileUrl && { contract_file_url: fileUrl }),
+        ...(fileName && { contract_file_name: fileName })
       };
 
       if (editingContract) {
@@ -170,6 +236,8 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
         description: "Erro ao salvar contrato.",
         variant: "destructive",
       });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -397,6 +465,59 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
                     />
                   </div>
 
+                  {/* File Upload Section */}
+                  <div className="space-y-2">
+                    <Label>Anexar Contrato (Opcional)</Label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                      {!uploadingFile ? (
+                        <div>
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx,.txt"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleFileSelect(file);
+                              }
+                            }}
+                            className="hidden"
+                            id="contract-file"
+                          />
+                          <label
+                            htmlFor="contract-file"
+                            className="cursor-pointer flex flex-col items-center gap-2 text-gray-500"
+                          >
+                            <Upload className="w-8 h-8" />
+                            <span className="text-sm">
+                              Clique para selecionar um arquivo
+                            </span>
+                            <span className="text-xs">
+                              PDF, DOC, DOCX ou TXT (máx. 10MB)
+                            </span>
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                          <div className="flex items-center gap-2">
+                            <File className="w-5 h-5 text-blue-600" />
+                            <span className="text-sm font-medium">{uploadingFile.name}</span>
+                            <span className="text-xs text-gray-500">
+                              ({(uploadingFile.size / 1024 / 1024).toFixed(1)} MB)
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={removeSelectedFile}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="flex gap-2 pt-4">
                     <Button
                       type="button"
@@ -405,8 +526,8 @@ export const ClientContractsModal: React.FC<ClientContractsModalProps> = ({ isOp
                     >
                       Cancelar
                     </Button>
-                    <Button type="submit">
-                      {editingContract ? 'Salvar Alterações' : 'Adicionar Contrato'}
+                    <Button type="submit" disabled={uploading}>
+                      {uploading ? 'Salvando...' : editingContract ? 'Salvar Alterações' : 'Adicionar Contrato'}
                     </Button>
                   </div>
                 </form>
