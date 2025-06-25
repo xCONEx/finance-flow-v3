@@ -38,7 +38,7 @@ export type Agency = {
   id: string;
   name: string;
   description?: string;
-  owner_id: string;
+  owner_id: string; // Mapeamos owner_uid para owner_id para manter compatibilidade
   created_at: string;
   status: string;
   cnpj?: string;
