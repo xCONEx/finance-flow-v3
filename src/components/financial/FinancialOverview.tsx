@@ -450,82 +450,70 @@ const FinancialOverview: React.FC = () => {
 
           return (
             <div
-              key={transaction.id}
-              className="flex items-center justify-between p-4 border rounded-lg flex-col sm:flex-row sm:items-center gap-4"
-            >
-              {/* Esquerda: nome + badges + categoria/data */}
-              <div className="flex-1 w-full">
-                <h4 className="font-medium">{transactionData.description}</h4>
+  key={transaction.id}
+  className="flex items-center justify-between p-4 border rounded-lg flex-col sm:flex-row sm:items-center gap-4"
+>
+  {/* Esquerda: nome + badges + categoria/data */}
+  <div className="flex-1 min-w-0">
+    <h4 className="font-medium truncate">{transactionData.description}</h4>
 
-                {/* Badges abaixo do nome */}
-                <div className="flex flex-wrap gap-2 mt-1 mb-2">
-                  <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
-                    {transactionData.isIncome ? 'Entrada' : 'Saída'}
-                  </Badge>
-                  {!transactionData.isPaid && (
-                    <Badge variant="outline">Pendente</Badge>
-                  )}
-                  {hasDueDate && (
-                    <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
-                      {isOverdue ? 'Vencido' : 'A vencer'}
-                    </Badge>
-                  )}
-                  {transaction.notification_enabled && hasDueDate && (
-                    <>
-                      {/* Ícone no mobile */}
-                      <span className="sm:hidden text-blue-600 text-lg">🔔</span>
-                      {/* Badge em telas maiores */}
-                      <Badge variant="outline" className="hidden sm:inline-flex text-blue-600">
-                        🔔 Notificações
-                      </Badge>
-                    </>
-                  )}
-                </div>
+    {/* Badges abaixo do nome */}
+    <div className="flex flex-wrap gap-2 mt-1 mb-2">
+      <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
+        {transactionData.isIncome ? 'Entrada' : 'Saída'}
+      </Badge>
+      {!transactionData.isPaid && <Badge variant="outline">Pendente</Badge>}
+      {hasDueDate && (
+        <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
+          {isOverdue ? 'Vencido' : 'A vencer'}
+        </Badge>
+      )}
+      {transaction.notification_enabled && hasDueDate && (
+        <>
+          <span className="sm:hidden text-blue-600 text-lg">🔔</span>
+          <Badge variant="outline" className="hidden sm:inline-flex text-blue-600">
+            🔔 Notificações
+          </Badge>
+        </>
+      )}
+    </div>
 
-                {/* Categoria e Data */}
-                <p className="text-sm text-muted-foreground">
-                  {transaction.category} •{' '}
-                  {formatDate(transactionData.date || transaction.created_at)}
-                </p>
+    {/* Categoria e Data */}
+    <p className="text-sm text-muted-foreground truncate">
+      {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
+    </p>
 
-                {/* Cliente/Fornecedor */}
-                {transactionData.clientOrSupplier && (
-                  <p className="text-sm text-muted-foreground">
-                    {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}:{' '}
-                    {transactionData.clientOrSupplier}
-                  </p>
-                )}
+    {/* Cliente/Fornecedor */}
+    {transactionData.clientOrSupplier && (
+      <p className="text-sm text-muted-foreground truncate">
+        {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
+      </p>
+    )}
 
-                {/* Vencimento */}
-                {transaction.due_date && (
-                  <p className="text-sm text-blue-600">
-                    Vencimento: {formatDate(transaction.due_date)}
-                  </p>
-                )}
-              </div>
+    {/* Vencimento */}
+    {transaction.due_date && (
+      <p className="text-sm text-blue-600 truncate">
+        Vencimento: {formatDate(transaction.due_date)}
+      </p>
+    )}
+  </div>
 
-              {/* Direita: valor, método pagamento e botão editar */}
-              <div className="flex flex-col items-end min-w-[140px] gap-1">
-                <p
-                  className={`font-bold ${
-                    transactionData.isIncome ? 'text-green-600' : 'text-red-600'
-                  }`}
-                >
-                  {transactionData.isIncome ? '+' : '-'}
-                  {formatValue(Math.abs(transaction.value))}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {transactionData.paymentMethod}
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEditTransaction(transaction)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+  {/* Direita: valor, método pagamento e botão editar */}
+  <div className="flex flex-col items-end flex-shrink-0 w-[140px] gap-1">
+    <p
+      className={`font-bold ${
+        transactionData.isIncome ? 'text-green-600' : 'text-red-600'
+      } truncate`}
+    >
+      {transactionData.isIncome ? '+' : '-'}
+      {formatValue(Math.abs(transaction.value))}
+    </p>
+    <p className="text-sm text-muted-foreground truncate">{transactionData.paymentMethod}</p>
+    <Button variant="ghost" size="sm" onClick={() => handleEditTransaction(transaction)}>
+      <Edit className="h-4 w-4" />
+    </Button>
+  </div>
+</div>
           );
         })}
       </div>
