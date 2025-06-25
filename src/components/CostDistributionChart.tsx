@@ -9,7 +9,20 @@ const CostDistributionChart = () => {
   const { monthlyCosts } = useApp();
   const { formatValue } = usePrivacy();
 
-  const costsByCategory = monthlyCosts.reduce((acc, cost) => {
+  // Filter out financial transactions and reserve items - only show regular monthly costs
+  const regularMonthlyCosts = monthlyCosts.filter(cost => 
+    !cost.description?.includes('FINANCIAL_INCOME:') && 
+    !cost.description?.includes('FINANCIAL_EXPENSE:') &&
+    !cost.description?.includes('RESERVE_') &&
+    !cost.description?.includes('Reserva:') &&
+    !cost.description?.includes('SMART_RESERVE') &&
+    cost.category !== 'Reserva' &&
+    cost.category !== 'Smart Reserve' &&
+    cost.category !== 'Reserve' &&
+    !cost.companyId // Only personal costs
+  );
+
+  const costsByCategory = regularMonthlyCosts.reduce((acc, cost) => {
     const category = cost.category || 'Outros';
     // Usar verificação segura para o valor
     const value = cost.value || 0;
@@ -39,7 +52,7 @@ const CostDistributionChart = () => {
   if (data.length === 0) {
     return (
       <div className="h-64 flex items-center justify-center text-gray-500">
-        <p>Nenhum custo cadastrado ainda</p>
+        <p>Nenhum custo mensal cadastrado ainda</p>
       </div>
     );
   }
