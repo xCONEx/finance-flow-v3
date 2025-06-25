@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from '@/hooks/use-toast';
@@ -22,6 +23,7 @@ const LoginPage = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -46,6 +48,15 @@ const LoginPage = () => {
     checkBiometric();
   }, []);
 
+  // Carregar email salvo se existir
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('saved_email');
+    if (savedEmail) {
+      setFormData(prev => ({ ...prev, email: savedEmail }));
+      setRememberMe(true);
+    }
+  }, []);
+
   // Redirecionar se já autenticado
   useEffect(() => {
     if (isAuthenticated) {
@@ -59,7 +70,7 @@ const LoginPage = () => {
 
     try {
       if (isLogin) {
-        const { error } = await signIn(formData.email, formData.password);
+        const { error } = await signIn(formData.email, formData.password, rememberMe);
         if (error) throw error;
         
         toast({
@@ -226,7 +237,7 @@ const LoginPage = () => {
             </CardHeader>
 
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0">
-              {/* Face ID Button (apenas mobile e quando disponível) */}
+              {/* Face ID Button (apenas quando disponível) */}
               {biometricAvailable && isLogin && (
                 <Button
                   onClick={handleBiometricLogin}
@@ -301,9 +312,22 @@ const LoginPage = () => {
                   </div>
                 </div>
 
-                {/* Link Esqueceu senha */}
+                {/* Checkbox Lembrar-me e Link Esqueceu senha */}
                 {isLogin && (
-                  <div className="text-right">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="remember"
+                        checked={rememberMe}
+                        onCheckedChange={setRememberMe}
+                      />
+                      <Label
+                        htmlFor="remember"
+                        className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 cursor-pointer"
+                      >
+                        Lembrar-me
+                      </Label>
+                    </div>
                     <Button
                       type="button"
                       variant="link"
