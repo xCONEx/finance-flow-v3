@@ -262,13 +262,18 @@ const FinancialOverview: React.FC = () => {
     );
   }
 
-{filteredTransactions.map((transaction) => {
-  const transactionData = parseTransactionData(transaction.description);
-  const hasDueDate = transaction.due_date && !transactionData.isPaid;
-  const isOverdue = hasDueDate && new Date(transaction.due_date!) < new Date();
+return (
+ <div className="p-4">
+    <Card>
+      <CardContent>
+        {filteredTransactions.map((transaction) => {
+          const transactionData = parseTransactionData(transaction.description);
+          const hasDueDate = transaction.due_date && !transactionData.isPaid;
+          const isOverdue = hasDueDate && transaction.due_date && new Date(transaction.due_date) < new Date();
 
-  return (
-    <div key={transaction.id} className="p-4 border rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+          return (
+            <div key={transaction.id} className="p-4 border rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       
       {/* Coluna Esquerda: Informações principais */}
       <div className="flex-1">
