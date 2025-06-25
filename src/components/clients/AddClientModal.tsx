@@ -1,58 +1,59 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface AddClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onClientAdded: () => void;
+  onSuccess: () => void;
 }
 
-const AddClientModal = ({ isOpen, onClose, onClientAdded }: AddClientModalProps) => {
+export const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     phone: '',
+    email: '',
     address: '',
     cnpj: '',
-    description: '',
+    description: ''
   });
   const [loading, setLoading] = useState(false);
+  const { user, agency } = useSupabaseAuth();
   const { toast } = useToast();
-  const { user } = useSupabaseAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!user) return;
+
     if (!formData.name.trim()) {
       toast({
         title: "Erro",
-        description: "O nome do cliente é obrigatório.",
+        description: "Nome é obrigatório.",
         variant: "destructive",
       });
       return;
     }
 
     setLoading(true);
-
     try {
       const { error } = await supabase
         .from('clients')
         .insert({
-          user_id: user?.id,
           name: formData.name,
-          email: formData.email || null,
           phone: formData.phone || null,
+          email: formData.email || null,
           address: formData.address || null,
           cnpj: formData.cnpj || null,
           description: formData.description || null,
+          user_id: user.id,
+          company_id: agency?.id || null
         });
 
       if (error) throw error;
@@ -62,18 +63,17 @@ const AddClientModal = ({ isOpen, onClose, onClientAdded }: AddClientModalProps)
         description: "Cliente adicionado com sucesso!",
       });
 
-      onClientAdded();
-      onClose();
+      onSuccess();
       setFormData({
         name: '',
-        email: '',
         phone: '',
+        email: '',
         address: '',
         cnpj: '',
-        description: '',
+        description: ''
       });
     } catch (error) {
-      console.error("Erro ao adicionar cliente:", error);
+      console.error('Erro ao adicionar cliente:', error);
       toast({
         title: "Erro",
         description: "Erro ao adicionar cliente. Tente novamente.",
@@ -86,75 +86,96 @@ const AddClientModal = ({ isOpen, onClose, onClientAdded }: AddClientModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Adicionar Cliente</DialogTitle>
+          <DialogTitle className="text-blue-600">Adicionar Cliente</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid gap-2">
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
             <Label htmlFor="name">Nome *</Label>
             <Input
               id="name"
               placeholder="Nome do cliente"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
             />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Email do cliente"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
-          </div>
-          <div className="grid gap-2">
+
+          <div className="space-y-2">
             <Label htmlFor="phone">Telefone</Label>
             <Input
               id="phone"
-              placeholder="Telefone do cliente"
+              placeholder="(00) 00000-0000"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             />
           </div>
-          <div className="grid gap-2">
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="cliente@email.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="cnpj">CNPJ</Label>
             <Input
               id="cnpj"
-              placeholder="CNPJ do cliente"
+              placeholder="00.000.000/0000-00"
               value={formData.cnpj}
               onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
             />
           </div>
-          <div className="grid gap-2">
+
+          <div className="space-y-2">
             <Label htmlFor="address">Endereço</Label>
             <Textarea
               id="address"
-              placeholder="Endereço do cliente"
+              placeholder="Endereço completo do cliente"
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              rows={2}
             />
           </div>
-          <div className="grid gap-2">
+
+          <div className="space-y-2">
             <Label htmlFor="description">Descrição</Label>
             <Textarea
               id="description"
-              placeholder="Descrição adicional"
+              placeholder="Observações sobre o cliente"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
             />
           </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="flex-1"
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 flex-1"
+              disabled={loading}
+            >
+              {loading ? 'Adicionando...' : 'Adicionar Cliente'}
+            </Button>
+          </div>
         </form>
-        <DialogFooter>
-          <Button type="submit" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Adicionando...' : 'Adicionar'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
-
-export default AddClientModal;

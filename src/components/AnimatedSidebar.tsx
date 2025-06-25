@@ -1,120 +1,300 @@
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Home, Users, Building, Settings, DollarSign, BarChart, FileText, Shield, Bell, User } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+"use client";
 
-interface SidebarProps {
-  isCollapsed: boolean;
-  setIsCollapsed: (collapsed: boolean) => void;
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
+import {
+  Home,
+  Calculator,
+  Video,
+  CreditCard,
+  UserCheck,
+  Settings,
+  Building,
+  ChevronsUpDown,
+  UserCircle,
+  LogOut,
+  Plus,
+  UserCog,
+  Blocks,
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
+
+interface AnimatedSidebarProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
 }
 
-const AnimatedSidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
+const sidebarVariants = {
+  open: {
+    width: "15rem",
+  },
+  closed: {
+    width: "3.05rem",
+  },
+};
 
-  const menuItems = [
-    { icon: Home, label: 'Dashboard', path: '/' },
-    { icon: Users, label: 'Clientes', path: '/clients' },
-    { icon: Building, label: 'Empresas', path: '/company-management' },
-    { icon: DollarSign, label: 'Financeiro', path: '/financial' },
-    { icon: BarChart, label: 'Relatórios', path: '/reports' },
-    { icon: FileText, label: 'Contratos', path: '/contracts' },
-    { icon: Settings, label: 'Configurações', path: '/settings' },
-    { icon: User, label: 'Perfil', path: '/profile' },
+const contentVariants = {
+  open: { display: "block", opacity: 1 },
+  closed: { display: "block", opacity: 1 },
+};
+
+const variants = {
+  open: {
+    x: 0,
+    opacity: 1,
+    transition: {
+      x: { stiffness: 1000, velocity: -100 },
+    },
+  },
+  closed: {
+    x: -20,
+    opacity: 0,
+    transition: {
+      x: { stiffness: 100 },
+    },
+  },
+};
+
+const transitionProps = {
+  type: "tween" as const,
+  ease: "easeOut",
+  duration: 0.2,
+};
+
+const staggerVariants = {
+  open: {
+    transition: { staggerChildren: 0.03, delayChildren: 0.02 },
+  },
+};
+
+export function AnimatedSidebar({ activeTab, onTabChange }: AnimatedSidebarProps) {
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const { profile, agency, signOut } = useSupabaseAuth();
+  const { currentTheme } = useTheme();
+
+  const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
+  const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
+
+  const navigationItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'calculator', label: 'Calculadora', icon: Calculator },
+    ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
+    ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
+    ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
+    { id: 'management', label: 'Gerenciamento', icon: Building },
+    { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
-  const sidebarVariants = {
-    expanded: { width: '16rem' },
-    collapsed: { width: '4rem' }
-  };
-
-  const itemVariants = {
-    expanded: { 
-      opacity: 1, 
-      x: 0,
-      transition: { 
-        type: "tween", 
-        ease: "easeOut", 
-        duration: 0.2 
-      }
-    },
-    collapsed: { 
-      opacity: 0, 
-      x: -10,
-      transition: { 
-        type: "tween", 
-        ease: "easeIn", 
-        duration: 0.1 
-      }
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
     }
   };
 
   return (
     <motion.div
-      className="bg-white dark:bg-gray-800 shadow-lg h-screen flex flex-col border-r border-gray-200 dark:border-gray-700"
+      className={cn(
+        "sidebar fixed left-0 z-40 h-full shrink-0 border-r bg-white dark:bg-gray-900 hidden md:block",
+      )}
+      initial={isCollapsed ? "closed" : "open"}
+      animate={isCollapsed ? "closed" : "open"}
       variants={sidebarVariants}
-      animate={isCollapsed ? 'collapsed' : 'expanded'}
-      transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
+      transition={transitionProps}
+      onMouseEnter={() => setIsCollapsed(false)}
+      onMouseLeave={() => setIsCollapsed(true)}
     >
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          {!isCollapsed && (
-            <motion.h1
-              className="text-xl font-bold text-gray-800 dark:text-gray-200"
-              variants={itemVariants}
-              animate={isCollapsed ? 'collapsed' : 'expanded'}
-            >
-              Sistema
-            </motion.h1>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2"
-          >
-            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
-        </div>
-      </div>
+      <motion.div
+        className={`relative z-40 flex text-muted-foreground h-full shrink-0 flex-col bg-white dark:bg-gray-900 transition-all`}
+        variants={contentVariants}
+      >
+        <motion.ul variants={staggerVariants} className="flex h-full flex-col">
+          <div className="flex grow flex-col items-center">
+            <div className="flex h-[54px] w-full shrink-0 border-b p-2">
+              <div className="mt-[1.5px] flex w-full">
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger className="w-full" asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex w-fit items-center gap-2 px-2"
+                    >
+                      <Avatar className='rounded size-4'>
+                        <AvatarFallback>
+                          {agency?.name?.charAt(0) || profile?.name?.charAt(0) || 'E'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <motion.li
+                        variants={variants}
+                        className="flex w-fit items-center gap-2"
+                      >
+                        {!isCollapsed && (
+                          <>
+                            <p className="text-sm font-medium">
+                              {agency?.name || "EntregaFlow"}
+                            </p>
+                            <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                          </>
+                        )}
+                      </motion.li>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem
+                      onClick={() => onTabChange('management')}
+                      className="flex items-center gap-2"
+                    >
+                      <UserCog className="h-4 w-4" /> Gerenciar membros
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onTabChange('settings')}
+                      className="flex items-center gap-2"
+                    >
+                      <Blocks className="h-4 w-4" /> Configurações
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onTabChange('management')}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Criar ou gerenciar empresa
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
 
-      {/* Menu Items */}
-      <nav className="flex-1 p-4 space-y-2">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          
-          return (
-            <motion.button
-              key={item.path}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                isActive 
-                  ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300' 
-                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
-              }`}
-              onClick={() => navigate(item.path)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Icon className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && (
-                <motion.span
-                  className="font-medium"
-                  variants={itemVariants}
-                  animate={isCollapsed ? 'collapsed' : 'expanded'}
-                >
-                  {item.label}
-                </motion.span>
-              )}
-            </motion.button>
-          );
-        })}
-      </nav>
+            <div className="flex h-full w-full flex-col">
+              <div className="flex grow flex-col gap-4">
+                <ScrollArea className="h-16 grow p-2">
+                  <div className={cn("flex w-full flex-col gap-1")}>
+                    {navigationItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeTab === item.id;
+
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => onTabChange(item.id)}
+                          className={cn(
+                            "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary text-left",
+                            isActive && "bg-muted text-blue-600",
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <motion.li variants={variants}>
+                            {!isCollapsed && (
+                              <div className="flex items-center gap-2">
+                                <p className="ml-2 text-sm font-medium">{item.label}</p>
+                                {item.id === 'kanban' && hasEnterprisePlan && (
+                                  <Badge
+                                    className={cn(
+                                      "flex h-fit w-fit items-center gap-1.5 rounded border-none bg-blue-50 px-1.5 text-blue-600 dark:bg-blue-700 dark:text-blue-300",
+                                    )}
+                                    variant="outline"
+                                  >
+                                    PRO
+                                  </Badge>
+                                )}
+                                {(item.id === 'financial' || item.id === 'clients') && hasPremiumPlan && (
+                                  <Badge
+                                    className={cn(
+                                      "flex h-fit w-fit items-center gap-1.5 rounded border-none bg-green-50 px-1.5 text-green-600 dark:bg-green-700 dark:text-green-300",
+                                    )}
+                                    variant="outline"
+                                  >
+                                    PREMIUM
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </motion.li>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+              
+              <div className="flex flex-col p-2">
+                <Separator className="w-full mb-2" />
+                <div>
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger className="w-full">
+                      <div className="flex h-8 w-full flex-row items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary">
+                        <Avatar className="size-4">
+                          <AvatarFallback>
+                            {profile?.name?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <motion.li
+                          variants={variants}
+                          className="flex w-full items-center gap-2"
+                        >
+                          {!isCollapsed && (
+                            <>
+                              <p className="text-sm font-medium">
+                                {profile?.name || 'Usuário'}
+                              </p>
+                              <ChevronsUpDown className="ml-auto h-4 w-4 text-muted-foreground/50" />
+                            </>
+                          )}
+                        </motion.li>
+                      </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent sideOffset={5}>
+                      <div className="flex flex-row items-center gap-2 p-2">
+                        <Avatar className="size-6">
+                          <AvatarFallback>
+                            {profile?.name?.split(' ').map(n => n.charAt(0)).join('') || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col text-left">
+                          <span className="text-sm font-medium">
+                            {profile?.name || 'Usuário'}
+                          </span>
+                          <span className="line-clamp-1 text-xs text-muted-foreground">
+                            {profile?.email || 'usuario@email.com'}
+                          </span>
+                        </div>
+                      </div>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onTabChange('settings')}
+                        className="flex items-center gap-2"
+                      >
+                        <UserCircle className="h-4 w-4" /> Perfil
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={handleSignOut}
+                        className="flex items-center gap-2"
+                      >
+                        <LogOut className="h-4 w-4" /> Sair
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.ul>
+      </motion.div>
     </motion.div>
   );
-};
-
-export default AnimatedSidebar;
+}

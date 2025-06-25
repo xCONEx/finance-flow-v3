@@ -1,65 +1,56 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit, Trash, Eye, FileText, History } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Plus, Search, Edit, Trash2, Eye, Phone, Mail, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
-import AddClientModal from './AddClientModal';
-import EditClientModal from './EditClientModal';
-import ClientDetailsModal from './ClientDetailsModal';
-import ClientContractsModal from './ClientContractsModal';
-import ClientJobHistory from './ClientJobHistory';
-import type { Client } from '@/types';
+import { useToast } from '@/hooks/use-toast';
+import { Client } from '@/types/client';
+import { AddClientModal } from './AddClientModal';
+import { EditClientModal } from './EditClientModal';
+import { ClientDetailsModal } from './ClientDetailsModal';
+import { ClientContractsModal } from './ClientContractsModal';
 
 const ClientsManagement = () => {
   const [clients, setClients] = useState<Client[]>([]);
-  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isContractsModalOpen, setIsContractsModalOpen] = useState(false);
-  const [isJobHistoryModalOpen, setIsJobHistoryModalOpen] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showContractsModal, setShowContractsModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const { user } = useSupabaseAuth();
+  const { user, profile, agency } = useSupabaseAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (user) {
-      fetchClients();
-    }
-  }, [user]);
+  const loadClients = async () => {
+    if (!user) return;
 
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = clients.filter(client =>
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.phone?.includes(searchTerm)
-      );
-      setFilteredClients(filtered);
-    } else {
-      setFilteredClients(clients);
-    }
-  }, [searchTerm, clients]);
-
-  const fetchClients = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao carregar clientes:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar clientes.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setClients(data || []);
     } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
+      console.error('Erro ao carregar clientes:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar clientes.",
@@ -70,18 +61,30 @@ const ClientsManagement = () => {
     }
   };
 
-  const handleDeleteClient = async (id: string) => {
+  useEffect(() => {
+    loadClients();
+  }, [user, agency]);
+
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (client.phone && client.phone.includes(searchTerm))
+  );
+
+  const handleDelete = async (clientId: string) => {
     if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
 
     try {
       const { error } = await supabase
         .from('clients')
         .delete()
-        .eq('id', id);
+        .eq('id', clientId)
+        .eq('user_id', user?.id);
 
       if (error) throw error;
 
-      setClients(prev => prev.filter(c => c.id !== id));
+      setClients(clients.filter(c => c.id !== clientId));
+      
       toast({
         title: "Sucesso",
         description: "Cliente excluído com sucesso!",
@@ -96,181 +99,269 @@ const ClientsManagement = () => {
     }
   };
 
-  const handleOpenEdit = (client: Client) => {
+  const handleEdit = (client: Client) => {
     setSelectedClient(client);
-    setIsEditModalOpen(true);
+    setShowEditModal(true);
   };
 
-  const handleOpenDetails = (client: Client) => {
+  const handleViewDetails = (client: Client) => {
     setSelectedClient(client);
-    setIsDetailsModalOpen(true);
+    setShowDetailsModal(true);
   };
 
-  const handleOpenContracts = (client: Client) => {
+  const handleViewContracts = (client: Client) => {
     setSelectedClient(client);
-    setIsContractsModalOpen(true);
+    setShowContractsModal(true);
   };
-
-  const handleOpenJobHistory = (client: Client) => {
-    setSelectedClient(client);
-    setIsJobHistoryModalOpen(true);
-  };
-
-  if (loading) {
-    return <div>Carregando...</div>;
-  }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-4 sm:p-6 space-y-6 pb-20 md:pb-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Gerenciamento de Clientes</h1>
-          <p className="text-gray-600">Gerencie seus clientes e relacionamentos</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            Gerenciamento de Clientes
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm sm:text-base">
+            Gerencie seus clientes e acompanhe o histórico de trabalhos
+          </p>
         </div>
-        <Button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Cliente
+        <Button
+          onClick={() => setShowAddModal(true)}
+          className="w-full sm:w-fit flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline">Adicionar Cliente</span>
+          <span className="sm:hidden">Adicionar</span>
         </Button>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar clientes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredClients.map((client) => (
-          <Card key={client.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">{client.name}</CardTitle>
-                <Badge variant="secondary">Cliente</Badge>
+      {/* Card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4">
+            <CardTitle className="text-lg sm:text-xl">
+              Lista de Clientes ({filteredClients.length})
+            </CardTitle>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar por nome, email ou telefone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">Carregando clientes...</div>
+          ) : filteredClients.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">
+                {searchTerm
+                  ? 'Nenhum cliente encontrado com os critérios de busca.'
+                  : 'Nenhum cliente cadastrado ainda.'}
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead>CNPJ</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClients.map((client) => (
+                      <TableRow key={client.id}>
+                        <TableCell className="font-medium">{client.name}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {client.phone && (
+                              <div className="flex items-center gap-1 text-sm">
+                                <Phone className="w-3 h-3" />
+                                {client.phone}
+                              </div>
+                            )}
+                            {client.email && (
+                              <div className="flex items-center gap-1 text-sm">
+                                <Mail className="w-3 h-3" />
+                                {client.email}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {client.cnpj && (
+                            <Badge variant="outline">{client.cnpj}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewContracts(client)}
+                              title="Contratos"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewDetails(client)}
+                              title="Detalhes"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(client)}
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(client.id)}
+                              className="text-red-600 hover:text-red-700"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {client.email && (
-                <p className="text-sm text-gray-600">
-                  <strong>Email:</strong> {client.email}
-                </p>
-              )}
-              {client.phone && (
-                <p className="text-sm text-gray-600">
-                  <strong>Telefone:</strong> {client.phone}
-                </p>
-              )}
-              {client.cnpj && (
-                <p className="text-sm text-gray-600">
-                  <strong>CNPJ:</strong> {client.cnpj}
-                </p>
-              )}
-              
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenDetails(client)}
-                  className="flex items-center gap-1"
-                >
-                  <Eye className="h-3 w-3" />
-                  Ver
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenEdit(client)}
-                  className="flex items-center gap-1"
-                >
-                  <Edit className="h-3 w-3" />
-                  Editar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenContracts(client)}
-                  className="flex items-center gap-1"
-                >
-                  <FileText className="h-3 w-3" />
-                  Contratos
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenJobHistory(client)}
-                  className="flex items-center gap-1"
-                >
-                  <History className="h-3 w-3" />
-                  Histórico
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => handleDeleteClient(client.id)}
-                  className="flex items-center gap-1"
-                >
-                  <Trash className="h-3 w-3" />
-                  Excluir
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
-      {filteredClients.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            {searchTerm ? 'Nenhum cliente encontrado com esse termo.' : 'Nenhum cliente cadastrado ainda.'}
-          </p>
-        </div>
-      )}
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-4">
+                {filteredClients.map((client) => (
+                  <Card key={client.id} className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-lg">{client.name}</h3>
+                        </div>
+                        {client.cnpj && (
+                          <Badge variant="outline" className="text-xs">
+                            {client.cnpj}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        {client.phone && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="w-4 h-4 text-gray-500" />
+                            {client.phone}
+                          </div>
+                        )}
+                        {client.email && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="w-4 h-4 text-gray-500" />
+                            {client.email}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-1 pt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewContracts(client)}
+                          className="flex flex-col items-center gap-1 p-2 h-auto"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span className="text-xs">Contratos</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(client)}
+                          className="flex flex-col items-center gap-1 p-2 h-auto"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span className="text-xs">Detalhes</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(client)}
+                          className="flex flex-col items-center gap-1 p-2 h-auto"
+                        >
+                          <Edit className="w-4 h-4" />
+                          <span className="text-xs">Editar</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(client.id)}
+                          className="flex flex-col items-center gap-1 p-2 h-auto text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span className="text-xs">Excluir</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <AddClientModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onClientAdded={fetchClients}
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => {
+          loadClients();
+          setShowAddModal(false);
+        }}
       />
 
       {selectedClient && (
         <>
           <EditClientModal
-            isOpen={isEditModalOpen}
+            isOpen={showEditModal}
             onClose={() => {
-              setIsEditModalOpen(false);
+              setShowEditModal(false);
+              setSelectedClient(null);
+            }}
+            onSuccess={() => {
+              loadClients();
+              setShowEditModal(false);
               setSelectedClient(null);
             }}
             client={selectedClient}
-            onClientUpdated={fetchClients}
           />
 
           <ClientDetailsModal
-            isOpen={isDetailsModalOpen}
+            isOpen={showDetailsModal}
             onClose={() => {
-              setIsDetailsModalOpen(false);
+              setShowDetailsModal(false);
               setSelectedClient(null);
             }}
             client={selectedClient}
           />
 
           <ClientContractsModal
-            isOpen={isContractsModalOpen}
+            isOpen={showContractsModal}
             onClose={() => {
-              setIsContractsModalOpen(false);
-              setSelectedClient(null);
-            }}
-            client={selectedClient}
-          />
-
-          <ClientJobHistory
-            isOpen={isJobHistoryModalOpen}
-            onClose={() => {
-              setIsJobHistoryModalOpen(false);
+              setShowContractsModal(false);
               setSelectedClient(null);
             }}
             client={selectedClient}

@@ -18,33 +18,31 @@ const FinancialManagement: React.FC = () => {
 
   if (!hasPremiumAccess) {
     return (
-      <div className="p-6">
-        <PremiumFeatureBlock
-          feature="Sistema Financeiro Completo"
-          requiredPlan="premium"
-          className="max-w-2xl mx-auto mt-8"
-        >
-          <div className="text-center p-8">
-            <TrendingUp className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Gestão Financeira</h3>
-            <p className="text-gray-600">
-              Controle completo das suas receitas, despesas e reserve inteligentemente para seus objetivos.
-            </p>
-          </div>
-        </PremiumFeatureBlock>
-      </div>
+      <PremiumFeatureBlock
+        feature="Sistema Financeiro Completo"
+        requiredPlan="premium"
+        className="max-w-2xl mx-auto mt-8"
+      >
+        <div className="text-center p-8">
+          <TrendingUp className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Gestão Financeira</h3>
+          <p className="text-gray-600">
+            Controle completo das suas receitas, despesas e reserve inteligentemente para seus objetivos.
+          </p>
+        </div>
+      </PremiumFeatureBlock>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 pb-20 md:pb-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             Gestão Financeira
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-gray-600 dark:text-gray-400">
             Controle suas receitas e despesas
           </p>
         </div>

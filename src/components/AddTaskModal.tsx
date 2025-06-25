@@ -1,237 +1,173 @@
-
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import ClientSelector from './ClientSelector';
-import AddClientModal from './clients/AddClientModal';
-import { Job } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
-import { useUsageTracking } from '@/hooks/useUsageTracking';
+import { Plus, Save } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useApp } from '../contexts/AppContext';
+import { toast } from '@/hooks/use-toast';
 
 interface AddTaskModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onAdd: (task: Job) => Promise<void>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const AddTaskModal = ({ isOpen, onClose, onAdd }: AddTaskModalProps) => {
-  const [formData, setFormData] = useState<Job>({
+const AddTaskModal = ({ open, onOpenChange }: AddTaskModalProps) => {
+  const { addTask } = useApp();
+  const [formData, setFormData] = useState({
+    title: '',
     description: '',
-    client: '',
-    client_id: '',
-    event_date: '',
-    estimated_hours: 0,
-    difficulty_level: 'médio',
-    logistics: 0,
-    equipment: 0,
-    assistance: 0,
-    status: 'pendente',
-    category: '',
-    discount_value: 0,
-    total_costs: 0,
-    service_value: 0,
-    value_with_discount: 0,
-    profit_margin: 30,
+    priority: 'média' as 'baixa' | 'média' | 'alta',
+    dueDate: '',
+    status: 'todo' as 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision'
   });
-  const [eventDate, setEventDate] = useState<Date>();
-  const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
-  const { toast } = useToast();
-  const { user } = useSupabaseAuth();
-  const { checkUsageLimit, incrementUsage } = useUsageTracking();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!user) {
+  const handleSave = async () => {
+    if (!formData.title.trim()) {
       toast({
         title: "Erro",
-        description: "Usuário não autenticado",
-        variant: "destructive",
+        description: "O título da tarefa é obrigatório.",
+        variant: "destructive"
       });
       return;
     }
-
-    // Check usage limit before creating
-    const canCreate = await checkUsageLimit('jobs');
-    if (!canCreate) {
-      return; // checkUsageLimit already shows the appropriate toast
-    }
-
-    if (!formData.description.trim() || !formData.client.trim()) {
-      toast({
-        title: "Erro",
-        description: "Descrição e cliente são obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const jobData: Job = {
-      ...formData,
-      user_id: user.id,
-      event_date: eventDate ? eventDate.toISOString() : undefined,
-    };
 
     try {
-      await onAdd(jobData);
-      // Increment usage after successful creation
-      await incrementUsage('jobs');
-      
+      // Criar objeto da task, removendo campos undefined/vazios
+      const taskData: any = {
+        title: formData.title,
+        description: formData.description || '',
+        priority: formData.priority,
+        completed: false,
+        status: formData.status
+      };
+
+      // Só adicionar dueDate se não for vazio
+      if (formData.dueDate && formData.dueDate.trim()) {
+        taskData.dueDate = formData.dueDate;
+      }
+
+      await addTask(taskData);
+
+      toast({
+        title: "Tarefa Adicionada",
+        description: "A tarefa foi criada com sucesso.",
+      });
+
       // Reset form
       setFormData({
+        title: '',
         description: '',
-        client: '',
-        client_id: '',
-        event_date: '',
-        estimated_hours: 0,
-        difficulty_level: 'médio',
-        logistics: 0,
-        equipment: 0,
-        assistance: 0,
-        status: 'pendente',
-        category: '',
-        discount_value: 0,
-        total_costs: 0,
-        service_value: 0,
-        value_with_discount: 0,
-        profit_margin: 30,
+        priority: 'média',
+        dueDate: '',
+        status: 'todo'
       });
-      setEventDate(undefined);
-      onClose();
+      onOpenChange(false);
     } catch (error) {
-      console.error('Erro ao adicionar tarefa:', error);
+      console.error('❌ Erro ao adicionar task:', error);
       toast({
         title: "Erro",
-        description: "Erro ao adicionar tarefa. Tente novamente.",
-        variant: "destructive",
+        description: "Erro ao criar tarefa.",
+        variant: "destructive"
       });
     }
-  };
-
-  const handleClientChange = (clientId: string) => {
-    setFormData({ ...formData, client_id: clientId });
-  };
-
-  const handleClientAdded = () => {
-    // Refresh client list if needed
   };
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar Nova Tarefa</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="description">Descrição *</Label>
-              <Textarea
-                id="description"
-                placeholder="Descrição da tarefa"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
-
-            <ClientSelector
-              value={formData.client_id}
-              onValueChange={handleClientChange}
-              onOpenAddModal={() => setIsAddClientModalOpen(true)}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Plus className="h-5 w-5" />
+            Nova Tarefa
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="task-title">Título *</Label>
+            <Input
+              id="task-title"
+              value={formData.title}
+              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              placeholder="Ex: Finalizar edição do vídeo"
+              className="text-sm"
             />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="task-description">Descrição</Label>
+            <Textarea
+              id="task-description"
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              placeholder="Detalhes da tarefa..."
+              className="min-h-[60px] text-sm"
+            />
+          </div>
 
-            <div className="grid gap-2">
-              <Label>Data do Evento</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !eventDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {eventDate ? format(eventDate, "PPP") : "Selecione uma data"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={eventDate}
-                    onSelect={setEventDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="category">Categoria</Label>
-              <Input
-                id="category"
-                placeholder="Categoria do trabalho"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="difficulty_level">Nível de Dificuldade</Label>
-              <Select
-                value={formData.difficulty_level}
-                onValueChange={(value: 'fácil' | 'médio' | 'complicado' | 'difícil') => 
-                  setFormData({ ...formData, difficulty_level: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a dificuldade" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="task-priority">Prioridade</Label>
+              <Select value={formData.priority} onValueChange={(value: 'baixa' | 'média' | 'alta') => setFormData({...formData, priority: value})}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fácil">Fácil</SelectItem>
-                  <SelectItem value="médio">Médio</SelectItem>
-                  <SelectItem value="complicado">Complicado</SelectItem>
-                  <SelectItem value="difícil">Difícil</SelectItem>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                  <SelectItem value="média">Média</SelectItem>
+                  <SelectItem value="alta">Alta</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="estimated_hours">Horas Estimadas</Label>
+            <div className="space-y-2">
+              <Label htmlFor="task-dueDate">Data de Vencimento</Label>
               <Input
-                id="estimated_hours"
-                type="number"
-                placeholder="0"
-                value={formData.estimated_hours}
-                onChange={(e) => setFormData({ ...formData, estimated_hours: parseInt(e.target.value) || 0 })}
+                id="task-dueDate"
+                type="date"
+                value={formData.dueDate}
+                onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+                className="text-sm"
               />
             </div>
-          </form>
-          <DialogFooter>
-            <Button type="submit" onClick={handleSubmit}>
-              Adicionar Tarefa
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
 
-      <AddClientModal
-        isOpen={isAddClientModalOpen}
-        onClose={() => setIsAddClientModalOpen(false)}
-        onClientAdded={handleClientAdded}
-      />
-    </>
+          <div className="space-y-2">
+            <Label htmlFor="task-status">Status</Label>
+            <Select value={formData.status} onValueChange={(value: 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision') => setFormData({...formData, status: value})}>
+              <SelectTrigger className="text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todo">A fazer</SelectItem>
+                <SelectItem value="editing">Em edição</SelectItem>
+                <SelectItem value="urgent">Urgente</SelectItem>
+                <SelectItem value="delivered">Entregue</SelectItem>
+                <SelectItem value="revision">Alteração</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-2 pt-4">
+            <Button onClick={handleSave} className="flex-1 order-1">
+              <Save className="h-4 w-4 mr-2" />
+              Salvar Tarefa
+            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="order-2 md:order-2">
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
