@@ -1,182 +1,32 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, TrendingDown, DollarSign, Plus, ArrowUpDown, Edit, FileText, Filter } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { usePrivacy } from '@/contexts/PrivacyContext';
-import { useNotifications } from '@/hooks/useNotifications';
+import { Plus, TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
+import { useApp } from '@/contexts/AppContext';
 import AddIncomeModal from './AddIncomeModal';
 import AddExpenseModal from './AddExpenseModal';
 import EditTransactionModal from './EditTransactionModal';
 
-interface FinancialTransaction {
-  id: string;
-  user_id: string;
-  description: string;
-  value: number;
-  category: string;
-  month: string;
-  due_date?: string;
-  notification_enabled?: boolean;
-  created_at: string;
-}
-
-interface FinancialSummary {
-  totalIncome: number;
-  totalExpenses: number;
-  balance: number;
-  pendingIncome: number;
-  pendingExpenses: number;
-}
-
 const FinancialOverview: React.FC = () => {
-  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<FinancialTransaction[]>([]);
-  const [summary, setSummary] = useState<FinancialSummary>({
-    totalIncome: 0,
-    totalExpenses: 0,
-    balance: 0,
-    pendingIncome: 0,
-    pendingExpenses: 0
-  });
-  const [loading, setLoading] = useState(true);
+  const { monthlyCosts } = useApp();
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<FinancialTransaction | null>(null);
-  
-  // Filtros
-  const [filterType, setFilterType] = useState('all'); // all, income, expense
-  const [filterCategory, setFilterCategory] = useState('');
-  const [filterDateFrom, setFilterDateFrom] = useState('');
-  const [filterDateTo, setFilterDateTo] = useState('');
-  const [filterPaid, setFilterPaid] = useState('all'); // all, paid, pending
 
-  const { user } = useSupabaseAuth();
-  const { toast } = useToast();
-  const { formatValue } = usePrivacy();
-  const { scheduleNotification } = useNotifications();
+  // Filter financial transactions only
+  const financialTransactions = monthlyCosts.filter(cost => 
+    cost.description?.includes('FINANCIAL_INCOME:') || 
+    cost.description?.includes('FINANCIAL_EXPENSE:')
+  );
 
-  const loadTransactions = async () => {
-    if (!user) return;
+  const incomes = financialTransactions.filter(t => t.description?.includes('FINANCIAL_INCOME:'));
+  const expenses = financialTransactions.filter(t => t.description?.includes('FINANCIAL_EXPENSE:'));
 
-    try {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', user.id)
-        .or('description.ilike.FINANCIAL_INCOME:%,description.ilike.FINANCIAL_EXPENSE:%')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const transactionData = data || [];
-      setTransactions(transactionData);
-      applyFilters(transactionData);
-
-      // Schedule notifications for transactions with due dates
-      transactionData.forEach(async (transaction: FinancialTransaction) => {
-        if (transaction.due_date && transaction.notification_enabled) {
-          const transactionDetails = parseTransactionData(transaction.description);
-          if (!transactionDetails.isPaid) {
-            await scheduleNotification(transaction);
-          }
-        }
-      });
-
-      // Calculate summary from financial transactions
-      const incomeTransactions = transactionData.filter((t: FinancialTransaction) => 
-        t.description.includes('FINANCIAL_INCOME:') && t.value < 0
-      );
-      const expenseTransactions = transactionData.filter((t: FinancialTransaction) => 
-        t.description.includes('FINANCIAL_EXPENSE:') && t.value > 0
-      );
-
-      const totalIncome = Math.abs(incomeTransactions.reduce((sum, t) => sum + t.value, 0));
-      const totalExpenses = expenseTransactions.reduce((sum, t) => sum + t.value, 0);
-
-      // Calculate pending amounts
-      const pendingIncomeTransactions = incomeTransactions.filter(t => 
-        !t.description.includes('Paid: true')
-      );
-      const pendingExpenseTransactions = expenseTransactions.filter(t => 
-        !t.description.includes('Paid: true')
-      );
-
-      const pendingIncome = Math.abs(pendingIncomeTransactions.reduce((sum, t) => sum + t.value, 0));
-      const pendingExpenses = pendingExpenseTransactions.reduce((sum, t) => sum + t.value, 0);
-
-      setSummary({
-        totalIncome,
-        totalExpenses,
-        balance: totalIncome - totalExpenses,
-        pendingIncome,
-        pendingExpenses
-      });
-    } catch (error) {
-      console.error('Erro ao carregar transações:', error);
-      setTransactions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyFilters = (transactionData: FinancialTransaction[] = transactions) => {
-    let filtered = [...transactionData];
-
-    // Filter by type (income/expense)
-    if (filterType === 'income') {
-      filtered = filtered.filter(t => t.description.includes('FINANCIAL_INCOME:'));
-    } else if (filterType === 'expense') {
-      filtered = filtered.filter(t => t.description.includes('FINANCIAL_EXPENSE:'));
-    }
-
-    // Filter by category
-    if (filterCategory) {
-      filtered = filtered.filter(t => t.category.toLowerCase().includes(filterCategory.toLowerCase()));
-    }
-
-    // Filter by date range
-    if (filterDateFrom) {
-      filtered = filtered.filter(t => {
-        const transactionData = parseTransactionData(t.description);
-        const transactionDate = transactionData.date || t.created_at.split('T')[0];
-        return transactionDate >= filterDateFrom;
-      });
-    }
-
-    if (filterDateTo) {
-      filtered = filtered.filter(t => {
-        const transactionData = parseTransactionData(t.description);
-        const transactionDate = transactionData.date || t.created_at.split('T')[0];
-        return transactionDate <= filterDateTo;
-      });
-    }
-
-    // Filter by payment status
-    if (filterPaid !== 'all') {
-      filtered = filtered.filter(t => {
-        const transactionData = parseTransactionData(t.description);
-        const isPaid = transactionData.isPaid;
-        return filterPaid === 'paid' ? isPaid : !isPaid;
-      });
-    }
-
-    setFilteredTransactions(filtered);
-  };
-
-  useEffect(() => {
-    loadTransactions();
-  }, [user]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [filterType, filterCategory, filterDateFrom, filterDateTo, filterPaid, transactions]);
+  const totalIncome = incomes.reduce((sum, income) => sum + Math.abs(income.value), 0);
+  const totalExpenses = expenses.reduce((sum, expense) => sum + Math.abs(expense.value), 0);
+  const balance = totalIncome - totalExpenses;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -185,344 +35,143 @@ const FinancialOverview: React.FC = () => {
     }).format(value);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+  const getTransactionTitle = (description: string) => {
+    if (description?.includes('FINANCIAL_INCOME:')) {
+      return description.replace('FINANCIAL_INCOME:', '').trim();
+    }
+    if (description?.includes('FINANCIAL_EXPENSE:')) {
+      return description.replace('FINANCIAL_EXPENSE:', '').trim();
+    }
+    return description;
   };
 
-  const parseTransactionData = (description: string) => {
-    const isIncome = description.includes('FINANCIAL_INCOME:');
-    const parts = description.split(' | ');
-    const mainDesc = parts[0].replace('FINANCIAL_INCOME: ', '').replace('FINANCIAL_EXPENSE: ', '');
-    const payment = parts.find(p => p.startsWith('Payment:'))?.replace('Payment: ', '') || '';
-    const clientOrSupplier = parts.find(p => p.startsWith('Client:') || p.startsWith('Supplier:'))?.split(': ')[1] || '';
-    const date = parts.find(p => p.startsWith('Date:'))?.replace('Date: ', '') || '';
-    const isPaid = parts.find(p => p.startsWith('Paid:'))?.replace('Paid: ', '') === 'true';
-
-    return {
-      isIncome,
-      description: mainDesc,
-      paymentMethod: payment,
-      clientOrSupplier,
-      date,
-      isPaid
-    };
-  };
-
-  const handleEditTransaction = (transaction: FinancialTransaction) => {
-    setSelectedTransaction(transaction);
+  const handleEditTransaction = (transaction: any) => {
+    setEditingTransaction(transaction);
     setShowEditModal(true);
   };
 
-  const exportToPDF = () => {
-    // Create PDF content
-    const content = filteredTransactions.map(transaction => {
-      const transactionData = parseTransactionData(transaction.description);
-      return {
-        date: transactionData.date || formatDate(transaction.created_at),
-        type: transactionData.isIncome ? 'Entrada' : 'Saída',
-        description: transactionData.description,
-        category: transaction.category,
-        amount: formatValue(Math.abs(transaction.value)),
-        paymentMethod: transactionData.paymentMethod,
-        clientSupplier: transactionData.clientOrSupplier,
-        status: transactionData.isPaid ? 'Pago' : 'Pendente'
-      };
-    });
-
-    // Simple implementation - in a real app, you'd use a PDF library like jsPDF
-    const dataStr = JSON.stringify(content, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `transacoes_financeiras_${new Date().toISOString().split('T')[0]}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-
-    toast({
-      title: "Exportação",
-      description: "Dados exportados com sucesso! (Em formato JSON para demonstração)",
-    });
-  };
-
-  const clearFilters = () => {
-    setFilterType('all');
-    setFilterCategory('');
-    setFilterDateFrom('');
-    setFilterDateTo('');
-    setFilterPaid('all');
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Header com Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Entradas</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatValue(summary.totalIncome)}
+                <p className="text-xs sm:text-sm font-medium text-green-800">Receitas</p>
+                <p className="text-lg sm:text-xl font-bold text-green-600 break-all">
+                  {formatCurrency(totalIncome)}
                 </p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-600" />
+              <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="bg-gradient-to-r from-red-50 to-pink-50 border-red-200">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Saídas</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {formatValue(summary.totalExpenses)}
+                <p className="text-xs sm:text-sm font-medium text-red-800">Despesas</p>
+                <p className="text-lg sm:text-xl font-bold text-red-600 break-all">
+                  {formatCurrency(totalExpenses)}
                 </p>
               </div>
-              <TrendingDown className="h-8 w-8 text-red-600" />
+              <TrendingDown className="h-6 w-6 sm:h-8 sm:w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className={`bg-gradient-to-r ${balance >= 0 ? 'from-blue-50 to-indigo-50 border-blue-200' : 'from-orange-50 to-red-50 border-orange-200'}`}>
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Saldo</p>
-                <p className={`text-2xl font-bold ${summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatValue(summary.balance)}
+                <p className={`text-xs sm:text-sm font-medium ${balance >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>Saldo</p>
+                <p className={`text-lg sm:text-xl font-bold break-all ${balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                  {formatCurrency(balance)}
                 </p>
               </div>
-              <DollarSign className="h-8 w-8 text-blue-600" />
+              <Wallet className={`h-6 w-6 sm:h-8 sm:w-8 ${balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">A Receber</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {formatValue(summary.pendingIncome)}
+                <p className="text-xs sm:text-sm font-medium text-purple-800">Transações</p>
+                <p className="text-lg sm:text-xl font-bold text-purple-600">
+                  {financialTransactions.length}
                 </p>
               </div>
-              <ArrowUpDown className="h-8 w-8 text-orange-600" />
+              <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            <div>
-              <label className="text-sm font-medium">Tipo</label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="income">Entradas</SelectItem>
-                  <SelectItem value="expense">Saídas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Categoria</label>
-              <Input
-                placeholder="Filtrar por categoria"
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Data Inicial</label>
-              <Input
-                type="date"
-                value={filterDateFrom}
-                onChange={(e) => setFilterDateFrom(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Data Final</label>
-              <Input
-                type="date"
-                value={filterDateTo}
-                onChange={(e) => setFilterDateTo(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Status</label>
-              <Select value={filterPaid} onValueChange={setFilterPaid}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="paid">Pagos</SelectItem>
-                  <SelectItem value="pending">Pendentes</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-end">
-              <Button variant="outline" onClick={clearFilters} className="w-full">
-                Limpar Filtros
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Botões de Ação - Responsivos */}
+      {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
         <Button 
-          onClick={() => setShowIncomeModal(true)} 
-          className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
+          onClick={() => setShowIncomeModal(true)}
+          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 flex items-center gap-2"
         >
-          <Plus className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Nova Entrada</span>
-          <span className="sm:hidden">Entrada</span>
+          <Plus className="h-4 w-4" />
+          <span className="text-sm sm:text-base">Adicionar Receita</span>
         </Button>
         <Button 
-          onClick={() => setShowExpenseModal(true)} 
-          variant="destructive"
-          className="flex-1 sm:flex-none"
+          onClick={() => setShowExpenseModal(true)}
+          className="w-full sm:w-auto bg-red-600 hover:bg-red-700 flex items-center gap-2"
         >
-          <Plus className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Nova Saída</span>
-          <span className="sm:hidden">Saída</span>
-        </Button>
-        <Button 
-          onClick={exportToPDF} 
-          variant="outline"
-          className="flex-1 sm:flex-none"
-        >
-          <FileText className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Exportar PDF</span>
-          <span className="sm:hidden">PDF</span>
+          <Plus className="h-4 w-4" />
+          <span className="text-sm sm:text-base">Adicionar Despesa</span>
         </Button>
       </div>
 
-      {/* Lista de Transações */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Transações Recentes ({filteredTransactions.length} de {transactions.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredTransactions.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Nenhuma transação encontrada com os filtros aplicados.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredTransactions.map((transaction) => {
-                const transactionData = parseTransactionData(transaction.description);
-                const hasDueDate = transaction.due_date && !transactionData.isPaid;
-                const isOverdue = hasDueDate && new Date(transaction.due_date!) < new Date();
-                
-                return (
-                  <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{transactionData.description}</h4>
-                        <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
-                          {transactionData.isIncome ? 'Entrada' : 'Saída'}
-                        </Badge>
-                        {!transactionData.isPaid && (
-                          <Badge variant="outline">Pendente</Badge>
-                        )}
-                        {hasDueDate && (
-                          <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
-                            {isOverdue ? 'Vencido' : 'A vencer'}
-                          </Badge>
-                        )}
-                        {transaction.notification_enabled && hasDueDate && (
-                          <Badge variant="outline" className="text-blue-600">
-                            🔔 Notificações
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
-                      </p>
-                      {transactionData.clientOrSupplier && (
-                        <p className="text-sm text-muted-foreground">
-                          {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
-                        </p>
-                      )}
-                      {transaction.due_date && (
-                        <p className="text-sm text-blue-600">
-                          Vencimento: {formatDate(transaction.due_date)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right flex items-center gap-2">
-                      <div>
-                        <p className={`font-bold ${transactionData.isIncome ? 'text-green-600' : 'text-red-600'}`}>
-                          {transactionData.isIncome ? '+' : '-'}{formatValue(Math.abs(transaction.value))}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {transactionData.paymentMethod}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditTransaction(transaction)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </div>
+      {/* Transactions List */}
+      <div className="grid gap-3 sm:gap-4">
+        {financialTransactions.length > 0 ? (
+          financialTransactions.map((transaction) => (
+            <Card key={transaction.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditTransaction(transaction)}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm sm:text-base truncate">
+                      {getTransactionTitle(transaction.description)}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      {transaction.category} • {new Date(transaction.month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-base sm:text-lg font-bold break-all ${transaction.description?.includes('FINANCIAL_INCOME:') ? 'text-green-600' : 'text-red-600'}`}>
+                      {transaction.description?.includes('FINANCIAL_INCOME:') ? '+' : '-'}{formatCurrency(Math.abs(transaction.value))}
+                    </span>
+                    <div className={`w-3 h-3 rounded-full ${transaction.description?.includes('FINANCIAL_INCOME:') ? 'bg-green-500' : 'bg-red-500'}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <Card>
+            <CardContent className="p-6 sm:p-8 text-center text-gray-500">
+              <DollarSign className="mx-auto h-10 w-10 sm:h-12 sm:w-12 mb-4" />
+              <p className="text-sm sm:text-base">Nenhuma transação registrada</p>
+              <p className="text-xs sm:text-sm text-gray-400 mt-1">Comece adicionando uma receita ou despesa</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
-      {/* Modais */}
-      <AddIncomeModal
-        isOpen={showIncomeModal}
-        onClose={() => setShowIncomeModal(false)}
-        onSuccess={loadTransactions}
-      />
-      <AddExpenseModal
-        isOpen={showExpenseModal}
-        onClose={() => setShowExpenseModal(false)}
-        onSuccess={loadTransactions}
-      />
-      <EditTransactionModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onSuccess={loadTransactions}
-        transaction={selectedTransaction}
+      {/* Modals */}
+      <AddIncomeModal open={showIncomeModal} onOpenChange={setShowIncomeModal} />
+      <AddExpenseModal open={showExpenseModal} onOpenChange={setShowExpenseModal} />
+      <EditTransactionModal 
+        open={showEditModal} 
+        onOpenChange={setShowEditModal} 
+        transaction={editingTransaction}
       />
     </div>
   );
