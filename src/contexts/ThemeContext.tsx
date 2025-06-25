@@ -1,97 +1,89 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Theme, UserSettings } from '@/types/theme';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Theme, UserSettings } from '../types';
 
 interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  userSettings: UserSettings;
-  updateUserSettings: (settings: Partial<UserSettings>) => void;
-  // Legacy properties that components are expecting
   isDark: boolean;
-  currentTheme: {
-    primary: string;
-    secondary: string;
-    accent: string;
-  };
+  currentTheme: Theme;
+  settings: UserSettings;
   toggleDarkMode: () => void;
-  changeTheme: (theme: Theme) => void;
+  changeTheme: (themeName: string) => void;
+  updateSettings: (settings: Partial<UserSettings>) => void;
 }
+
+const defaultThemes: Record<string, Theme> = {
+  'purple-blue': {
+    name: 'Roxo & Azul',
+    primary: 'from-purple-600 to-blue-600',
+    secondary: 'from-purple-100 to-blue-100',
+    accent: 'purple-600'
+  },
+  'green-blue': {
+    name: 'Verde & Azul',
+    primary: 'from-green-600 to-blue-600',
+    secondary: 'from-green-100 to-blue-100',
+    accent: 'green-600'
+  },
+  'orange-red': {
+    name: 'Laranja & Vermelho',
+    primary: 'from-orange-600 to-red-600',
+    secondary: 'from-orange-100 to-red-100',
+    accent: 'orange-600'
+  }
+};
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>('system');
-  const [userSettings, setUserSettings] = useState<UserSettings>({
-    theme: 'system',
+  const [settings, setSettings] = useState<UserSettings>({
+    theme: 'light',
+    colorTheme: 'purple-blue',
     notifications: true,
-    autoSave: true,
     language: 'pt-BR'
   });
 
-  const [isDark, setIsDark] = useState(false);
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('financeflow_settings');
+    if (savedSettings) {
+      setSettings(JSON.parse(savedSettings));
+    }
+  }, []);
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-
-    let effectiveTheme: 'light' | 'dark';
-    if (theme === 'system') {
-      effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    } else {
-      effectiveTheme = theme;
-    }
-    
-    root.classList.add(effectiveTheme);
-    setIsDark(effectiveTheme === 'dark');
-  }, [theme]);
-
-  const updateUserSettings = (settings: Partial<UserSettings>) => {
-    const newSettings = { ...userSettings, ...settings };
-    setUserSettings(newSettings);
-    if (settings.theme) {
-      setTheme(settings.theme);
-    }
-  };
+    localStorage.setItem('financeflow_settings', JSON.stringify(settings));
+    document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+  }, [settings]);
 
   const toggleDarkMode = () => {
-    const newTheme = isDark ? 'light' : 'dark';
-    setTheme(newTheme);
-    updateUserSettings({ theme: newTheme });
+    setSettings(prev => ({ ...prev, theme: prev.theme === 'light' ? 'dark' : 'light' }));
   };
 
-  const changeTheme = (newTheme: Theme) => {
-    setTheme(newTheme);
-    updateUserSettings({ theme: newTheme });
+  const changeTheme = (themeName: string) => {
+    setSettings(prev => ({ ...prev, colorTheme: themeName }));
   };
 
-  // Theme colors based on current theme
-  const currentTheme = {
-    primary: isDark ? 'from-purple-600 to-blue-600' : 'from-purple-600 to-blue-600',
-    secondary: isDark ? 'from-gray-800 to-gray-700' : 'from-gray-100 to-gray-200',
-    accent: isDark ? 'purple-400' : 'purple-600'
+  const updateSettings = (newSettings: Partial<UserSettings>) => {
+    setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
   return (
-    <ThemeContext.Provider value={{ 
-      theme, 
-      setTheme, 
-      userSettings, 
-      updateUserSettings,
-      isDark,
-      currentTheme,
+    <ThemeContext.Provider value={{
+      isDark: settings.theme === 'dark',
+      currentTheme: defaultThemes[settings.colorTheme],
+      settings,
       toggleDarkMode,
-      changeTheme
+      changeTheme,
+      updateSettings
     }}>
       {children}
     </ThemeContext.Provider>
   );
-};
-
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
 };

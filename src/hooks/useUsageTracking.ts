@@ -1,98 +1,76 @@
 
-import { useState, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { usageTrackingService } from '@/services/usageTrackingService';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  checkUserUsageLimit, 
-  incrementUserUsage, 
-  resetUserUsageCounters,
-  getUserUsageStats 
-} from '@/services/usageTrackingService';
 
 export const useUsageTracking = () => {
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
 
-  const checkUsageLimit = async (usageType: 'jobs' | 'projects'): Promise<boolean> => {
-    if (!user) return false;
-    
-    try {
-      setLoading(true);
-      const canUse = await checkUserUsageLimit(user.id, usageType);
-      
-      if (!canUse) {
-        toast({
-          title: "Limite atingido",
-          description: `Você atingiu o limite mensal de ${usageType}. Faça upgrade do seu plano para continuar.`,
-          variant: "destructive",
-        });
-      }
-      
-      return canUse;
-    } catch (error) {
-      console.error('Erro ao verificar limite de uso:', error);
-      return false;
-    } finally {
-      setLoading(false);
+  const incrementJobUsage = useCallback(async () => {
+    if (!user?.id) {
+      console.warn('Usuário não autenticado para incrementar uso de jobs');
+      return;
     }
-  };
 
-  const incrementUsage = async (usageType: 'jobs' | 'projects'): Promise<void> => {
-    if (!user) return;
-    
     try {
-      await incrementUserUsage(user.id, usageType);
+      await usageTrackingService.incrementUsage(user.id, 'job');
+      console.log('✅ Uso de job incrementado no banco de dados');
     } catch (error) {
-      console.error('Erro ao incrementar uso:', error);
-    }
-  };
-
-  const incrementJobUsage = async (): Promise<void> => {
-    await incrementUsage('jobs');
-  };
-
-  const incrementProjectUsage = async (): Promise<void> => {
-    await incrementUsage('projects');
-  };
-
-  const resetUsageCounters = async (): Promise<void> => {
-    if (!user) return;
-    
-    try {
-      await resetUserUsageCounters(user.id);
-      toast({
-        title: "Sucesso",
-        description: "Contadores de uso resetados com sucesso.",
-      });
-    } catch (error) {
-      console.error('Erro ao resetar contadores:', error);
+      console.error('❌ Erro ao incrementar uso de job:', error);
       toast({
         title: "Erro",
-        description: "Erro ao resetar contadores de uso.",
+        description: "Erro ao registrar uso. Tente novamente.",
         variant: "destructive",
       });
     }
-  };
+  }, [user?.id, toast]);
 
-  const getUsageStats = async () => {
-    if (!user) return null;
-    
-    try {
-      return await getUserUsageStats(user.id);
-    } catch (error) {
-      console.error('Erro ao buscar estatísticas de uso:', error);
-      return null;
+  const incrementProjectUsage = useCallback(async () => {
+    if (!user?.id) {
+      console.warn('Usuário não autenticado para incrementar uso de projetos');
+      return;
     }
-  };
+
+    try {
+      await usageTrackingService.incrementUsage(user.id, 'project');
+      console.log('✅ Uso de projeto incrementado no banco de dados');
+    } catch (error) {
+      console.error('❌ Erro ao incrementar uso de projeto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao registrar uso. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  }, [user?.id, toast]);
+
+  const resetUsageCounters = useCallback(async () => {
+    if (!user?.id) {
+      console.warn('Usuário não autenticado para resetar contadores');
+      return;
+    }
+
+    try {
+      await usageTrackingService.resetUsageForUser(user.id);
+      toast({
+        title: "Sucesso",
+        description: "Contadores de uso resetados com sucesso!",
+      });
+    } catch (error) {
+      console.error('❌ Erro ao resetar contadores:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao resetar contadores. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  }, [user?.id, toast]);
 
   return {
-    checkUsageLimit,
-    incrementUsage,
     incrementJobUsage,
     incrementProjectUsage,
-    resetUsageCounters,
-    getUsageStats,
-    loading
+    resetUsageCounters
   };
 };

@@ -11,46 +11,126 @@ export interface UsageRecord {
   updated_at: string;
 }
 
-// For now, provide mock implementations since user_usage_tracking table doesn't exist
 export const usageTrackingService = {
   async getUserUsage(userId: string, usageType: 'job' | 'project'): Promise<number> {
-    console.log(`Mock: Getting usage for ${userId}, type: ${usageType}`);
-    return 0; // Return 0 to allow unlimited usage for now
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      const { data, error } = await supabase
+        .from('user_usage_tracking')
+        .select('count')
+        .eq('user_id', userId)
+        .eq('usage_type', usageType)
+        .eq('reset_date', currentMonth)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      return data?.count || 0;
+    } catch (error) {
+      console.warn(`Erro ao buscar uso de ${usageType}:`, error);
+      return 0;
+    }
   },
 
   async incrementUsage(userId: string, usageType: 'job' | 'project'): Promise<void> {
-    console.log(`Mock: Incrementing usage for ${userId}, type: ${usageType}`);
-    // Mock implementation - do nothing for now
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      // Primeiro, tenta buscar o registro existente
+      const { data: existing, error: fetchError } = await supabase
+        .from('user_usage_tracking')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('usage_type', usageType)
+        .eq('reset_date', currentMonth)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existing) {
+        // Atualiza o contador existente
+        const { error: updateError } = await supabase
+          .from('user_usage_tracking')
+          .update({ 
+            count: existing.count + 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Cria um novo registro
+        const { error: insertError } = await supabase
+          .from('user_usage_tracking')
+          .insert({
+            user_id: userId,
+            usage_type: usageType,
+            count: 1,
+            reset_date: currentMonth
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      console.log(`✅ Incrementado uso de ${usageType} para usuário ${userId}`);
+    } catch (error) {
+      console.error(`❌ Erro ao incrementar uso de ${usageType}:`, error);
+      throw error;
+    }
   },
 
   async resetUsageForUser(userId: string): Promise<void> {
-    console.log(`Mock: Resetting usage for ${userId}`);
-    // Mock implementation - do nothing for now
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      const { error } = await supabase
+        .from('user_usage_tracking')
+        .update({ count: 0, updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('reset_date', currentMonth);
+
+      if (error) throw error;
+      
+      console.log(`✅ Reset de uso para usuário ${userId}`);
+    } catch (error) {
+      console.error('❌ Erro ao resetar uso:', error);
+      throw error;
+    }
   },
 
   async getAllUsageForUser(userId: string): Promise<{ jobs: number; projects: number }> {
-    console.log(`Mock: Getting all usage for ${userId}`);
-    return { jobs: 0, projects: 0 }; // Return 0 to allow unlimited usage for now
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      const { data, error } = await supabase
+        .from('user_usage_tracking')
+        .select('usage_type, count')
+        .eq('user_id', userId)
+        .eq('reset_date', currentMonth);
+
+      if (error) throw error;
+
+      const usage = { jobs: 0, projects: 0 };
+      
+      if (data) {
+        data.forEach(record => {
+          if (record.usage_type === 'job') {
+            usage.jobs = record.count;
+          } else if (record.usage_type === 'project') {
+            usage.projects = record.count;
+          }
+        });
+      }
+
+      return usage;
+    } catch (error) {
+      console.warn('Erro ao buscar uso total:', error);
+      return { jobs: 0, projects: 0 };
+    }
   }
-};
-
-// Export additional functions that the hook expects
-export const checkUserUsageLimit = async (userId: string, usageType: 'jobs' | 'projects'): Promise<boolean> => {
-  console.log(`Mock: Checking usage limit for ${userId}, type: ${usageType}`);
-  return true; // Always allow for now
-};
-
-export const incrementUserUsage = async (userId: string, usageType: 'jobs' | 'projects'): Promise<void> => {
-  console.log(`Mock: Incrementing user usage for ${userId}, type: ${usageType}`);
-  // Mock implementation - do nothing for now
-};
-
-export const resetUserUsageCounters = async (userId: string): Promise<void> => {
-  console.log(`Mock: Resetting user usage counters for ${userId}`);
-  // Mock implementation - do nothing for now
-};
-
-export const getUserUsageStats = async (userId: string) => {
-  console.log(`Mock: Getting usage stats for ${userId}`);
-  return { jobs: 0, projects: 0 }; // Return 0 to allow unlimited usage for now
 };
