@@ -162,6 +162,7 @@ interface AppContextType {
   getUpcomingNotifications: () => CostNotification[];
   markNotificationAsRead: (id: string) => Promise<void>;
   checkDueNotifications: () => void;
+  markAllNotificationsAsRead: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -970,6 +971,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const markAllNotificationsAsRead = async () => {
+    try {
+      // Update all notifications to read status
+      const updatedNotifications = notifications.map(notification => ({
+        ...notification,
+        isRead: true
+      }));
+      
+      setNotifications(updatedNotifications);
+      
+      // If using Supabase, update in database
+      if (user?.id) {
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', user.id)
+          .eq('is_read', false);
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
   // Task functions (mock for now - would need tasks table)
   const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
     const newTask: Task = {
@@ -1013,45 +1037,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProjects(prev => prev.filter(project => project.id !== id));
   };
 
+  const value = {
+    currentView,
+    setCurrentView,
+    sidebarOpen,
+    setSidebarOpen,
+    
+    // Data state
+    tasks,
+    jobs,
+    monthlyCosts,
+    workItems,
+    workRoutine,
+    projects,
+    notifications,
+    loading,
+    
+    // Functions
+    addTask,
+    updateTask,
+    deleteTask,
+    addJob,
+    updateJob,
+    deleteJob,
+    refreshJobs,
+    addMonthlyCost,
+    updateMonthlyCost,
+    deleteMonthlyCost,
+    addWorkItem,
+    updateWorkItem,
+    deleteWorkItem,
+    refreshWorkRoutine,
+    addProject,
+    updateProject,
+    deleteProject,
+    getUpcomingNotifications,
+    markNotificationAsRead,
+    checkDueNotifications,
+    markAllNotificationsAsRead,
+  };
+
   return (
-    <AppContext.Provider value={{
-      currentView,
-      setCurrentView,
-      sidebarOpen,
-      setSidebarOpen,
-      
-      // Data state
-      tasks,
-      jobs,
-      monthlyCosts,
-      workItems,
-      workRoutine,
-      projects,
-      notifications,
-      loading,
-      
-      // Functions
-      addTask,
-      updateTask,
-      deleteTask,
-      addJob,
-      updateJob,
-      deleteJob,
-      refreshJobs,
-      addMonthlyCost,
-      updateMonthlyCost,
-      deleteMonthlyCost,
-      addWorkItem,
-      updateWorkItem,
-      deleteWorkItem,
-      refreshWorkRoutine,
-      addProject,
-      updateProject,
-      deleteProject,
-      getUpcomingNotifications,
-      markNotificationAsRead,
-      checkDueNotifications,
-    }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );
