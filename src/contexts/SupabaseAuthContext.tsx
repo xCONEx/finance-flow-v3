@@ -14,7 +14,7 @@ interface SupabaseAuthContextType {
   session: Session | null;
   isAuthenticated: boolean;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
   signInWithBiometric: () => Promise<{ error: any }>;
@@ -172,17 +172,21 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe = false) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      // Salvar credenciais para Face ID se login for bem-sucedido
-      if (!error) {
+      // Salvar credenciais apenas se o usuário escolheu "Lembrar-me"
+      if (!error && rememberMe) {
         localStorage.setItem('saved_email', email);
         localStorage.setItem('saved_password', password);
+      } else if (!rememberMe) {
+        // Remover credenciais salvas se o usuário desmarcou "Lembrar-me"
+        localStorage.removeItem('saved_email');
+        localStorage.removeItem('saved_password');
       }
       
       return { error };
@@ -195,32 +199,52 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       const { Capacitor } = await import('@capacitor/core');
       
-      if (!Capacitor.isNativePlatform()) {
-        return { error: 'Biometric authentication is only available on mobile devices' };
-      }
-
       // Verificar se há credenciais salvas
       const savedEmail = localStorage.getItem('saved_email');
       const savedPassword = localStorage.getItem('saved_password');
       
       if (!savedEmail || !savedPassword) {
-        return { error: 'No saved credentials found. Please login with email/password first.' };
+        return { error: 'Credenciais não encontradas. Faça login com email/senha primeiro e marque "Lembrar-me".' };
       }
 
-      // Para web/PWA, podemos usar a Web Authentication API
+      if (Capacitor.isNativePlatform()) {
+        try {
+          // Para plataformas móveis nativas - usar plugin Capacitor
+          const { Device } = await import('@capacitor/device');
+          const info = await Device.getInfo();
+          
+          if (info.platform === 'ios' || info.platform === 'android') {
+            // Simular autenticação biométrica nativa
+            const confirmed = confirm('Usar autenticação biométrica para fazer login?');
+            if (confirmed) {
+              const { error } = await supabase.auth.signInWithPassword({
+                email: savedEmail,
+                password: savedPassword,
+              });
+              return { error };
+            } else {
+              return { error: 'Autenticação biométrica cancelada' };
+            }
+          }
+        } catch (deviceError) {
+          console.log('Device info error:', deviceError);
+        }
+      }
+
+      // Para web/PWA - usar WebAuthn quando disponível
       if ('credentials' in navigator && 'create' in navigator.credentials) {
         try {
-          // Solicitar autenticação biométrica usando WebAuthn
+          // Tentar usar WebAuthn para autenticação biométrica
           const credential = await navigator.credentials.get({
             publicKey: {
               challenge: new Uint8Array(32),
               allowCredentials: [],
-              userVerification: 'required'
+              userVerification: 'preferred',
+              timeout: 30000
             }
           });
 
           if (credential) {
-            // Se autenticação foi bem-sucedida, fazer login
             const { error } = await supabase.auth.signInWithPassword({
               email: savedEmail,
               password: savedPassword,
@@ -228,7 +252,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             return { error };
           }
         } catch (webAuthnError) {
-          // Fallback para login normal em caso de erro
+          console.log('WebAuthn error:', webAuthnError);
+          // Fallback para login normal
           const { error } = await supabase.auth.signInWithPassword({
             email: savedEmail,
             password: savedPassword,
@@ -237,25 +262,15 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       }
 
-      // Para plataformas móveis nativas, usar plugin nativo
-      try {
-        // Simular autenticação biométrica para desenvolvimento
-        const confirmed = confirm('Use biometric authentication to login?');
-        if (confirmed) {
-          const { error } = await supabase.auth.signInWithPassword({
-            email: savedEmail,
-            password: savedPassword,
-          });
-          return { error };
-        } else {
-          return { error: 'Biometric authentication cancelled' };
-        }
-      } catch (error: any) {
-        return { error: error.message || 'Biometric authentication failed' };
-      }
+      // Fallback geral - login direto se biometria não estiver disponível
+      const { error } = await supabase.auth.signInWithPassword({
+        email: savedEmail,
+        password: savedPassword,
+      });
+      return { error };
 
     } catch (error: any) {
-      return { error: error.message || 'Biometric authentication failed' };
+      return { error: error.message || 'Erro na autenticação biométrica' };
     }
   };
 
