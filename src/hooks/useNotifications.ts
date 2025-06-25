@@ -9,10 +9,22 @@ export const useNotifications = (monthlyCosts?: any[]) => {
   }, []);
 
   useEffect(() => {
-    // Agendar notificações para todos os custos com vencimento
+    // Schedule notifications only for regular monthly costs with due dates
     if (monthlyCosts && monthlyCosts.length > 0) {
-      monthlyCosts.forEach(cost => {
+      const regularCosts = monthlyCosts.filter(cost => 
+        !cost.description?.includes('FINANCIAL_INCOME:') && 
+        !cost.description?.includes('FINANCIAL_EXPENSE:') &&
+        !cost.description?.includes('RESERVE_') &&
+        !cost.description?.includes('Reserva:') &&
+        !cost.description?.includes('SMART_RESERVE') &&
+        cost.category !== 'Reserva' &&
+        cost.category !== 'Smart Reserve' &&
+        cost.category !== 'Reserve'
+      );
+
+      regularCosts.forEach(cost => {
         if (cost.dueDate && cost.notificationEnabled) {
+          console.log('📅 Scheduling notification for:', cost.description, 'Due:', cost.dueDate);
           notificationService.scheduleExpenseReminder(cost);
         }
       });
@@ -31,9 +43,14 @@ export const useNotifications = (monthlyCosts?: any[]) => {
     });
   };
 
+  const cancelExpenseNotifications = async (expenseId: string) => {
+    await notificationService.cancelExpenseNotifications(expenseId);
+  };
+
   return {
     scheduleNotification,
     sendImmediateNotification,
+    cancelExpenseNotifications,
     notificationService
   };
 };
