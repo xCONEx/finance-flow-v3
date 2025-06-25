@@ -355,5 +355,5 @@ return (
     />
   </div>
 );
-
+};
 export default FinancialOverview;
