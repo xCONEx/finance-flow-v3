@@ -1,171 +1,208 @@
-import React, { useState } from 'react';
-import { Plus, Save } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useApp } from '../contexts/AppContext';
-import { toast } from '@/hooks/use-toast';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Calendar } from "@/components/ui/calendar"
+import { CalendarIcon } from "lucide-react"
+import { format } from "date-fns"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { TaskStatus } from '@/types';
+import { useToast } from "@/hooks/use-toast"
+import { Job } from '@/types/project';
+import { useUsageTracking } from '@/hooks/useUsageTracking';
+import { useSubscriptionPermissions } from '@/hooks/useSubscriptionPermissions';
 
 interface AddTaskModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onAdd: (task: Job) => Promise<void>;
+  status?: TaskStatus;
+  context?: 'project' | 'client';
+  clientId?: string;
 }
 
-const AddTaskModal = ({ open, onOpenChange }: AddTaskModalProps) => {
-  const { addTask } = useApp();
+const AddTaskModal = ({ isOpen, onClose, onAdd, status, context, clientId }: AddTaskModalProps) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    priority: 'média' as 'baixa' | 'média' | 'alta',
-    dueDate: '',
-    status: 'todo' as 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision'
+    dueDate: undefined,
+    priority: 'baixa',
+    status: status || 'pendente',
+    context: context || 'project',
+    clientId: clientId || '',
   });
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast()
+  
+  const { incrementJobUsage } = useUsageTracking();
+  const { canCreateJob, refreshUsage } = useSubscriptionPermissions();
 
-  const handleSave = async () => {
-    if (!formData.title.trim()) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Verificar limite antes de criar
+    if (!canCreateJob) {
       toast({
-        title: "Erro",
-        description: "O título da tarefa é obrigatório.",
-        variant: "destructive"
+        title: "Limite atingido",
+        description: "Você atingiu o limite de jobs do seu plano. Faça upgrade para continuar.",
+        variant: "destructive",
       });
       return;
     }
 
+    if (!formData.title.trim()) {
+      toast({
+        title: "Erro",
+        description: "O título é obrigatório.",
+        variant: "destructive",
+      })
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      // Criar objeto da task, removendo campos undefined/vazios
-      const taskData: any = {
+      const newTask: Job = {
         title: formData.title,
-        description: formData.description || '',
+        description: formData.description,
+        dueDate: formData.dueDate ? formData.dueDate.toISOString() : new Date().toISOString(),
         priority: formData.priority,
-        completed: false,
-        status: formData.status
+        status: formData.status,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        companyId: 'fakeCompanyId', // TODO: pegar do contexto
+        links: [],
+        client: formData.clientId,
       };
 
-      // Só adicionar dueDate se não for vazio
-      if (formData.dueDate && formData.dueDate.trim()) {
-        taskData.dueDate = formData.dueDate;
+      await onAdd(newTask);
+      
+      // Incrementar contador de uso apenas se o job foi aprovado
+      if (formData.status === 'aprovado') {
+        await incrementJobUsage();
+        await refreshUsage(); // Atualizar dados na UI
       }
 
-      await addTask(taskData);
-
       toast({
-        title: "Tarefa Adicionada",
-        description: "A tarefa foi criada com sucesso.",
-      });
-
-      // Reset form
+        title: "Sucesso",
+        description: "Tarefa adicionada com sucesso!",
+      })
+      onClose();
       setFormData({
         title: '',
         description: '',
-        priority: 'média',
-        dueDate: '',
-        status: 'todo'
+        dueDate: undefined,
+        priority: 'baixa',
+        status: status || 'pendente',
+        context: context || 'project',
+        clientId: clientId || '',
       });
-      onOpenChange(false);
     } catch (error) {
-      console.error('❌ Erro ao adicionar task:', error);
+      console.error("Erro ao adicionar tarefa:", error);
       toast({
         title: "Erro",
-        description: "Erro ao criar tarefa.",
-        variant: "destructive"
-      });
+        description: "Erro ao adicionar tarefa. Tente novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <Plus className="h-5 w-5" />
-            Nova Tarefa
-          </DialogTitle>
+          <DialogTitle>Adicionar Tarefa</DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="task-title">Título *</Label>
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="title">Título</Label>
             <Input
-              id="task-title"
+              id="title"
+              placeholder="Nome da tarefa"
               value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
-              placeholder="Ex: Finalizar edição do vídeo"
-              className="text-sm"
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="task-description">Descrição</Label>
+          <div className="grid gap-2">
+            <Label htmlFor="description">Descrição</Label>
             <Textarea
-              id="task-description"
+              id="description"
+              placeholder="Detalhes da tarefa"
               value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              placeholder="Detalhes da tarefa..."
-              className="min-h-[60px] text-sm"
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="task-priority">Prioridade</Label>
-              <Select value={formData.priority} onValueChange={(value: 'baixa' | 'média' | 'alta') => setFormData({...formData, priority: value})}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="média">Média</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="task-dueDate">Data de Vencimento</Label>
-              <Input
-                id="task-dueDate"
-                type="date"
-                value={formData.dueDate}
-                onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                className="text-sm"
-              />
-            </div>
+          <div className="grid gap-2">
+            <Label>Data de Entrega</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={
+                    "w-[240px] justify-start text-left font-normal" +
+                    (formData.dueDate ? "" : " text-muted-foreground")
+                  }
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.dueDate ? (
+                    format(formData.dueDate, "PPP")
+                  ) : (
+                    <span>Escolha uma data</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="center" side="bottom">
+                <Calendar
+                  mode="single"
+                  selected={formData.dueDate}
+                  onSelect={(date) => setFormData({ ...formData, dueDate: date })}
+                  disabled={(date) =>
+                    date < new Date()
+                  }
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="task-status">Status</Label>
-            <Select value={formData.status} onValueChange={(value: 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision') => setFormData({...formData, status: value})}>
-              <SelectTrigger className="text-sm">
-                <SelectValue />
+          <div className="grid gap-2">
+            <Label htmlFor="priority">Prioridade</Label>
+            <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value as "baixa" | "media" | "alta" })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a prioridade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todo">A fazer</SelectItem>
-                <SelectItem value="editing">Em edição</SelectItem>
-                <SelectItem value="urgent">Urgente</SelectItem>
-                <SelectItem value="delivered">Entregue</SelectItem>
-                <SelectItem value="revision">Alteração</SelectItem>
+                <SelectItem value="baixa">Baixa</SelectItem>
+                <SelectItem value="media">Média</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex flex-col md:flex-row gap-2 pt-4">
-            <Button onClick={handleSave} className="flex-1 order-1">
-              <Save className="h-4 w-4 mr-2" />
-              Salvar Tarefa
-            </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="order-2 md:order-2">
-              Cancelar
-            </Button>
+          <div className="grid gap-2">
+            <Label htmlFor="status">Status</Label>
+            <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as TaskStatus })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pendente">Pendente</SelectItem>
+                <SelectItem value="em andamento">Em Andamento</SelectItem>
+                <SelectItem value="concluida">Concluída</SelectItem>
+                <SelectItem value="revisao">Revisão</SelectItem>
+                <SelectItem value="aprovado">Aprovado</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
+        </form>
+        <DialogFooter>
+          <Button type="submit" onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Adicionando...' : 'Adicionar'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

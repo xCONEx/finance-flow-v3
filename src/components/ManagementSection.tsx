@@ -11,12 +11,12 @@ const ManagementSection = () => {
   const [activeTab, setActiveTab] = useState('costs');
 
   return (
-   <div className="p-4 sm:p-6 space-y-6 pb-20 md:pb-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 pb-20 md:pb-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
           Gerenciamento
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm sm:text-base">
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
           Gerencie seus custos, itens e rotina de trabalho
         </p>
       </div>
@@ -37,15 +37,15 @@ const ManagementSection = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="costs" className="mt-6">
+        <TabsContent value="costs" className="mt-4 sm:mt-6">
           <MonthlyCosts />
         </TabsContent>
 
-        <TabsContent value="items" className="mt-6">
+        <TabsContent value="items" className="mt-4 sm:mt-6">
           <WorkItems />
         </TabsContent>
 
-        <TabsContent value="routine" className="mt-6">
+        <TabsContent value="routine" className="mt-4 sm:mt-6">
           <WorkRoutine />
         </TabsContent>
       </Tabs>
