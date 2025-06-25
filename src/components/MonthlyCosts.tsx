@@ -7,12 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { useApp } from '../contexts/AppContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { toast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/useNotifications';
 import ExpenseModal from './ExpenseModal';
 import { generateExpensesPDF } from '../utils/pdfGenerator';
 
 const MonthlyCosts = () => {
   const { monthlyCosts, updateMonthlyCost, deleteMonthlyCost, loading } = useApp();
   const { user, profile } = useSupabaseAuth();
+  const { cancelExpenseNotifications, scheduleNotification } = useNotifications();
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingCost, setEditingCost] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -41,6 +43,9 @@ const MonthlyCosts = () => {
 
   const handleDelete = async (id: string) => {
     try {
+      // Cancel notifications for this expense before deleting
+      await cancelExpenseNotifications(id);
+      
       await deleteMonthlyCost(id);
       toast({
         title: "Custo Removido",
