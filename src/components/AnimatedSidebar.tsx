@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { motion, Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Home, Users, Building, Settings, DollarSign, BarChart, FileText, Shield, Bell, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -25,12 +25,12 @@ const AnimatedSidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }
     { icon: User, label: 'Perfil', path: '/profile' },
   ];
 
-  const sidebarVariants: Variants = {
+  const sidebarVariants = {
     expanded: { width: '16rem' },
     collapsed: { width: '4rem' }
   };
 
-  const itemVariants: Variants = {
+  const itemVariants = {
     expanded: { 
       opacity: 1, 
       x: 0,

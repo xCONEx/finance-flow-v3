@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { Client } from '@/types/client';
-import AddClientModal from './AddClientModal';
+import { AddClientModal } from './AddClientModal';
 
 interface ClientSelectorProps {
   onClientSelect: (client: Client) => void;
@@ -43,26 +43,14 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelect, placeho
     if (!user) return;
 
     try {
-      // Try clients table first, fall back to profiles
-      let { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email, phone, created_at, updated_at')
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;
-      
-      // Convert profiles to Client format
-      const clientsData: Client[] = (data || []).map(profile => ({
-        id: profile.id,
-        user_id: user.id,
-        name: profile.name || profile.email,
-        email: profile.email,
-        phone: profile.phone,
-        created_at: profile.created_at || new Date().toISOString(),
-        updated_at: profile.updated_at || new Date().toISOString()
-      }));
-      
-      setClients(clientsData);
+      setClients(data || []);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
     }
@@ -129,7 +117,7 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelect, placeho
       <AddClientModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onClientAdded={handleAddSuccess}
+        onSuccess={handleAddSuccess}
       />
     </div>
   );

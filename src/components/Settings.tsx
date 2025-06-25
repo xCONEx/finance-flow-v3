@@ -15,9 +15,9 @@ const Settings = () => {
   const { user, profile } = useSupabaseAuth();
 
   const themes = [
-    { id: 'light', name: 'Roxo & Azul', colors: 'from-purple-600 to-blue-600' },
-    { id: 'dark', name: 'Verde & Azul', colors: 'from-green-600 to-blue-600' },
-    { id: 'system', name: 'Laranja & Vermelho', colors: 'from-orange-600 to-red-600' }
+    { id: 'purple-blue', name: 'Roxo & Azul', colors: 'from-purple-600 to-blue-600' },
+    { id: 'green-blue', name: 'Verde & Azul', colors: 'from-green-600 to-blue-600' },
+    { id: 'orange-red', name: 'Laranja & Vermelho', colors: 'from-orange-600 to-red-600' }
   ];
 
   const isCompanyUser = profile?.user_type === 'company_owner' || profile?.user_type === 'employee';
@@ -149,15 +149,15 @@ const Settings = () => {
                       <div
                         key={theme.id}
                         className={`p-3 md:p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          theme.name === 'Roxo & Azul' ? `border-purple-500` : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                          currentTheme.name === theme.name ? `border-${currentTheme.accent}` : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                         }`}
-                        onClick={() => changeTheme(theme.id as 'light' | 'dark' | 'system')}
+                        onClick={() => changeTheme(theme.id)}
                       >
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r ${theme.colors} rounded-lg`} />
                           <div className="flex-1">
                             <p className="text-sm md:text-base font-medium">{theme.name}</p>
-                            {theme.name === 'Roxo & Azul' && (
+                            {currentTheme.name === theme.name && (
                               <Badge className="mt-1">Ativo</Badge>
                             )}
                           </div>

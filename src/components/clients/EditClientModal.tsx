@@ -55,13 +55,15 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({ isOpen, onClos
 
     setLoading(true);
     try {
-      // Using profiles table as fallback since clients table doesn't exist yet
       const { error } = await supabase
-        .from('profiles')
+        .from('clients')
         .update({
           name: formData.name,
           phone: formData.phone || null,
           email: formData.email || null,
+          address: formData.address || null,
+          cnpj: formData.cnpj || null,
+          description: formData.description || null,
         })
         .eq('id', client.id);
 

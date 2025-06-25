@@ -1,382 +1,186 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, CreditCard, ArrowDown, ArrowUp, PlusCircle, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { formatCurrency } from '@/utils/formatters';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useSupabaseAuth } from '../../contexts/SupabaseAuthContext';
-import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { EditTransactionModal } from './EditTransactionModal';
+import { Plus, TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
+import { useApp } from '@/contexts/AppContext';
+import AddIncomeModal from './AddIncomeModal';
+import AddExpenseModal from './AddExpenseModal';
+import EditTransactionModal from './EditTransactionModal';
 
-interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  type: 'income' | 'expense';
-  category: string;
-  date: string;
-  created_at: string;
-}
-
-const FinancialOverview = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [totalIncome, setTotalIncome] = useState(0);
-  const [totalExpenses, setTotalExpenses] = useState(0);
-  const [balance, setBalance] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const { currentTheme } = useTheme();
-  const { user } = useSupabaseAuth();
-  const { toast } = useToast();
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newTransaction, setNewTransaction] = useState({
-    description: '',
-    amount: 0,
-    type: 'expense',
-    category: '',
-    date: new Date().toISOString().split('T')[0]
-  });
+const FinancialOverview: React.FC = () => {
+  const { monthlyCosts } = useApp();
+  const [showIncomeModal, setShowIncomeModal] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
-  useEffect(() => {
-    loadTransactions();
-  }, [user]);
+  // Filter financial transactions only
+  const financialTransactions = monthlyCosts.filter(cost => 
+    cost.description?.includes('FINANCIAL_INCOME:') || 
+    cost.description?.includes('FINANCIAL_EXPENSE:')
+  );
 
-  const loadTransactions = async () => {
-    if (!user?.id) return;
+  const incomes = financialTransactions.filter(t => t.description?.includes('FINANCIAL_INCOME:'));
+  const expenses = financialTransactions.filter(t => t.description?.includes('FINANCIAL_EXPENSE:'));
 
-    setLoading(true);
-    try {
-      // Mock data since transactions table doesn't exist
-      const mockTransactions: Transaction[] = [
-        {
-          id: '1',
-          description: 'Pagamento de cliente',
-          amount: 2500,
-          type: 'income',
-          category: 'Serviços',
-          date: '2024-01-15',
-          created_at: '2024-01-15T10:00:00Z'
-        },
-        {
-          id: '2',
-          description: 'Equipamento de câmera',
-          amount: 800,
-          type: 'expense',
-          category: 'Equipamentos',
-          date: '2024-01-10',
-          created_at: '2024-01-10T14:30:00Z'
-        }
-      ];
+  const totalIncome = incomes.reduce((sum, income) => sum + Math.abs(income.value), 0);
+  const totalExpenses = expenses.reduce((sum, expense) => sum + Math.abs(expense.value), 0);
+  const balance = totalIncome - totalExpenses;
 
-      setTransactions(mockTransactions);
-      calculateTotals(mockTransactions);
-    } catch (error: any) {
-      console.error('Erro ao carregar transações:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar transações",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const getTransactionTitle = (description: string) => {
+    if (description?.includes('FINANCIAL_INCOME:')) {
+      return description.replace('FINANCIAL_INCOME:', '').trim();
     }
-  };
-
-  const calculateTotals = (transactions: Transaction[]) => {
-    let income = 0;
-    let expenses = 0;
-
-    transactions.forEach(transaction => {
-      if (transaction.type === 'income') {
-        income += transaction.amount;
-      } else {
-        expenses += transaction.amount;
-      }
-    });
-
-    setTotalIncome(income);
-    setTotalExpenses(expenses);
-    setBalance(income - expenses);
-  };
-
-  const handleAddTransaction = async () => {
-    if (!user?.id) return;
-
-    try {
-      // Mock implementation - in real app this would save to database
-      const newTrans: Transaction = {
-        id: Date.now().toString(),
-        description: newTransaction.description,
-        amount: newTransaction.amount,
-        type: newTransaction.type as 'income' | 'expense',
-        category: newTransaction.category,
-        date: newTransaction.date,
-        created_at: new Date().toISOString()
-      };
-
-      setTransactions(prevTransactions => [newTrans, ...prevTransactions]);
-      calculateTotals([...transactions, newTrans]);
-      setNewTransaction({
-        description: '',
-        amount: 0,
-        type: 'expense',
-        category: '',
-        date: new Date().toISOString().split('T')[0]
-      });
-      setShowAddModal(false);
-
-      toast({
-        title: "Sucesso",
-        description: "Transação adicionada com sucesso!",
-      });
-    } catch (error: any) {
-      console.error('Erro ao adicionar transação:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao adicionar transação. Tente novamente.",
-        variant: "destructive"
-      });
+    if (description?.includes('FINANCIAL_EXPENSE:')) {
+      return description.replace('FINANCIAL_EXPENSE:', '').trim();
     }
+    return description;
   };
 
-  const handleDeleteTransaction = async (transactionId: string) => {
-    if (!user?.id) return;
-
-    try {
-      // Mock implementation - in real app this would delete from database
-      const updatedTransactions = transactions.filter(transaction => transaction.id !== transactionId);
-      setTransactions(updatedTransactions);
-      calculateTotals(updatedTransactions);
-
-      toast({
-        title: "Sucesso",
-        description: "Transação excluída com sucesso!",
-      });
-    } catch (error: any) {
-      console.error('Erro ao excluir transação:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir transação. Tente novamente.",
-        variant: "destructive"
-      });
-    }
+  const handleEditTransaction = (transaction: any) => {
+    setEditingTransaction(transaction);
+    setShowEditModal(true);
   };
-
-  if (loading) {
-    return <p>Carregando...</p>;
-  }
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Visão Geral Financeira</h2>
-        <p className="text-gray-600 dark:text-gray-400">Acompanhe suas finanças de perto</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-green-100 dark:bg-green-900 border-green-200 dark:border-green-700">
-          <CardHeader>
-            <CardTitle>Receitas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalIncome)}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Total de receitas</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-red-100 dark:bg-red-900 border-red-200 dark:border-red-700">
-          <CardHeader>
-            <CardTitle>Despesas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Total de despesas</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-blue-100 dark:bg-blue-900 border-blue-200 dark:border-blue-700">
-          <CardHeader>
-            <CardTitle>Saldo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(balance)}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Saldo atual</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold">Transações Recentes</h3>
-        <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-          <DialogTrigger asChild>
-            <Button><PlusCircle className="h-4 w-4 mr-2" /> Adicionar Transação</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Adicionar Nova Transação</DialogTitle>
-              <DialogDescription>
-                Adicione uma nova receita ou despesa à sua lista.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="description" className="text-right">
-                  Descrição
-                </Label>
-                <Input
-                  type="text"
-                  id="description"
-                  value={newTransaction.description}
-                  onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
-                  className="col-span-3"
-                />
+    <div className="space-y-6">
+      {/* Summary Cards - Responsive Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-green-800 truncate">Receitas</p>
+                <p className="text-xl font-bold text-green-600 truncate">
+                  {formatCurrency(totalIncome)}
+                </p>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount" className="text-right">
-                  Valor
-                </Label>
-                <Input
-                  type="number"
-                  id="amount"
-                  value={newTransaction.amount}
-                  onChange={(e) => setNewTransaction({ ...newTransaction, amount: parseFloat(e.target.value) })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="type" className="text-right">
-                  Tipo
-                </Label>
-                <select
-                  id="type"
-                  value={newTransaction.type}
-                  onChange={(e) => setNewTransaction({ ...newTransaction, type: e.target.value as 'income' | 'expense' })}
-                  className="col-span-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                >
-                  <option value="income">Receita</option>
-                  <option value="expense">Despesa</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="date" className="text-right">
-                  Data
-                </Label>
-                <Input
-                  type="date"
-                  id="date"
-                  value={newTransaction.date}
-                  onChange={(e) => setNewTransaction({ ...newTransaction, date: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
+              <TrendingUp className="h-8 w-8 text-green-600 flex-shrink-0 ml-2" />
             </div>
-            <Button onClick={handleAddTransaction}>Adicionar Transação</Button>
-          </DialogContent>
-        </Dialog>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-red-50 to-pink-50 border-red-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-red-800 truncate">Despesas</p>
+                <p className="text-xl font-bold text-red-600 truncate">
+                  {formatCurrency(totalExpenses)}
+                </p>
+              </div>
+              <TrendingDown className="h-8 w-8 text-red-600 flex-shrink-0 ml-2" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={`bg-gradient-to-r ${balance >= 0 ? 'from-blue-50 to-indigo-50 border-blue-200' : 'from-orange-50 to-red-50 border-orange-200'}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm font-medium truncate ${balance >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>Saldo</p>
+                <p className={`text-xl font-bold truncate ${balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                  {formatCurrency(balance)}
+                </p>
+              </div>
+              <Wallet className={`h-8 w-8 flex-shrink-0 ml-2 ${balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-purple-800 truncate">Transações</p>
+                <p className="text-xl font-bold text-purple-600">
+                  {financialTransactions.length}
+                </p>
+              </div>
+              <DollarSign className="h-8 w-8 text-purple-600 flex-shrink-0 ml-2" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <Separator />
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full leading-normal">
-          <thead>
-            <tr>
-              <th className="px-5 py-3 border-b-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                Descrição
-              </th>
-              <th className="px-5 py-3 border-b-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                Valor
-              </th>
-              <th className="px-5 py-3 border-b-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                Tipo
-              </th>
-              <th className="px-5 py-3 border-b-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                Data
-              </th>
-              <th className="px-5 py-3 border-b-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map(transaction => (
-              <tr key={transaction.id}>
-                <td className="px-5 py-5 border-b text-sm">
-                  <p className="text-gray-900 whitespace-no-wrap">{transaction.description}</p>
-                </td>
-                <td className="px-5 py-5 border-b text-sm">
-                  <p className="text-gray-900 whitespace-no-wrap">{formatCurrency(transaction.amount)}</p>
-                </td>
-                <td className="px-5 py-5 border-b text-sm">
-                  {transaction.type === 'income' ? (
-                    <Badge variant="outline" className="text-green-500 bg-green-50 border-green-500">
-                      <ArrowUp className="h-4 w-4 mr-2" />
-                      Receita
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-red-500 bg-red-50 border-red-500">
-                      <ArrowDown className="h-4 w-4 mr-2" />
-                      Despesa
-                    </Badge>
-                  )}
-                </td>
-                <td className="px-5 py-5 border-b text-sm">
-                  <p className="text-gray-900 whitespace-no-wrap">
-                    {new Date(transaction.date).toLocaleDateString()}
-                  </p>
-                </td>
-                <td className="px-5 py-5 border-b text-sm">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      setSelectedTransaction(transaction);
-                      setShowEditModal(true);
-                    }}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDeleteTransaction(transaction.id)}
-                    className="ml-2"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* Edit Transaction Modal */}
-        <EditTransactionModal
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          transaction={selectedTransaction}
-          onSave={(updatedTransaction) => {
-            // Handle the updated transaction
-            console.log('Transaction updated:', updatedTransaction);
-            setSelectedTransaction(null);
-          }}
-        />
+      {/* Action Buttons - Stack on mobile */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Button 
+          onClick={() => setShowIncomeModal(true)}
+          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 flex items-center justify-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Adicionar Receita
+        </Button>
+        <Button 
+          onClick={() => setShowExpenseModal(true)}
+          className="w-full sm:w-auto bg-red-600 hover:bg-red-700 flex items-center justify-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Adicionar Despesa
+        </Button>
       </div>
+
+      {/* Transactions List */}
+      <div className="space-y-4">
+        {financialTransactions.length > 0 ? (
+          financialTransactions.map((transaction) => (
+            <Card key={transaction.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditTransaction(transaction)}>
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-base truncate">
+                      {getTransactionTitle(transaction.description)}
+                    </h3>
+                    <p className="text-sm text-gray-600 truncate">
+                      {transaction.category} • {new Date(transaction.month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`text-lg font-bold ${transaction.description?.includes('FINANCIAL_INCOME:') ? 'text-green-600' : 'text-red-600'}`}>
+                      {transaction.description?.includes('FINANCIAL_INCOME:') ? '+' : '-'}{formatCurrency(Math.abs(transaction.value))}
+                    </span>
+                    <div className={`w-3 h-3 rounded-full ${transaction.description?.includes('FINANCIAL_INCOME:') ? 'bg-green-500' : 'bg-red-500'}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center text-gray-500">
+              <DollarSign className="mx-auto h-12 w-12 mb-4" />
+              <p>Nenhuma transação registrada</p>
+              <p className="text-sm text-gray-400 mt-1">Comece adicionando uma receita ou despesa</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Modals */}
+      <AddIncomeModal 
+        isOpen={showIncomeModal} 
+        onClose={() => setShowIncomeModal(false)}
+        onSuccess={() => window.location.reload()}
+      />
+      <AddExpenseModal 
+        isOpen={showExpenseModal} 
+        onClose={() => setShowExpenseModal(false)}
+        onSuccess={() => window.location.reload()}
+      />
+      <EditTransactionModal 
+        open={showEditModal} 
+        onOpenChange={setShowEditModal} 
+        transaction={editingTransaction}
+      />
     </div>
   );
 };
