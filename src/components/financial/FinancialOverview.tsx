@@ -254,6 +254,7 @@ const FinancialOverview: React.FC = () => {
     setFilterPaid('all');
   };
 
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -262,8 +263,171 @@ const FinancialOverview: React.FC = () => {
     );
   }
 
+  return (
+    <div className="space-y-6">
+      {/* Header com Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Entradas</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatValue(summary.totalIncome)}
+                </p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-return (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Saídas</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {formatValue(summary.totalExpenses)}
+                </p>
+              </div>
+              <TrendingDown className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Saldo</p>
+                <p className={`text-2xl font-bold ${summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatValue(summary.balance)}
+                </p>
+              </div>
+              <DollarSign className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">A Receber</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {formatValue(summary.pendingIncome)}
+                </p>
+              </div>
+              <ArrowUpDown className="h-8 w-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filtros */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            <div>
+              <label className="text-sm font-medium">Tipo</label>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="income">Entradas</SelectItem>
+                  <SelectItem value="expense">Saídas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Categoria</label>
+              <Input
+                placeholder="Filtrar por categoria"
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Data Inicial</label>
+              <Input
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Data Final</label>
+              <Input
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Status</label>
+              <Select value={filterPaid} onValueChange={setFilterPaid}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="paid">Pagos</SelectItem>
+                  <SelectItem value="pending">Pendentes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button variant="outline" onClick={clearFilters} className="w-full">
+                Limpar Filtros
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Botões de Ação - Responsivos */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+        <Button 
+          onClick={() => setShowIncomeModal(true)} 
+          className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          <span className="hidden sm:inline">Nova Entrada</span>
+          <span className="sm:hidden">Entrada</span>
+        </Button>
+        <Button 
+          onClick={() => setShowExpenseModal(true)} 
+          variant="destructive"
+          className="flex-1 sm:flex-none"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          <span className="hidden sm:inline">Nova Saída</span>
+          <span className="sm:hidden">Saída</span>
+        </Button>
+        <Button 
+          onClick={exportToPDF} 
+          variant="outline"
+          className="flex-1 sm:flex-none"
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          <span className="hidden sm:inline">Exportar PDF</span>
+          <span className="sm:hidden">PDF</span>
+        </Button>
+      </div>
+
   <div className="p-4">
     <Card>
       <CardContent className="space-y-4">
