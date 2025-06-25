@@ -1,9 +1,7 @@
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useSubscription } from './useSubscription';
 import { useApp } from '@/contexts/AppContext';
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
-import { usageTrackingService } from '@/services/usageTrackingService';
 
 export interface SubscriptionLimits {
   maxJobs: number;
@@ -23,10 +21,7 @@ export interface SubscriptionLimits {
 
 export const useSubscriptionPermissions = () => {
   const { subscription, loading } = useSubscription();
-  const { jobs } = useApp();
-  const { user } = useSupabaseAuth();
-  const [currentUsage, setCurrentUsage] = useState({ jobsCount: 0, projectsCount: 0, teamMembersCount: 1 });
-  const [usageLoading, setUsageLoading] = useState(true);
+  const { jobs, monthlyCosts } = useApp();
 
   const limits = useMemo<SubscriptionLimits>(() => {
     switch (subscription) {
@@ -98,39 +93,14 @@ export const useSubscriptionPermissions = () => {
     }
   }, [subscription]);
 
-  // Buscar uso do banco de dados
-  useEffect(() => {
-    const loadUsage = async () => {
-      if (!user?.id) {
-        setUsageLoading(false);
-        return;
-      }
-
-      try {
-        const usage = await usageTrackingService.getAllUsageForUser(user.id);
-        setCurrentUsage({
-          jobsCount: usage.jobs,
-          projectsCount: usage.projects,
-          teamMembersCount: 1, // Por enquanto sempre 1
-        });
-        
-        console.log('📊 Uso carregado do banco:', usage);
-      } catch (error) {
-        console.warn('Erro ao carregar uso do banco:', error);
-        // Fallback para contagem local como backup
-        const approvedJobs = jobs.filter(job => job.status === 'aprovado');
-        setCurrentUsage({
-          jobsCount: approvedJobs.length,
-          projectsCount: jobs.length,
-          teamMembersCount: 1,
-        });
-      } finally {
-        setUsageLoading(false);
-      }
+  const currentUsage = useMemo(() => {
+    const approvedJobs = jobs.filter(job => job.status === 'aprovado');
+    return {
+      jobsCount: approvedJobs.length,
+      projectsCount: jobs.length,
+      teamMembersCount: 1, // Por enquanto sempre 1, pode ser expandido
     };
-
-    loadUsage();
-  }, [user?.id, jobs]);
+  }, [jobs]);
 
   const canCreateJob = useMemo(() => {
     if (limits.maxJobs === -1) return true;
@@ -157,25 +127,9 @@ export const useSubscriptionPermissions = () => {
     return Math.min(100, (current / max) * 100);
   };
 
-  // Função para recarregar os dados de uso
-  const refreshUsage = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const usage = await usageTrackingService.getAllUsageForUser(user.id);
-      setCurrentUsage({
-        jobsCount: usage.jobs,
-        projectsCount: usage.projects,
-        teamMembersCount: 1,
-      });
-    } catch (error) {
-      console.warn('Erro ao recarregar uso:', error);
-    }
-  };
-
   return {
     subscription,
-    loading: loading || usageLoading,
+    loading,
     limits,
     currentUsage,
     canCreateJob,
@@ -183,7 +137,6 @@ export const useSubscriptionPermissions = () => {
     getRemainingJobs,
     getRemainingProjects,
     getUsagePercentage,
-    refreshUsage,
     isFreePlan: subscription === 'free',
     isBasicPlan: subscription === 'basic',
     isPremiumPlan: subscription === 'premium',
