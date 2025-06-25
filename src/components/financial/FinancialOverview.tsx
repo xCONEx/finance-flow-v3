@@ -451,9 +451,9 @@ const FinancialOverview: React.FC = () => {
           return (
             <div
   key={transaction.id}
-  className="flex items-center justify-between p-4 border rounded-lg flex-col sm:flex-row sm:items-center gap-4"
+  className="flex items-center justify-between p-4 border rounded-lg gap-4 flex-nowrap"
 >
-  {/* Esquerda: nome + badges + categoria/data */}
+  {/* Coluna esquerda: flex-grow para ocupar espaço */}
   <div className="flex-1 min-w-0">
     <h4 className="font-medium truncate">{transactionData.description}</h4>
 
@@ -498,7 +498,7 @@ const FinancialOverview: React.FC = () => {
     )}
   </div>
 
-  {/* Direita: valor, método pagamento e botão editar */}
+  {/* Coluna direita: largura fixa, não encolhe */}
   <div className="flex flex-col items-end flex-shrink-0 w-[140px] gap-1">
     <p
       className={`font-bold ${
@@ -514,6 +514,7 @@ const FinancialOverview: React.FC = () => {
     </Button>
   </div>
 </div>
+
           );
         })}
       </div>
