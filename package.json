@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@capacitor/core": "^7.4.0",
+    "@capacitor/device": "^7.0.1",
     "@capacitor/local-notifications": "^7.0.1",
     "@capacitor/push-notifications": "^7.0.1",
     "@hello-pangea/dnd": "^18.0.1",
