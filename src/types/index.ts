@@ -1,117 +1,78 @@
 
-export interface User {
+// Tipos baseados no schema SQL
+export type TaskStatus = 'pendente' | 'aprovado'; // Simplified to match job status
+
+export type Client = {
+  id: string;
+  user_id: string;
+  company_id?: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  cnpj?: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserProfile = {
   id: string;
   email: string;
-  name: string;
-  avatar?: string;
-  photoURL?: string;
-  userType: 'admin' | 'company_owner' | 'employee' | 'individual';
-  companyId?: string;
-  createdAt: string;
-}
+  name?: string;
+  phone?: string;
+  company?: string;
+  logo_base64?: string;
+  image_user?: string;
+  user_type: 'individual' | 'company_owner' | 'employee' | 'admin';
+  banned: boolean;
+  agency_id?: string;
+  role: 'owner' | 'editor' | 'viewer';
+  created_at: string;
+  updated_at: string;
+  subscription: 'free' | 'basic' | 'premium' | 'enterprise' | 'enterprise-annual';
+  subscription_data?: any;
+};
 
-export interface Company {
+export type Agency = {
   id: string;
   name: string;
-  logo?: string;
-  plan: 'free' | 'premium';
-  ownerId: string;
-  createdAt: string;
-}
+  description?: string;
+  owner_id: string;
+  created_at: string;
+  status: string;
+  cnpj?: string;
+};
 
-export interface Job {
-  id: string;
+export type Job = {
+  id?: string;
+  user_id?: string;
+  agency_id?: string;
   description: string;
   client: string;
-  eventDate: string;
-  estimatedHours: number;
-  difficultyLevel: 'fácil' | 'médio' | 'complicado' | 'difícil';
-  logistics: number;
-  equipment: number;
-  assistance: number;
-  status: 'pendente' | 'aprovado';
-  category: string;
-  discountValue: number;
-  totalCosts: number;
-  serviceValue: number;
-  valueWithDiscount: number;
-  profitMargin: number;
-  createdAt: string;
-  updatedAt: string;
-  userId: string;
-  companyId?: string;
-}
-
-export interface MonthlyCost {
-  id: string;
-  description: string;
-  category: string;
-  value: number;
-  month: string;
+  client_id?: string;
+  event_date?: string;
+  estimated_hours?: number;
+  difficulty_level?: 'fácil' | 'médio' | 'complicado' | 'difícil';
+  logistics?: number;
+  equipment?: number;
+  assistance?: number;
+  status?: 'pendente' | 'aprovado';
+  category?: string;
+  discount_value?: number;
+  total_costs?: number;
+  service_value?: number;
+  value_with_discount?: number;
+  profit_margin?: number;
+  created_at?: string;
+  updated_at?: string;
+  is_approved?: boolean;
+  // Propriedades compatíveis com o sistema de jobs existente
+  title?: string;
   dueDate?: string;
-  isRecurring: boolean;
-  installments?: number;
-  currentInstallment?: number;
-  parentId?: string;
-  notificationEnabled: boolean;
-  createdAt: string;
-  userId: string;
+  priority?: string;
   companyId?: string;
-}
-
-export interface WorkItem {
-  id: string;
-  description: string;
-  category: string;
-  value: number;
-  depreciationYears: number;
-  createdAt: string;
-  userId: string;
-  companyId?: string;
-}
-
-export interface Task {
-  id: string;
-  title: string;
-  description: string;
-  completed: boolean;
-  priority: 'baixa' | 'média' | 'alta';
-  status: 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision';
-  dueDate?: string;
-  createdAt: string;
-  userId: string;
-}
-
-export interface WorkRoutine {
-  desiredSalary: number;
-  workDaysPerMonth: number;
-  workHoursPerDay: number;
-  valuePerDay: number;
-  valuePerHour: number;
-  userId: string;
-}
-
-export interface CostNotification {
-  id: string;
-  costId: string;
-  userId: string;
-  title: string;
-  message: string;
-  dueDate: string;
-  isRead: boolean;
-  createdAt: string;
-}
-
-export interface Theme {
-  name: string;
-  primary: string;
-  secondary: string;
-  accent: string;
-}
-
-export interface UserSettings {
-  theme: 'light' | 'dark';
-  colorTheme: string;
-  notifications: boolean;
-  language: 'pt-BR';
-}
+  links?: any[];
+  createdAt?: string;
+  updatedAt?: string;
+};
