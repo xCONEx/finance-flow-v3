@@ -254,7 +254,6 @@ const FinancialOverview: React.FC = () => {
     setFilterPaid('all');
   };
 
-
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -428,95 +427,102 @@ const FinancialOverview: React.FC = () => {
         </Button>
       </div>
 
-  <div className="p-4">
-    <Card>
-      <CardContent className="space-y-4">
-        {filteredTransactions.map((transaction) => {
-          const transactionData = parseTransactionData(transaction.description);
-          const hasDueDate = transaction.due_date && !transactionData.isPaid;
-          const isOverdue = hasDueDate && new Date(transaction.due_date!) < new Date();
-
-          return (
-            <div
-              key={transaction.id}
-              className="p-4 border rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-            >
-              {/* Coluna Esquerda */}
-              <div className="flex-1">
-                <h4 className="font-medium">{transactionData.description}</h4>
-
-                <div className="flex flex-wrap gap-2 mt-1 mb-2">
-                  <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
-                    {transactionData.isIncome ? 'Entrada' : 'Saída'}
-                  </Badge>
-                  {!transactionData.isPaid && <Badge variant="outline">Pendente</Badge>}
-                  {hasDueDate && (
-                    <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
-                      {isOverdue ? 'Vencido' : 'A vencer'}
-                    </Badge>
-                  )}
-                  {transaction.notification_enabled && hasDueDate && (
-                    <Badge variant="outline" className="text-blue-600">
-                      🔔 Notificações
-                    </Badge>
-                  )}
-                </div>
-
-                <p className="text-sm text-muted-foreground">
-                  {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
-                </p>
-
-                {transactionData.clientOrSupplier && (
-                  <p className="text-sm text-muted-foreground">
-                    {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
-                  </p>
-                )}
-
-                {transaction.due_date && (
-                  <p className="text-sm text-blue-600">
-                    Vencimento: {formatDate(transaction.due_date)}
-                  </p>
-                )}
-              </div>
-
-              {/* Coluna Direita */}
-              <div className="flex flex-col items-end gap-1 sm:items-end min-w-[120px]">
-                <p className={`font-bold ${transactionData.isIncome ? 'text-green-600' : 'text-red-600'}`}>
-                  {transactionData.isIncome ? '+' : '-'}
-                  {formatValue(Math.abs(transaction.value))}
-                </p>
-                <p className="text-sm text-muted-foreground">{transactionData.paymentMethod}</p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEditTransaction(transaction)}
-                  className="mt-1"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </div>
+      {/* Lista de Transações */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Transações Recentes ({filteredTransactions.length} de {transactions.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredTransactions.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Nenhuma transação encontrada com os filtros aplicados.</p>
             </div>
-          );
-        })}
-      </CardContent>
-    </Card>
+          ) : (
+            <div className="space-y-4">
+              {filteredTransactions.map((transaction) => {
+                const transactionData = parseTransactionData(transaction.description);
+                const hasDueDate = transaction.due_date && !transactionData.isPaid;
+                const isOverdue = hasDueDate && new Date(transaction.due_date!) < new Date();
+                
+                return (
+                  <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium">{transactionData.description}</h4>
+                        <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
+                          {transactionData.isIncome ? 'Entrada' : 'Saída'}
+                        </Badge>
+                        {!transactionData.isPaid && (
+                          <Badge variant="outline">Pendente</Badge>
+                        )}
+                        {hasDueDate && (
+                          <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
+                            {isOverdue ? 'Vencido' : 'A vencer'}
+                          </Badge>
+                        )}
+                        {transaction.notification_enabled && hasDueDate && (
+                          <Badge variant="outline" className="text-blue-600">
+                            🔔 Notificações
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
+                      </p>
+                      {transactionData.clientOrSupplier && (
+                        <p className="text-sm text-muted-foreground">
+                          {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
+                        </p>
+                      )}
+                      {transaction.due_date && (
+                        <p className="text-sm text-blue-600">
+                          Vencimento: {formatDate(transaction.due_date)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right flex items-center gap-2">
+                      <div>
+                        <p className={`font-bold ${transactionData.isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                          {transactionData.isIncome ? '+' : '-'}{formatValue(Math.abs(transaction.value))}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {transactionData.paymentMethod}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditTransaction(transaction)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-    {/* Modais */}
-    <AddIncomeModal
-      isOpen={showIncomeModal}
-      onClose={() => setShowIncomeModal(false)}
-      onSuccess={loadTransactions}
-    />
-    <AddExpenseModal
-      isOpen={showExpenseModal}
-      onClose={() => setShowExpenseModal(false)}
-      onSuccess={loadTransactions}
-    />
-    <EditTransactionModal
-      isOpen={showEditModal}
-      onClose={() => setShowEditModal(false)}
-      onSuccess={loadTransactions}
-      transaction={selectedTransaction}
+      {/* Modais */}
+      <AddIncomeModal
+        isOpen={showIncomeModal}
+        onClose={() => setShowIncomeModal(false)}
+        onSuccess={loadTransactions}
+      />
+      <AddExpenseModal
+        isOpen={showExpenseModal}
+        onClose={() => setShowExpenseModal(false)}
+        onSuccess={loadTransactions}
+      />
+      <EditTransactionModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={loadTransactions}
+        transaction={selectedTransaction}
       />
     </div>
   );
