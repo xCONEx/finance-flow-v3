@@ -255,115 +255,105 @@ const FinancialOverview: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  return (
+    <div className="flex items-center justify-center p-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    </div>
+  );
+}
 
 return (
- <div className="p-4">
+  <div className="p-4">
     <Card>
-      <CardContent>
+      <CardContent className="space-y-4">
         {filteredTransactions.map((transaction) => {
           const transactionData = parseTransactionData(transaction.description);
           const hasDueDate = transaction.due_date && !transactionData.isPaid;
-          const isOverdue = hasDueDate && transaction.due_date && new Date(transaction.due_date) < new Date();
-
+          const isOverdue = hasDueDate && new Date(transaction.due_date!) < new Date();
 
           return (
-            <div key={transaction.id} className="p-4 border rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      
-      {/* Coluna Esquerda: Informações principais */}
-      <div className="flex-1">
-        <h4 className="font-medium">{transactionData.description}</h4>
+            <div
+              key={transaction.id}
+              className="p-4 border rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+            >
+              {/* Coluna Esquerda */}
+              <div className="flex-1">
+                <h4 className="font-medium">{transactionData.description}</h4>
 
-        {/* Badges abaixo do nome, acima do cliente */}
-        <div className="flex flex-wrap gap-2 mt-1 mb-2">
-          <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
-            {transactionData.isIncome ? 'Entrada' : 'Saída'}
-          </Badge>
-          {!transactionData.isPaid && (
-            <Badge variant="outline">Pendente</Badge>
-          )}
-          {hasDueDate && (
-            <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
-              {isOverdue ? 'Vencido' : 'A vencer'}
-            </Badge>
-          )}
-          {transaction.notification_enabled && hasDueDate && (
-            <Badge variant="outline" className="text-blue-600">
-              🔔 Notificações
-            </Badge>
-          )}
-        </div>
+                <div className="flex flex-wrap gap-2 mt-1 mb-2">
+                  <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
+                    {transactionData.isIncome ? 'Entrada' : 'Saída'}
+                  </Badge>
+                  {!transactionData.isPaid && <Badge variant="outline">Pendente</Badge>}
+                  {hasDueDate && (
+                    <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
+                      {isOverdue ? 'Vencido' : 'A vencer'}
+                    </Badge>
+                  )}
+                  {transaction.notification_enabled && hasDueDate && (
+                    <Badge variant="outline" className="text-blue-600">
+                      🔔 Notificações
+                    </Badge>
+                  )}
+                </div>
 
-        {/* Categoria e Data */}
-        <p className="text-sm text-muted-foreground">
-          {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
-        </p>
+                <p className="text-sm text-muted-foreground">
+                  {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
+                </p>
 
-        {/* Cliente ou Fornecedor */}
-        {transactionData.clientOrSupplier && (
-          <p className="text-sm text-muted-foreground">
-            {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
-          </p>
-        )}
+                {transactionData.clientOrSupplier && (
+                  <p className="text-sm text-muted-foreground">
+                    {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
+                  </p>
+                )}
 
-        {/* Vencimento */}
-        {transaction.due_date && (
-          <p className="text-sm text-blue-600">
-            Vencimento: {formatDate(transaction.due_date)}
-          </p>
-        )}
-      </div>
+                {transaction.due_date && (
+                  <p className="text-sm text-blue-600">
+                    Vencimento: {formatDate(transaction.due_date)}
+                  </p>
+                )}
+              </div>
 
-      {/* Coluna Direita: Valor e editar */}
-      <div className="flex flex-col items-end gap-1 sm:items-end min-w-[120px]">
-        <p className={`font-bold ${transactionData.isIncome ? 'text-green-600' : 'text-red-600'}`}>
-          {transactionData.isIncome ? '+' : '-'}{formatValue(Math.abs(transaction.value))}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {transactionData.paymentMethod}
-        </p>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleEditTransaction(transaction)}
-          className="mt-1"
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-})}
-
+              {/* Coluna Direita */}
+              <div className="flex flex-col items-end gap-1 sm:items-end min-w-[120px]">
+                <p className={`font-bold ${transactionData.isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                  {transactionData.isIncome ? '+' : '-'}
+                  {formatValue(Math.abs(transaction.value))}
+                </p>
+                <p className="text-sm text-muted-foreground">{transactionData.paymentMethod}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleEditTransaction(transaction)}
+                  className="mt-1"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          );
+        })}
+      </CardContent>
+    </Card>
 
-      {/* Modais */}
-      <AddIncomeModal
-        isOpen={showIncomeModal}
-        onClose={() => setShowIncomeModal(false)}
-        onSuccess={loadTransactions}
-      />
-      <AddExpenseModal
-        isOpen={showExpenseModal}
-        onClose={() => setShowExpenseModal(false)}
-        onSuccess={loadTransactions}
-      />
-      <EditTransactionModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onSuccess={loadTransactions}
-        transaction={selectedTransaction}
-      />
-    </div>
-  );
-};
+    {/* Modais */}
+    <AddIncomeModal
+      isOpen={showIncomeModal}
+      onClose={() => setShowIncomeModal(false)}
+      onSuccess={loadTransactions}
+    />
+    <AddExpenseModal
+      isOpen={showExpenseModal}
+      onClose={() => setShowExpenseModal(false)}
+      onSuccess={loadTransactions}
+    />
+    <EditTransactionModal
+      isOpen={showEditModal}
+      onClose={() => setShowEditModal(false)}
+      onSuccess={loadTransactions}
+      transaction={selectedTransaction}
+    />
+  </div>
+);
 
 export default FinancialOverview;
