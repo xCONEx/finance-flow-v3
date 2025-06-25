@@ -262,246 +262,79 @@ const FinancialOverview: React.FC = () => {
     );
   }
 
+{filteredTransactions.map((transaction) => {
+  const transactionData = parseTransactionData(transaction.description);
+  const hasDueDate = transaction.due_date && !transactionData.isPaid;
+  const isOverdue = hasDueDate && new Date(transaction.due_date!) < new Date();
+
   return (
-    <div className="space-y-6">
-      {/* Header com Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Entradas</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatValue(summary.totalIncome)}
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
+    <div key={transaction.id} className="p-4 border rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      
+      {/* Coluna Esquerda: Informações principais */}
+      <div className="flex-1">
+        <h4 className="font-medium">{transactionData.description}</h4>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Saídas</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {formatValue(summary.totalExpenses)}
-                </p>
-              </div>
-              <TrendingDown className="h-8 w-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Badges abaixo do nome, acima do cliente */}
+        <div className="flex flex-wrap gap-2 mt-1 mb-2">
+          <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
+            {transactionData.isIncome ? 'Entrada' : 'Saída'}
+          </Badge>
+          {!transactionData.isPaid && (
+            <Badge variant="outline">Pendente</Badge>
+          )}
+          {hasDueDate && (
+            <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
+              {isOverdue ? 'Vencido' : 'A vencer'}
+            </Badge>
+          )}
+          {transaction.notification_enabled && hasDueDate && (
+            <Badge variant="outline" className="text-blue-600">
+              🔔 Notificações
+            </Badge>
+          )}
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Saldo</p>
-                <p className={`text-2xl font-bold ${summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatValue(summary.balance)}
-                </p>
-              </div>
-              <DollarSign className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Categoria e Data */}
+        <p className="text-sm text-muted-foreground">
+          {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
+        </p>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">A Receber</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {formatValue(summary.pendingIncome)}
-                </p>
-              </div>
-              <ArrowUpDown className="h-8 w-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Cliente ou Fornecedor */}
+        {transactionData.clientOrSupplier && (
+          <p className="text-sm text-muted-foreground">
+            {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
+          </p>
+        )}
+
+        {/* Vencimento */}
+        {transaction.due_date && (
+          <p className="text-sm text-blue-600">
+            Vencimento: {formatDate(transaction.due_date)}
+          </p>
+        )}
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            <div>
-              <label className="text-sm font-medium">Tipo</label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="income">Entradas</SelectItem>
-                  <SelectItem value="expense">Saídas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Categoria</label>
-              <Input
-                placeholder="Filtrar por categoria"
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Data Inicial</label>
-              <Input
-                type="date"
-                value={filterDateFrom}
-                onChange={(e) => setFilterDateFrom(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Data Final</label>
-              <Input
-                type="date"
-                value={filterDateTo}
-                onChange={(e) => setFilterDateTo(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Status</label>
-              <Select value={filterPaid} onValueChange={setFilterPaid}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="paid">Pagos</SelectItem>
-                  <SelectItem value="pending">Pendentes</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-end">
-              <Button variant="outline" onClick={clearFilters} className="w-full">
-                Limpar Filtros
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Botões de Ação - Responsivos */}
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-        <Button 
-          onClick={() => setShowIncomeModal(true)} 
-          className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
+      {/* Coluna Direita: Valor e editar */}
+      <div className="flex flex-col items-end gap-1 sm:items-end min-w-[120px]">
+        <p className={`font-bold ${transactionData.isIncome ? 'text-green-600' : 'text-red-600'}`}>
+          {transactionData.isIncome ? '+' : '-'}{formatValue(Math.abs(transaction.value))}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {transactionData.paymentMethod}
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleEditTransaction(transaction)}
+          className="mt-1"
         >
-          <Plus className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Nova Entrada</span>
-          <span className="sm:hidden">Entrada</span>
-        </Button>
-        <Button 
-          onClick={() => setShowExpenseModal(true)} 
-          variant="destructive"
-          className="flex-1 sm:flex-none"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Nova Saída</span>
-          <span className="sm:hidden">Saída</span>
-        </Button>
-        <Button 
-          onClick={exportToPDF} 
-          variant="outline"
-          className="flex-1 sm:flex-none"
-        >
-          <FileText className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Exportar PDF</span>
-          <span className="sm:hidden">PDF</span>
+          <Edit className="h-4 w-4" />
         </Button>
       </div>
+    </div>
+  );
+})}
 
-      {/* Lista de Transações */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Transações Recentes ({filteredTransactions.length} de {transactions.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredTransactions.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Nenhuma transação encontrada com os filtros aplicados.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredTransactions.map((transaction) => {
-                const transactionData = parseTransactionData(transaction.description);
-                const hasDueDate = transaction.due_date && !transactionData.isPaid;
-                const isOverdue = hasDueDate && new Date(transaction.due_date!) < new Date();
-                
-                return (
-                  <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{transactionData.description}</h4>
-                        <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
-                          {transactionData.isIncome ? 'Entrada' : 'Saída'}
-                        </Badge>
-                        {!transactionData.isPaid && (
-                          <Badge variant="outline">Pendente</Badge>
-                        )}
-                        {hasDueDate && (
-                          <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
-                            {isOverdue ? 'Vencido' : 'A vencer'}
-                          </Badge>
-                        )}
-                        {transaction.notification_enabled && hasDueDate && (
-                          <Badge variant="outline" className="text-blue-600">
-                            🔔 Notificações
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
-                      </p>
-                      {transactionData.clientOrSupplier && (
-                        <p className="text-sm text-muted-foreground">
-                          {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
-                        </p>
-                      )}
-                      {transaction.due_date && (
-                        <p className="text-sm text-blue-600">
-                          Vencimento: {formatDate(transaction.due_date)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right flex items-center gap-2">
-                      <div>
-                        <p className={`font-bold ${transactionData.isIncome ? 'text-green-600' : 'text-red-600'}`}>
-                          {transactionData.isIncome ? '+' : '-'}{formatValue(Math.abs(transaction.value))}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {transactionData.paymentMethod}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditTransaction(transaction)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           )}
         </CardContent>
