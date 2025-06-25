@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Bell, X } from 'lucide-react';
+import { Bell, X, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,13 +8,17 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useApp } from '../contexts/AppContext';
 
 const NotificationBell = () => {
-  const { notifications, markNotificationAsRead } = useApp();
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useApp();
   const [isOpen, setIsOpen] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const handleMarkAsRead = async (id: string) => {
     await markNotificationAsRead(id);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    await markAllNotificationsAsRead();
   };
 
   const formatDueDate = (dueDate: string) => {
@@ -46,9 +50,22 @@ const NotificationBell = () => {
       <PopoverContent className="w-80 p-0" align="end">
         <Card className="border-0 shadow-none">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              Notificações de Vencimento
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium">
+                Notificações de Vencimento
+              </CardTitle>
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs"
+                  onClick={handleMarkAllAsRead}
+                >
+                  <CheckCheck className="h-3 w-3 mr-1" />
+                  Marcar todas como lida
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {notifications.length === 0 ? (

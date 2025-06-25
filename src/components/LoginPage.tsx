@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Mail, Lock, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,19 +10,41 @@ import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import ForgotPasswordModal from './ForgotPasswordModal';
+import { Capacitor } from '@capacitor/core';
 
 const LoginPage = () => {
-  const { signIn, signUp, signInWithGoogle, isAuthenticated } = useSupabaseAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithBiometric, isAuthenticated } = useSupabaseAuth();
   const { currentTheme } = useTheme();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     name: ''
   });
+
+  // Verificar se biometria está disponível
+  useEffect(() => {
+    const checkBiometric = async () => {
+      // Verificar se há credenciais salvas
+      const hasSavedCredentials = localStorage.getItem('saved_email') && localStorage.getItem('saved_password');
+      
+      if (Capacitor.isNativePlatform()) {
+        // Para plataformas móveis nativas
+        setBiometricAvailable(hasSavedCredentials);
+      } else {
+        // Para web/PWA, verificar se WebAuthn está disponível
+        const webAuthnAvailable = 'credentials' in navigator && 'create' in navigator.credentials;
+        setBiometricAvailable(webAuthnAvailable && hasSavedCredentials);
+      }
+    };
+    checkBiometric();
+  }, []);
 
   // Redirecionar se já autenticado
   useEffect(() => {
@@ -79,6 +101,27 @@ const LoginPage = () => {
       toast({
         title: "Erro",
         description: error.message || "Erro ao fazer login com Google",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await signInWithBiometric();
+      if (error) throw error;
+      
+      toast({
+        title: "Login realizado!",
+        description: "Autenticado com sucesso",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro na autenticação biométrica",
         variant: "destructive"
       });
     } finally {
@@ -183,6 +226,18 @@ const LoginPage = () => {
             </CardHeader>
 
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0">
+              {/* Face ID Button (apenas mobile e quando disponível) */}
+              {biometricAvailable && isLogin && (
+                <Button
+                  onClick={handleBiometricLogin}
+                  className={`w-full h-10 sm:h-12 bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 text-sm sm:text-base mb-4`}
+                  disabled={loading}
+                >
+                  <Fingerprint className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  {loading ? 'Autenticando...' : 'Entrar com Face ID'}
+                </Button>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 {!isLogin && (
                   <div className="space-y-2">
@@ -246,6 +301,20 @@ const LoginPage = () => {
                   </div>
                 </div>
 
+                {/* Link Esqueceu senha */}
+                {isLogin && (
+                  <div className="text-right">
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-xs sm:text-sm text-purple-600 hover:text-purple-500 dark:text-purple-400 dark:hover:text-purple-300 p-0 h-auto"
+                      onClick={() => setShowForgotPassword(true)}
+                    >
+                      Esqueceu sua senha?
+                    </Button>
+                  </div>
+                )}
+
                 <Button 
                   type="submit" 
                   className={`w-full h-10 sm:h-12 bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 text-sm sm:text-base`}
@@ -302,6 +371,12 @@ const LoginPage = () => {
           </Card>
         </div>
       </div>
+
+      {/* Modal de recuperação de senha */}
+      <ForgotPasswordModal
+        open={showForgotPassword}
+        onOpenChange={setShowForgotPassword}
+      />
     </div>
   );
 };
