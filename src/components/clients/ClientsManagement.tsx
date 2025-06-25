@@ -9,11 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import AddClientModal from './AddClientModal';
-import EditClientModal from './EditClientModal';
-import ClientDetailsModal from './ClientDetailsModal';
 import ClientContractsModal from './ClientContractsModal';
-import ClientJobHistory from './ClientJobHistory';
-import type { Client } from '@/types';
+import type { Client } from '@/types/client';
 
 const ClientsManagement = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -21,10 +18,7 @@ const ClientsManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isContractsModalOpen, setIsContractsModalOpen] = useState(false);
-  const [isJobHistoryModalOpen, setIsJobHistoryModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
@@ -50,14 +44,26 @@ const ClientsManagement = () => {
 
   const fetchClients = async () => {
     try {
+      // Using profiles as fallback until clients table is available
       const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('user_id', user?.id)
+        .from('profiles')
+        .select('id, name, email, phone, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setClients(data || []);
+      
+      // Convert profiles to Client format
+      const clientsData: Client[] = (data || []).map(profile => ({
+        id: profile.id,
+        user_id: user?.id || '',
+        name: profile.name || profile.email,
+        email: profile.email,
+        phone: profile.phone,
+        created_at: profile.created_at || new Date().toISOString(),
+        updated_at: profile.updated_at || new Date().toISOString()
+      }));
+      
+      setClients(clientsData);
     } catch (error) {
       console.error('Erro ao buscar clientes:', error);
       toast({
@@ -74,8 +80,9 @@ const ClientsManagement = () => {
     if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
 
     try {
+      // Using profiles as fallback
       const { error } = await supabase
-        .from('clients')
+        .from('profiles')
         .delete()
         .eq('id', id);
 
@@ -96,24 +103,9 @@ const ClientsManagement = () => {
     }
   };
 
-  const handleOpenEdit = (client: Client) => {
-    setSelectedClient(client);
-    setIsEditModalOpen(true);
-  };
-
-  const handleOpenDetails = (client: Client) => {
-    setSelectedClient(client);
-    setIsDetailsModalOpen(true);
-  };
-
   const handleOpenContracts = (client: Client) => {
     setSelectedClient(client);
     setIsContractsModalOpen(true);
-  };
-
-  const handleOpenJobHistory = (client: Client) => {
-    setSelectedClient(client);
-    setIsJobHistoryModalOpen(true);
   };
 
   if (loading) {
@@ -165,31 +157,8 @@ const ClientsManagement = () => {
                   <strong>Telefone:</strong> {client.phone}
                 </p>
               )}
-              {client.cnpj && (
-                <p className="text-sm text-gray-600">
-                  <strong>CNPJ:</strong> {client.cnpj}
-                </p>
-              )}
               
               <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenDetails(client)}
-                  className="flex items-center gap-1"
-                >
-                  <Eye className="h-3 w-3" />
-                  Ver
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenEdit(client)}
-                  className="flex items-center gap-1"
-                >
-                  <Edit className="h-3 w-3" />
-                  Editar
-                </Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -198,15 +167,6 @@ const ClientsManagement = () => {
                 >
                   <FileText className="h-3 w-3" />
                   Contratos
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenJobHistory(client)}
-                  className="flex items-center gap-1"
-                >
-                  <History className="h-3 w-3" />
-                  Histórico
                 </Button>
                 <Button
                   size="sm"
@@ -238,44 +198,15 @@ const ClientsManagement = () => {
       />
 
       {selectedClient && (
-        <>
-          <EditClientModal
-            isOpen={isEditModalOpen}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              setSelectedClient(null);
-            }}
-            client={selectedClient}
-            onClientUpdated={fetchClients}
-          />
-
-          <ClientDetailsModal
-            isOpen={isDetailsModalOpen}
-            onClose={() => {
-              setIsDetailsModalOpen(false);
-              setSelectedClient(null);
-            }}
-            client={selectedClient}
-          />
-
-          <ClientContractsModal
-            isOpen={isContractsModalOpen}
-            onClose={() => {
-              setIsContractsModalOpen(false);
-              setSelectedClient(null);
-            }}
-            client={selectedClient}
-          />
-
-          <ClientJobHistory
-            isOpen={isJobHistoryModalOpen}
-            onClose={() => {
-              setIsJobHistoryModalOpen(false);
-              setSelectedClient(null);
-            }}
-            client={selectedClient}
-          />
-        </>
+        <ClientContractsModal
+          isOpen={isContractsModalOpen}
+          onClose={() => {
+            setIsContractsModalOpen(false);
+            setSelectedClient(null);
+          }}
+          clientId={selectedClient.id}
+          clientName={selectedClient.name}
+        />
       )}
     </div>
   );

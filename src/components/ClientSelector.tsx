@@ -27,18 +27,30 @@ const ClientSelector = ({ value, onValueChange, onOpenAddModal }: ClientSelector
 
   const fetchClients = async () => {
     try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('user_id', user?.id)
+      // Usando a tabela 'profiles' como fallback já que 'clients' não existe ainda
+      // Você pode criar a tabela 'clients' depois ou usar uma query customizada
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email, phone')
         .order('name');
 
-      if (error) {
-        console.error('Erro ao buscar clientes:', error);
+      if (profilesError) {
+        console.error('Erro ao buscar clientes:', profilesError);
         return;
       }
 
-      setClients(data || []);
+      // Convertendo profiles para formato de Client
+      const clientsData: Client[] = (profilesData || []).map(profile => ({
+        id: profile.id,
+        user_id: user?.id || '',
+        name: profile.name || profile.email,
+        email: profile.email,
+        phone: profile.phone,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
+      setClients(clientsData);
     } catch (error) {
       console.error('Erro ao buscar clientes:', error);
     } finally {
