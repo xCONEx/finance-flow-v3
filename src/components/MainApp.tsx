@@ -9,7 +9,7 @@ import Settings from './Settings';
 import UserProfile from './UserProfile';
 import AdminPanel from './AdminPanel';
 import TeamManagement from './TeamManagement';
-import EntregaFlowKanban from './EntregaFlowKanban_old';
+import EntregaFlowKanban from './EntregaFlowKanban';
 import SubscriptionPlans from './SubscriptionPlans';
 import FinancialManagement from './financial/FinancialManagement';
 import ClientsManagement from './clients/ClientsManagement';
