@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -9,11 +8,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  User, 
-  LogOut, 
-  Settings, 
-  Crown, 
+import {
+  User,
+  LogOut,
+  Settings,
+  Crown,
   Users,
   Home,
   Calculator,
@@ -23,14 +22,13 @@ import {
   Building,
   FileText,
   Eye,
-  EyeOff
+  EyeOff,
 } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import NotificationBell from './NotificationBell';
 import ContextSelector from './ContextSelector';
-
 
 interface HeaderProps {
   activeTab: string;
@@ -48,7 +46,8 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
     await signOut();
   };
 
-  const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
+  const hasEnterprisePlan =
+    profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
 
   const menuItems = [
@@ -64,68 +63,52 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-           {/* Logo */}
+          {/* Logo + Contexto */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${currentTheme.primary} flex items-center justify-center`}>
                 <span className="text-white font-bold text-sm">FF</span>
               </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                Finance Flow
-              </h1>
-            </div>    
-                        {/* Context Selector */}
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Finance Flow</h1>
+            </div>
             <ContextSelector />
-            
           </div>
 
           {/* Navegação Desktop */}
-          <nav className="hidden lg:flex items-center space-x-3">
-            {menuItems.map(({ id, label, icon: Icon }) => {
-              const isActive = activeTab === id;
-              return (
-                <div key={id} className="relative group">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`h-10 w-10 rounded-full transition-colors ${
-                      isActive
-                        ? `${currentTheme.primary} text-white`
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
-                    }`}
-                    onClick={() => onTabChange(id)}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </Button>
-                  <div className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-                    {label}
-                  </div>
-                </div>
-              );
-            })}
+          <nav className="hidden lg:flex items-center space-x-1">
+            {menuItems.map((item) => (
+              <Button
+                key={item.id}
+                variant="ghost"
+                className={`flex items-center space-x-2 ${
+                  activeTab === item.id
+                    ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90`
+                    : `hover:bg-gradient-to-r hover:${currentTheme.secondary}`
+                }`}
+                onClick={() => onTabChange(item.id)}
+              >
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </Button>
+            ))}
 
             {showTeamOption && (
-              <div className="relative group">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={`h-10 w-10 rounded-full transition-colors ${
-                    activeTab === 'team'
-                      ? `${currentTheme.primary} text-white`
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
-                  }`}
-                  onClick={() => onTabChange('team')}
-                >
-                  <Users className="h-5 w-5" />
-                </Button>
-                <div className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-                  Equipe
-                </div>
-              </div>
+              <Button
+                variant="ghost"
+                className={`flex items-center space-x-2 ${
+                  activeTab === 'team'
+                    ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90`
+                    : `hover:bg-gradient-to-r hover:${currentTheme.secondary}`
+                }`}
+                onClick={() => onTabChange('team')}
+              >
+                <Users className="w-4 h-4" />
+                <span>Equipe</span>
+              </Button>
             )}
           </nav>
 
-          {/* User + Notificações */}
+          {/* Menu do Usuário */}
           <div className="flex items-center space-x-3">
             <Button
               variant="ghost"
@@ -151,76 +134,46 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-auto p-2 max-w-[90vw] overflow-hidden"
+                className="w-56 max-w-[90vw] overflow-hidden"
                 align="end"
                 forceMount
               >
-                <div className="flex items-center justify-center flex-col gap-2 px-2 pt-2">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-                    <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white`}>
-                      {user?.email?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="text-center">
-                    <p className="text-sm font-medium">{user?.email}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {profile?.subscription === 'free'
-                        ? 'Plano Gratuito'
-                        : profile?.subscription === 'premium'
-                        ? 'Plano Premium'
-                        : 'Plano Enterprise'}
-                    </p>
-                  </div>
+                <div className="flex flex-col space-y-1 p-2">
+                  <p className="text-sm font-medium leading-none">{user?.email}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {profile?.subscription === 'free'
+                      ? 'Plano Gratuito'
+                      : profile?.subscription === 'premium'
+                      ? 'Plano Premium'
+                      : 'Plano Enterprise'}
+                  </p>
                 </div>
-
                 <DropdownMenuSeparator />
-
-                <div className="grid grid-cols-3 gap-2 p-2">
-                  {[
-                    { id: 'profile', icon: User, label: 'Perfil' },
-                    { id: 'settings', icon: Settings, label: 'Configurações' },
-                    { id: 'subscription', icon: Crown, label: 'Assinatura' },
-                    ...(isAdmin ? [{ id: 'admin', icon: FileText, label: 'Admin' }] : []),
-                  ].map(({ id, icon: Icon, label }) => {
-                    const isActive = activeTab === id;
-                    return (
-                      <div key={id} className="relative group">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={`h-10 w-10 rounded-full ${
-                            isActive
-                              ? `${currentTheme.primary} text-white`
-                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
-                          }`}
-                          onClick={() => onTabChange(id)}
-                        >
-                          <Icon className="w-5 h-5" />
-                        </Button>
-                        <div className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-                          {label}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <DropdownMenuSeparator />
-
-                <div className="flex justify-center p-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleLogout}
-                    className="text-red-600 hover:text-red-800"
-                    title="Sair"
+                {[
+                  { id: 'profile', label: 'Perfil', icon: User },
+                  { id: 'settings', label: 'Configurações', icon: Settings },
+                  { id: 'subscription', label: 'Assinatura', icon: Crown },
+                  ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: FileText }] : []),
+                ].map(({ id, label, icon: Icon }) => (
+                  <DropdownMenuItem
+                    key={id}
+                    onClick={() => onTabChange(id)}
+                    className={`flex items-center space-x-2 ${
+                      activeTab === id
+                        ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90`
+                        : ''
+                    }`}
                   >
-                    <LogOut className="w-5 h-5" />
-                  </Button>
-                </div>
+                    <Icon className="mr-2 h-4 w-4" />
+                    <span>{label}</span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4 text-red-500" />
+                  <span className="text-red-600">Sair</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
-
             </DropdownMenu>
           </div>
         </div>
