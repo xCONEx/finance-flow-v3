@@ -111,28 +111,51 @@ const CompanyManagement = () => {
   };
 
   // ➕ Create Company
-  const handleCreateCompany = async (name: string, ownerEmail: string) => {
-    const owner = users.find(u => u.email === ownerEmail);
-    if (!owner) {
-      return toast({
-        title: "Erro",
-        description: "Usuário não encontrado.",
-        variant: "destructive"
-      });
-    }
+  const handleCreateCompany = async (name: string, ownerEmail: string, cnpj: string, description: string) => {
     try {
-      const { error } = await supabase
+      // Buscar usuário na tabela profiles
+      const { data: user, error: userError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', ownerEmail)
+        .single();
+
+      if (userError || !user) {
+        throw new Error('Usuário proprietário não encontrado');
+      }
+
+      // Inserir agência
+      const { error: agencyError } = await supabase
         .from('agencies')
         .insert({
           name,
-          owner_id: owner.id,
+          owner_uid: user.id,
           status: 'active'
         });
-      if (error) throw error;
+
+      if (agencyError) {
+        throw agencyError;
+      }
+
+      // Atualizar perfil do usuário para company_owner
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          user_type: 'company_owner',
+          role: 'owner',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (profileError) {
+        console.error('Erro ao atualizar perfil do usuário:', profileError);
+      }
+
       toast({
         title: "Sucesso",
         description: "Empresa criada com sucesso.",
       });
+      
       fetchCompanies();
     } catch (error: any) {
       toast({
@@ -144,32 +167,24 @@ const CompanyManagement = () => {
   };
 
   // ✏️ Edit Company
-  const handleEditCompany = async (
-    id: string,
-    name: string,
-    ownerEmail: string,
-    cnpj: string,
-    description: string
-  ): Promise<void> => {
+  const handleEditCompany = async (name: string, ownerEmail: string) => {
+    if (!selectedCompany) return;
     const owner = users.find(u => u.email === ownerEmail);
     if (!owner) {
-      toast({
+      return toast({
         title: "Erro",
         description: "Usuário não encontrado.",
         variant: "destructive"
       });
-      return;
     }
     try {
       const { error } = await supabase
         .from('agencies')
         .update({
           name,
-          owner_id: owner.id,
-          cnpj,
-          description
+          owner_id: owner.id
         })
-        .eq('id', id);
+        .eq('id', selectedCompany.id);
       if (error) throw error;
       toast({
         title: "Sucesso",
@@ -373,18 +388,12 @@ const CompanyManagement = () => {
         </>
       )}
 
-      <EditCompanyDialog
-        isOpen={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        company={selectedCompany}
+      {/* Dialogs */}
+      <CreateCompanyDialog
+        isOpen={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
         users={users}
-        onEditCompany={(
-          id: string,
-          name: string,
-          ownerEmail: string,
-          cnpj: string,
-          description: string
-        ) => handleEditCompany(id, name, ownerEmail, cnpj, description)}
+        onCreateCompany={handleCreateCompany}
       />
 
       <EditCompanyDialog
