@@ -7,9 +7,15 @@ import MonthlyCosts from './MonthlyCosts';
 import WorkItems from './WorkItems';
 import WorkRoutine from './WorkRoutine';
 import AgencyCollaborators from './AgencyCollaborators';
+import { useAgency } from '../contexts/AgencyContext';
 
 const ManagementSection = () => {
   const [activeTab, setActiveTab] = useState('costs');
+  const { currentContext, agencies } = useAgency();
+
+  // Verificar se é owner da agência atual
+  const currentAgency = currentContext !== 'individual' ? currentContext : null;
+  const isOwner = currentAgency && agencies.find(a => a.id === currentAgency.id)?.is_owner;
 
   return (
    <div className="p-4 sm:p-6 space-y-6 pb-20 md:pb-6">
@@ -23,7 +29,7 @@ const ManagementSection = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-auto">
+        <TabsList className={`grid w-full ${isOwner ? 'grid-cols-4' : 'grid-cols-3'} h-auto`}>
           <TabsTrigger value="costs" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
             <DollarSign className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Custos</span>
@@ -36,10 +42,12 @@ const ManagementSection = () => {
             <Calendar className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Rotina</span>
           </TabsTrigger>
-          <TabsTrigger value="collaborators" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
-            <Users className="w-4 h-4" />
-            <span className="text-xs sm:text-sm">Colaboradores</span>
-          </TabsTrigger>
+          {isOwner && (
+            <TabsTrigger value="collaborators" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
+              <Users className="w-4 h-4" />
+              <span className="text-xs sm:text-sm">Colaboradores</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="costs" className="mt-6">
@@ -54,9 +62,11 @@ const ManagementSection = () => {
           <WorkRoutine />
         </TabsContent>
 
-        <TabsContent value="collaborators" className="mt-6">
-          <AgencyCollaborators />
-        </TabsContent>
+        {isOwner && (
+          <TabsContent value="collaborators" className="mt-6">
+            <AgencyCollaborators />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
