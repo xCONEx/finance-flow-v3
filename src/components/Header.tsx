@@ -73,7 +73,10 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                 Finance Flow
               </h1>
-            </div>            
+            </div>    
+                        {/* Context Selector */}
+            <ContextSelector />
+            
           </div>
 
           {/* Desktop Navigation */}
