@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { supabaseKanbanService, KanbanProject } from '../services/supabaseKanbanService';
 import { useKanbanContext } from '../hooks/useKanbanContext';
+import ContextSelector from './ContextSelector';
 
 interface Column {
   id: string;
@@ -398,28 +399,18 @@ const EntregaFlowKanban = () => {
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
-      {/* Header com indicador de contexto MELHORADO */}
+      {/* Header com ContextSelector integrado */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             <div className={`w-10 h-10 bg-gradient-to-r ${currentTheme.primary} rounded-lg flex items-center justify-center`}>
               <Video className="text-white font-bold text-2xl"/>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
                 <h1 className="text-2xl font-bold">Projetos Audiovisuais</h1>
-                {isAgencyMode && currentAgencyId ? (
-                  <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 border-blue-200">
-                    <Building className="h-3 w-3" />
-                    <span className="font-medium">{contextLabel}</span>
-                    <span className="text-xs text-blue-600">ID: {currentAgencyId}</span>
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="flex items-center gap-1 bg-gray-100">
-                    <User className="h-3 w-3" />
-                    Individual
-                  </Badge>
-                )}
+                {/* ContextSelector integrado aqui */}
+                <ContextSelector />
               </div>
               <p className="text-sm text-gray-600">
                 {isAgencyMode && currentAgencyId ? 
