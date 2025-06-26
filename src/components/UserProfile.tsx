@@ -1,5 +1,4 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,17 +24,21 @@ const UserProfile = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
+  const hasEnterprisePlan =
+    profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
 
-  // Buscar nome da agência do usuário (se pertence a alguma)
-  const userAgency = agencies.find(agency => 
-    (currentContext !== 'individual' && currentContext.id === agency.id) ||
-    (profile?.agency_id && agency.id === profile.agency_id)
+  const userAgency = agencies.find(
+    (agency) =>
+      (currentContext !== 'individual' && currentContext.id === agency.id) ||
+      (profile?.agency_id && agency.id === profile.agency_id)
   );
+
+  const showCompanyInput = !userAgency && hasEnterprisePlan;
+  const showUpgradeMessage = !userAgency && !hasEnterprisePlan;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value
     }));
@@ -51,9 +54,9 @@ const UserProfile = () => {
 
     if (file.size > 2 * 1024 * 1024) {
       toast({
-        title: "Erro",
-        description: "A imagem deve ter no máximo 2MB",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'A imagem deve ter no máximo 2MB',
+        variant: 'destructive'
       });
       return;
     }
@@ -63,7 +66,7 @@ const UserProfile = () => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
-        
+
         const { error } = await supabase
           .from('profiles')
           .update({ image_user: base64, updated_at: new Date().toISOString() })
@@ -71,14 +74,14 @@ const UserProfile = () => {
 
         if (error) {
           toast({
-            title: "Erro",
-            description: "Erro ao atualizar foto de perfil",
-            variant: "destructive"
+            title: 'Erro',
+            description: 'Erro ao atualizar foto de perfil',
+            variant: 'destructive'
           });
         } else {
           toast({
-            title: "Sucesso",
-            description: "Foto de perfil atualizada!"
+            title: 'Sucesso',
+            description: 'Foto de perfil atualizada!'
           });
           window.location.reload();
         }
@@ -86,9 +89,9 @@ const UserProfile = () => {
       reader.readAsDataURL(file);
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Erro ao processar imagem",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Erro ao processar imagem',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
@@ -97,10 +100,10 @@ const UserProfile = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
-      
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -114,16 +117,16 @@ const UserProfile = () => {
       if (error) throw error;
 
       await updateProfile();
-      
+
       toast({
-        title: "Sucesso",
-        description: "Perfil atualizado com sucesso!"
+        title: 'Sucesso',
+        description: 'Perfil atualizado com sucesso!'
       });
     } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro ao atualizar perfil",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Erro ao atualizar perfil',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
@@ -146,16 +149,13 @@ const UserProfile = () => {
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Meu Perfil
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Meu Perfil</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Gerencie suas informações pessoais e configurações
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Foto e informações básicas */}
           <Card className="md:col-span-1">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -187,16 +187,20 @@ const UserProfile = () => {
                   className="hidden"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <h3 className="font-semibold text-lg">
                   {profile?.name || user?.email?.split('@')[0]}
                 </h3>
                 <p className="text-sm text-gray-600">{user?.email}</p>
                 <Badge className={getSubscriptionBadgeColor(profile?.subscription || 'free')}>
-                  {profile?.subscription === 'enterprise-annual' ? 'Enterprise Anual' : 
-                   profile?.subscription === 'enterprise' ? 'Enterprise' :
-                   profile?.subscription === 'premium' ? 'Premium' : 'Free'}
+                  {profile?.subscription === 'enterprise-annual'
+                    ? 'Enterprise Anual'
+                    : profile?.subscription === 'enterprise'
+                    ? 'Enterprise'
+                    : profile?.subscription === 'premium'
+                    ? 'Premium'
+                    : 'Free'}
                 </Badge>
                 {profile?.user_type === 'company_owner' && (
                   <div className="flex items-center justify-center gap-1 text-sm text-amber-600">
@@ -208,7 +212,6 @@ const UserProfile = () => {
             </CardContent>
           </Card>
 
-          {/* Formulário de dados */}
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Informações Pessoais</CardTitle>
@@ -246,18 +249,17 @@ const UserProfile = () => {
                     <Building2 className="h-4 w-4" />
                     Empresa
                   </Label>
-                  {userAgency ? (
+
+                  {userAgency && (
                     <div className="mt-1">
-                      <Input
-                        value={userAgency.name}
-                        disabled
-                        className="bg-gray-50"
-                      />
+                      <Input value={userAgency.name} disabled className="bg-gray-50" />
                       <p className="text-xs text-gray-500 mt-1">
                         Você faz parte da agência: {userAgency.name}
                       </p>
                     </div>
-                  ) : hasEnterprisePlan ? (
+                  )}
+
+                  {showCompanyInput && (
                     <Input
                       id="company"
                       name="company"
@@ -267,7 +269,9 @@ const UserProfile = () => {
                       placeholder="Nome da sua empresa"
                       className="mt-1"
                     />
-                  ) : (
+                  )}
+
+                  {showUpgradeMessage && (
                     <div className="mt-1">
                       <Input
                         value="Upgrade para Enterprise necessário"
@@ -281,11 +285,7 @@ const UserProfile = () => {
                   )}
                 </div>
 
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full"
-                >
+                <Button type="submit" disabled={loading} className="w-full">
                   {loading ? 'Salvando...' : 'Salvar Alterações'}
                 </Button>
               </form>
@@ -293,7 +293,6 @@ const UserProfile = () => {
           </Card>
         </div>
 
-        {/* Informações adicionais */}
         <Card>
           <CardHeader>
             <CardTitle>Informações da Conta</CardTitle>
@@ -304,9 +303,13 @@ const UserProfile = () => {
                 <Label>Tipo de Usuário</Label>
                 <div className="mt-1">
                   <Badge variant="outline">
-                    {profile?.user_type === 'company_owner' ? 'Proprietário de Empresa' :
-                     profile?.user_type === 'employee' ? 'Funcionário' :
-                     profile?.user_type === 'admin' ? 'Administrador' : 'Individual'}
+                    {profile?.user_type === 'company_owner'
+                      ? 'Proprietário de Empresa'
+                      : profile?.user_type === 'employee'
+                      ? 'Funcionário'
+                      : profile?.user_type === 'admin'
+                      ? 'Administrador'
+                      : 'Individual'}
                   </Badge>
                 </div>
               </div>
@@ -314,10 +317,9 @@ const UserProfile = () => {
               <div>
                 <Label>Conta criada em</Label>
                 <p className="text-sm text-gray-600 mt-1">
-                  {profile?.created_at ? 
-                    new Date(profile.created_at).toLocaleDateString('pt-BR') : 
-                    'Não disponível'
-                  }
+                  {profile?.created_at
+                    ? new Date(profile.created_at).toLocaleDateString('pt-BR')
+                    : 'Não disponível'}
                 </p>
               </div>
             </div>
