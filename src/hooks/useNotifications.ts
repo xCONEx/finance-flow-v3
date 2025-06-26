@@ -1,14 +1,28 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { notificationService } from '../services/notificationService';
 
 export const useNotifications = (monthlyCosts?: any[]) => {
+  const processedCosts = useRef(new Set<string>());
+  const lastProcessedTime = useRef<number>(0);
+
   useEffect(() => {
-    // Inicializar o serviço de notificações
-    notificationService.initialize();
+    // Inicializar o serviço de notificações apenas uma vez
+    const initNotifications = async () => {
+      await notificationService.initialize();
+    };
+    
+    initNotifications();
   }, []);
 
   useEffect(() => {
+    // Evitar processamento muito frequente (debounce de 5 segundos)
+    const now = Date.now();
+    if (now - lastProcessedTime.current < 5000) {
+      return;
+    }
+    lastProcessedTime.current = now;
+
     // Schedule notifications only for regular monthly costs with due dates
     if (monthlyCosts && monthlyCosts.length > 0) {
       const regularCosts = monthlyCosts.filter(cost => 
@@ -23,16 +37,36 @@ export const useNotifications = (monthlyCosts?: any[]) => {
       );
 
       regularCosts.forEach(cost => {
+        const costKey = `${cost.id || cost.description}-${cost.dueDate}`;
+        
+        // Verificar se já foi processado
+        if (processedCosts.current.has(costKey)) {
+          return;
+        }
+
         if (cost.dueDate && cost.notificationEnabled) {
           console.log('📅 Scheduling notification for:', cost.description, 'Due:', cost.dueDate);
           notificationService.scheduleExpenseReminder(cost);
+          processedCosts.current.add(costKey);
         }
       });
+
+      // Limpar custos antigos do cache (manter apenas últimos 100)
+      if (processedCosts.current.size > 100) {
+        const costKeys = Array.from(processedCosts.current);
+        const keysToRemove = costKeys.slice(0, costKeys.length - 100);
+        keysToRemove.forEach(key => processedCosts.current.delete(key));
+      }
     }
   }, [monthlyCosts]);
 
   const scheduleNotification = async (expense: any) => {
-    await notificationService.scheduleExpenseReminder(expense);
+    const costKey = `${expense.id || expense.description}-${expense.dueDate}`;
+    
+    if (!processedCosts.current.has(costKey)) {
+      await notificationService.scheduleExpenseReminder(expense);
+      processedCosts.current.add(costKey);
+    }
   };
 
   const sendImmediateNotification = async (title: string, message: string, data?: any) => {
@@ -45,6 +79,15 @@ export const useNotifications = (monthlyCosts?: any[]) => {
 
   const cancelExpenseNotifications = async (expenseId: string) => {
     await notificationService.cancelExpenseNotifications(expenseId);
+    
+    // Remover do cache também
+    const keysToRemove: string[] = [];
+    processedCosts.current.forEach(key => {
+      if (key.includes(expenseId)) {
+        keysToRemove.push(key);
+      }
+    });
+    keysToRemove.forEach(key => processedCosts.current.delete(key));
   };
 
   return {
