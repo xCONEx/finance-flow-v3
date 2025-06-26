@@ -24,32 +24,14 @@ const UserProfile = () => {
     company: profile?.company || ''
   });
   const [loading, setLoading] = useState(false);
-  const [agencyName, setAgencyName] = useState<string>('');
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
 
-  // Buscar nome da agência se o usuário pertence a uma
-  useEffect(() => {
-    const loadAgencyName = async () => {
-      if (profile?.agency_id) {
-        try {
-          const { data, error } = await supabase
-            .from('agencies')
-            .select('name')
-            .eq('id', profile.agency_id)
-            .single();
-
-          if (data && !error) {
-            setAgencyName(data.name);
-          }
-        } catch (error) {
-          console.error('Erro ao carregar nome da agência:', error);
-        }
-      }
-    };
-
-    loadAgencyName();
-  }, [profile?.agency_id]);
+  // Buscar nome da agência do usuário (se pertence a alguma)
+  const userAgency = agencies.find(agency => 
+    (currentContext !== 'individual' && currentContext.id === agency.id) ||
+    (profile?.agency_id && agency.id === profile.agency_id)
+  );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -264,15 +246,15 @@ const UserProfile = () => {
                     <Building2 className="h-4 w-4" />
                     Empresa
                   </Label>
-                  {agencyName ? (
+                  {userAgency ? (
                     <div className="mt-1">
                       <Input
-                        value={agencyName}
+                        value={userAgency.name}
                         disabled
                         className="bg-gray-50"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Você faz parte da agência: {agencyName}
+                        Você faz parte da agência: {userAgency.name}
                       </p>
                     </div>
                   ) : hasEnterprisePlan ? (
