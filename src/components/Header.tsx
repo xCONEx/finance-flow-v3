@@ -52,12 +52,12 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
 
   const menuItems = [
-    { id: 'dashboard', icon: Home },
-    { id: 'calculator', icon: Calculator },
-    ...(hasEnterprisePlan ? [{ id: 'kanban', icon: Video }] : []),
-    ...(hasPremiumPlan ? [{ id: 'financial', icon: CreditCard }] : []),
-    ...(hasPremiumPlan ? [{ id: 'clients', icon: UserCheck }] : []),
-    { id: 'management', icon: Building },
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'calculator', label: 'Calculadora', icon: Calculator },
+    ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
+    ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
+    ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
+    { id: 'management', label: 'Gerenciamento', icon: Building },
   ];
 
   return (
