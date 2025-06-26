@@ -64,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          {/* Logo */}
+           {/* Logo */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${currentTheme.primary} flex items-center justify-center`}>
@@ -79,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
             
           </div>
 
-          {/* Desktop Navigation */}
+          {/* Navegação Desktop */}
           <nav className="hidden lg:flex items-center space-x-3">
             {menuItems.map(({ id, label, icon: Icon }) => {
               const isActive = activeTab === id;
@@ -90,7 +90,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                     size="icon"
                     className={`h-10 w-10 rounded-full transition-colors ${
                       isActive
-                        ? `${currentTheme.primary} text-primary-foreground`
+                        ? `${currentTheme.primary} text-white`
                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
                     }`}
                     onClick={() => onTabChange(id)}
@@ -111,7 +111,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                   size="icon"
                   className={`h-10 w-10 rounded-full transition-colors ${
                     activeTab === 'team'
-                      ? `${currentTheme.primary} text-primary-foreground`
+                      ? `${currentTheme.primary} text-white`
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
                   }`}
                   onClick={() => onTabChange('team')}
@@ -125,7 +125,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
             )}
           </nav>
 
-          {/* User Area */}
+          {/* User + Notificações */}
           <div className="flex items-center space-x-3">
             <Button
               variant="ghost"
@@ -150,11 +150,9 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-
               <DropdownMenuContent
-                className="w-[260px] max-w-[90vw] p-2"
+                className="w-auto p-2 max-w-[90vw] overflow-hidden"
                 align="end"
-                sideOffset={8}
                 forceMount
               >
                 <div className="flex items-center justify-center flex-col gap-2 px-2 pt-2">
@@ -193,7 +191,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                           size="icon"
                           className={`h-10 w-10 rounded-full ${
                             isActive
-                              ? `${currentTheme.primary} text-primary-foreground`
+                              ? `${currentTheme.primary} text-white`
                               : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
                           }`}
                           onClick={() => onTabChange(id)}
