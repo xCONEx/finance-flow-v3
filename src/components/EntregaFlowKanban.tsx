@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { supabaseKanbanService, KanbanProject } from '../services/supabaseKanbanService';
 import { useKanbanContext } from '../hooks/useKanbanContext';
+import ContextSelector from './ContextSelector';
 
 interface Column {
   id: string;
