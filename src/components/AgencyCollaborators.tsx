@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Collaborator {
   id: string;
@@ -40,13 +41,25 @@ const AgencyCollaborators = () => {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [selectedAgency, setSelectedAgency] = useState<string>('');
 
-  // Verificar se é owner da agência atual
-  const currentAgency = currentContext !== 'individual' ? currentContext : null;
+  // Buscar agências que o usuário é owner
+  const ownedAgencies = agencies.filter(agency => agency.is_owner);
 
-  // Carregar colaboradores da agência
-  const loadCollaborators = async () => {
-    if (!currentAgency) {
+  // Selecionar agência padrão (contexto atual se for owner, ou primeira agência owned)
+  useEffect(() => {
+    if (ownedAgencies.length > 0) {
+      if (currentContext !== 'individual' && ownedAgencies.find(a => a.id === currentContext.id)) {
+        setSelectedAgency(currentContext.id);
+      } else {
+        setSelectedAgency(ownedAgencies[0].id);
+      }
+    }
+  }, [ownedAgencies, currentContext]);
+
+  // Carregar colaboradores da agência selecionada
+  const loadCollaborators = async (agencyId: string) => {
+    if (!agencyId) {
       setLoading(false);
       return;
     }
@@ -54,8 +67,19 @@ const AgencyCollaborators = () => {
     try {
       setLoading(true);
 
+      // Usar uma função RPC específica para owners ou a função admin se for admin
+      const isAdmin = profile?.user_type === 'admin';
+      
+      let rpcFunction = 'get_agency_collaborators_owner';
+      let params = { agency_id: agencyId };
+
+      if (isAdmin) {
+        rpcFunction = 'get_company_collaborators_admin';
+        params = { company_id: agencyId };
+      }
+
       const { data: collabData, error: collabError } = await (supabase as any)
-        .rpc('get_company_collaborators_admin', { company_id: currentAgency.id });
+        .rpc(rpcFunction, params);
 
       if (collabError) throw collabError;
 
@@ -75,32 +99,32 @@ const AgencyCollaborators = () => {
 
   // Convidar colaborador
   const handleInviteCollaborator = async () => {
-    if (!currentAgency || !inviteEmail.trim()) return;
+    if (!selectedAgency || !inviteEmail.trim()) return;
 
     try {
       setInviteLoading(true);
 
-      const { error } = await (supabase as any)
-        .rpc('invite_collaborator_admin', {
-          company_id: currentAgency.id,
+      // Usar função RPC apropriada baseada no tipo de usuário
+      const isAdmin = profile?.user_type === 'admin';
+      
+      let rpcFunction = 'invite_collaborator_owner';
+      let params = {
+        agency_id: selectedAgency,
+        collaborator_email: inviteEmail.trim()
+      };
+
+      if (isAdmin) {
+        rpcFunction = 'invite_collaborator_admin';
+        params = {
+          company_id: selectedAgency,
           collaborator_email: inviteEmail.trim()
-        });
+        };
+      }
+
+      const { error } = await (supabase as any)
+        .rpc(rpcFunction, params);
 
       if (error) throw error;
-
-      // Dar o mesmo plano do owner para o colaborador
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          subscription: profile?.subscription || 'free',
-          subscription_given_by_agency: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('email', inviteEmail.trim());
-
-      if (updateError) {
-        console.warn('Aviso: Não foi possível atualizar o plano do colaborador:', updateError);
-      }
 
       toast({
         title: "Sucesso",
@@ -109,7 +133,7 @@ const AgencyCollaborators = () => {
 
       setInviteEmail('');
       setShowInviteDialog(false);
-      loadCollaborators();
+      loadCollaborators(selectedAgency);
 
     } catch (error: any) {
       toast({
@@ -128,30 +152,25 @@ const AgencyCollaborators = () => {
     if (!confirmRemove) return;
 
     try {
+      // Usar função RPC apropriada baseada no tipo de usuário
+      const isAdmin = profile?.user_type === 'admin';
+      let rpcFunction = 'remove_collaborator_owner';
+      
+      if (isAdmin) {
+        rpcFunction = 'remove_collaborator_admin';
+      }
+
       const { error } = await (supabase as any)
-        .rpc('remove_collaborator_admin', { collaborator_id: collaboratorId });
+        .rpc(rpcFunction, { collaborator_id: collaboratorId });
 
       if (error) throw error;
-
-      // Remover plano se foi dado pela agência
-      const collaborator = collaborators.find(c => c.id === collaboratorId);
-      if (collaborator?.subscription_given_by_agency) {
-        await supabase
-          .from('profiles')
-          .update({
-            subscription: 'free',
-            subscription_given_by_agency: false,
-            updated_at: new Date().toISOString()
-          })
-          .eq('email', email);
-      }
 
       toast({
         title: "Sucesso",
         description: `${email} foi removido da agência`
       });
 
-      loadCollaborators();
+      loadCollaborators(selectedAgency);
 
     } catch (error: any) {
       toast({
@@ -163,8 +182,28 @@ const AgencyCollaborators = () => {
   };
 
   useEffect(() => {
-    loadCollaborators();
-  }, [currentContext]);
+    if (selectedAgency) {
+      loadCollaborators(selectedAgency);
+    }
+  }, [selectedAgency]);
+
+  if (ownedAgencies.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Nenhuma Agência
+            </h3>
+            <p className="text-gray-500">
+              Você precisa ser proprietário de uma agência para gerenciar colaboradores.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (loading) {
     return (
@@ -179,6 +218,8 @@ const AgencyCollaborators = () => {
     );
   }
 
+  const currentAgencyName = ownedAgencies.find(a => a.id === selectedAgency)?.name || 'Agência';
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -189,7 +230,7 @@ const AgencyCollaborators = () => {
             Colaboradores
           </h2>
           <p className="text-gray-600 mt-2">
-            {currentAgency?.name} - Gerencie sua equipe
+            {currentAgencyName} - Gerencie sua equipe
           </p>
         </div>
 
@@ -201,6 +242,29 @@ const AgencyCollaborators = () => {
           Convidar Colaborador
         </Button>
       </div>
+
+      {/* Seletor de Agência (se houver mais de uma) */}
+      {ownedAgencies.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Selecionar Agência</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select value={selectedAgency} onValueChange={setSelectedAgency}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma agência" />
+              </SelectTrigger>
+              <SelectContent>
+                {ownedAgencies.map(agency => (
+                  <SelectItem key={agency.id} value={agency.id}>
+                    {agency.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Card */}
       <Card>
