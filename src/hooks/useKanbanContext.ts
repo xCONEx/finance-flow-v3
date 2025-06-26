@@ -22,7 +22,7 @@ export const useKanbanContext = (): KanbanContextData => {
 
   useEffect(() => {
     console.log('🔄 [CONTEXT] useKanbanContext - Recalculando contexto...', {
-      currentContext: currentContext === 'individual' ? 'individual' : (currentContext ? `agency:${currentContext.id}` : 'undefined'),
+      currentContext: currentContext === 'individual' ? 'individual' : (currentContext && typeof currentContext === 'object' ? `agency:${currentContext.id}` : 'undefined'),
       profile: profile ? {
         user_type: profile.user_type,
         agency_id: profile.agency_id,
@@ -54,7 +54,7 @@ export const useKanbanContext = (): KanbanContextData => {
       return;
     }
 
-    // Se currentContext é um objeto (agência selecionada)
+    // Se currentContext é um objeto (agência selecionada) - CORREÇÃO PRINCIPAL
     if (currentContext && typeof currentContext === 'object' && currentContext.id) {
       console.log('🏢 [CONTEXT] Modo Empresa ativado:', {
         agencyId: currentContext.id,
@@ -69,20 +69,8 @@ export const useKanbanContext = (): KanbanContextData => {
       return;
     }
 
-    // Fallback: se há agência no perfil mas contexto não definido
-    if (profile?.agency_id && (profile.user_type === 'company_owner' || profile.user_type === 'employee')) {
-      console.log('🏢 [CONTEXT] Usando agency_id do perfil como fallback:', profile.agency_id);
-      setContextData({
-        isAgencyMode: true,
-        currentAgencyId: profile.agency_id,
-        currentUserId: user.id,
-        contextLabel: 'Empresa'
-      });
-      return;
-    }
-
-    // Último fallback para modo individual
-    console.log('⚠️ [CONTEXT] Fallback final para modo individual');
+    // Fallback: modo individual se não conseguir determinar contexto
+    console.log('⚠️ [CONTEXT] Fallback para modo individual - contexto não identificado:', currentContext);
     setContextData({
       isAgencyMode: false,
       currentAgencyId: null,
@@ -94,7 +82,8 @@ export const useKanbanContext = (): KanbanContextData => {
   console.log('📋 [CONTEXT] Estado final do Kanban:', {
     isAgencyMode: contextData.isAgencyMode,
     currentAgencyId: contextData.currentAgencyId,
-    contextLabel: contextData.contextLabel
+    contextLabel: contextData.contextLabel,
+    rawCurrentContext: currentContext
   });
 
   return contextData;
