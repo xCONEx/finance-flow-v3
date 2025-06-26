@@ -1,408 +1,347 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Save, Upload, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Camera, User, Building2, Crown } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { useSubscription } from '../hooks/useSubscription';
-import { toast } from '@/hooks/use-toast';
+import { useAgency } from '../contexts/AgencyContext';
+import { supabase } from '../integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const UserProfile = () => {
-  const { user, profile, updateProfile, signOut } = useSupabaseAuth();
-  const { currentTheme } = useTheme();
-  const { subscription } = useSubscription();
+  const { user, profile, updateProfile } = useSupabaseAuth();
+  const { agencies, currentContext } = useAgency();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Aqui vamos guardar o nome da empresa vinculada (se existir)
-  const [linkedCompanyName, setLinkedCompanyName] = useState<string | null>(null);
-
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    company: ''
+    name: profile?.name || '',
+    phone: profile?.phone || '',
+    company: profile?.company || ''
   });
+  const [loading, setLoading] = useState(false);
+  const [agencyName, setAgencyName] = useState<string>('');
 
-  // Função para pegar o nome do usuário, igual antes
-  const getUserDisplayName = () => {
-    if (profile?.name) {
-      return profile.name;
-    }
-    if (user?.user_metadata?.full_name) {
-      return user.user_metadata.full_name;
-    }
-    if (user?.user_metadata?.name) {
-      return user.user_metadata.name;
-    }
-    return user?.email?.split('@')[0] || '';
-  };
+  const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
 
-  // Detectar plano enterprise
-  const isEnterpriseUser = subscription === 'enterprise' || subscription === 'enterprise-annual';
-
-  // Carregar dados quando profile/user mudar
+  // Buscar nome da agência se o usuário pertence a uma
   useEffect(() => {
-    if (user && profile) {
-      // Se o profile tem empresa vinculada, usar o nome dela. Supondo que você tem essa info:
-      // Exemplo: profile.company_name (empresa vinculada) ou null se não tem
-      if (profile.company_name) {
-        setLinkedCompanyName(profile.company_name);
-      } else {
-        setLinkedCompanyName(null);
-      }
-
-      setFormData({
-        name: getUserDisplayName(),
-        email: user.email || '',
-        phone: profile.phone || '',
-        // Se usuário tem empresa vinculada, no formData.company deixamos vazio
-        // para não editar esse campo, pois vamos mostrar linkedCompanyName
-        company: '', 
-      });
-    }
-  }, [user, profile]);
-
-  // Pega URL da foto de perfil
-  const getProfileImageUrl = () => {
-    if (profile?.image_user) {
-      return profile.image_user;
-    }
-    if (user?.user_metadata?.avatar_url) {
-      return user.user_metadata.avatar_url;
-    }
-    return '';
-  };
-
-  // Função salvar
-  const handleSave = async () => {
-    if (!user?.id) return;
-
-    setIsLoading(true);
-    try {
-      const updateData: any = {};
-
-      if (formData.phone !== profile?.phone) {
-        updateData.phone = formData.phone;
-      }
-
-      // Se usuário NÃO tem empresa vinculada, então salvar o que ele digitou
-      if (!linkedCompanyName) {
-        // Se plano enterprise, salva company que ele digitou
-        if (isEnterpriseUser && formData.company !== profile?.company) {
-          updateData.company = formData.company;
-        }
-        // Se não for enterprise, salva mesmo assim pois campo livre
-        if (!isEnterpriseUser && formData.company !== profile?.company) {
-          updateData.company = formData.company;
-        }
-      }
-
-      if (formData.name !== profile?.name) {
-        updateData.name = formData.name;
-      }
-
-      if (Object.keys(updateData).length > 0) {
-        await updateProfile(updateData);
-      }
-
-      toast({
-        title: "Perfil Atualizado",
-        description: "Suas informações foram atualizadas com sucesso.",
-      });
-
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Erro ao salvar perfil:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar perfil.",
-        variant: "destructive"
-      });
-    }
-    setIsLoading(false);
-  };
-
-  // Upload de foto (igual seu código)
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user?.id) return;
-
-    if (file.size > 3 * 1024 * 1024) {
-      toast({
-        title: "Erro",
-        description: "A imagem deve ter no máximo 3MB.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Erro",
-        description: "Por favor, selecione uma imagem válida.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = e.target?.result as string;
-
+    const loadAgencyName = async () => {
+      if (profile?.agency_id) {
         try {
-          await updateProfile({ image_user: base64 });
+          const { data, error } = await supabase
+            .from('agencies')
+            .select('name')
+            .eq('id', profile.agency_id)
+            .single();
 
-          toast({
-            title: "Foto Atualizada",
-            description: "Sua foto de perfil foi atualizada com sucesso.",
-          });
+          if (data && !error) {
+            setAgencyName(data.name);
+          }
         } catch (error) {
-          console.error('Erro ao salvar foto:', error);
-          toast({
-            title: "Erro",
-            description: "Erro ao salvar foto.",
-            variant: "destructive"
-          });
+          console.error('Erro ao carregar nome da agência:', error);
         }
-        setIsLoading(false);
-      };
+      }
+    };
 
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error('Erro ao processar imagem:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao processar imagem.",
-        variant: "destructive"
-      });
-      setIsLoading(false);
-    }
-  };
+    loadAgencyName();
+  }, [profile?.agency_id]);
 
-  // Mudança em inputs
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [name]: value
     }));
   };
 
-  // Cor do badge plano
-  const getPlanBadgeColor = () => {
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Erro",
+        description: "A imagem deve ter no máximo 2MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string;
+        
+        const { error } = await supabase
+          .from('profiles')
+          .update({ image_user: base64, updated_at: new Date().toISOString() })
+          .eq('id', user?.id);
+
+        if (error) {
+          toast({
+            title: "Erro",
+            description: "Erro ao atualizar foto de perfil",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Sucesso",
+            description: "Foto de perfil atualizada!"
+          });
+          window.location.reload();
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao processar imagem",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          company: formData.company.trim(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      await updateProfile();
+      
+      toast({
+        title: "Sucesso",
+        description: "Perfil atualizado com sucesso!"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar perfil",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getSubscriptionBadgeColor = (subscription: string) => {
     switch (subscription) {
       case 'enterprise':
       case 'enterprise-annual':
         return 'bg-purple-100 text-purple-800';
       case 'premium':
         return 'bg-blue-100 text-blue-800';
-      case 'basic':
-        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
-  // Nome do plano
-  const getPlanName = () => {
-    switch (subscription) {
-      case 'enterprise':
-        return 'Enterprise';
-      case 'enterprise-annual':
-        return 'Enterprise Anual';
-      case 'premium':
-        return 'Premium';
-      case 'basic':
-        return 'Básico';
-      default:
-        return 'Gratuito';
-    }
-  };
-
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-24 md:pb-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Perfil do Usuário
-            </div>
-            <Badge className={getPlanBadgeColor()}>
-              {getPlanName()}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Avatar Section */}
-          <div className="flex flex-col items-center gap-4">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={getProfileImageUrl()} alt="Profile" />
-              <AvatarFallback className={`text-white text-xl bg-gradient-to-r ${currentTheme.primary}`}>
-                {getUserDisplayName() ? getUserDisplayName().charAt(0).toUpperCase() : 'U'}
-              </AvatarFallback>
-            </Avatar>
+    <div className="container mx-auto p-6 max-w-4xl">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Meu Perfil
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Gerencie suas informações pessoais e configurações
+          </p>
+        </div>
 
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-              className="flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              Alterar Foto
-            </Button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-            />
-          </div>
-
-          {/* Form Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                disabled={!isEditing || isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                value={formData.email}
-                disabled={true}
-                className="bg-gray-50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefone</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                disabled={!isEditing || isLoading}
-                placeholder="(11) 99999-9999"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="company" className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Empresa
-                {!isEnterpriseUser && (
-                  <Badge variant="outline" className="text-xs">
-                    Enterprise
-                  </Badge>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Foto e informações básicas */}
+          <Card className="md:col-span-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Foto de Perfil
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <div className="relative inline-block">
+                <Avatar className="w-32 h-32 mx-auto cursor-pointer" onClick={handleImageClick}>
+                  <AvatarImage src={profile?.image_user || user?.user_metadata?.avatar_url} />
+                  <AvatarFallback className="text-2xl">
+                    {user?.email?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <Button
+                  size="sm"
+                  className="absolute bottom-0 right-0 rounded-full p-2"
+                  onClick={handleImageClick}
+                  disabled={loading}
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="font-semibold text-lg">
+                  {profile?.name || user?.email?.split('@')[0]}
+                </h3>
+                <p className="text-sm text-gray-600">{user?.email}</p>
+                <Badge className={getSubscriptionBadgeColor(profile?.subscription || 'free')}>
+                  {profile?.subscription === 'enterprise-annual' ? 'Enterprise Anual' : 
+                   profile?.subscription === 'enterprise' ? 'Enterprise' :
+                   profile?.subscription === 'premium' ? 'Premium' : 'Free'}
+                </Badge>
+                {profile?.user_type === 'company_owner' && (
+                  <div className="flex items-center justify-center gap-1 text-sm text-amber-600">
+                    <Crown className="h-3 w-3" />
+                    <span>Proprietário</span>
+                  </div>
                 )}
-              </Label>
+              </div>
+            </CardContent>
+          </Card>
 
-              {/* Se tem empresa vinculada, mostrar nome fixo (disabled) */}
-              {linkedCompanyName ? (
-                <Input
-                  id="company"
-                  value={linkedCompanyName}
-                  disabled={true}
-                  className="bg-gray-50 cursor-not-allowed"
-                />
-              ) : (
-                <Input
-                  id="company"
-                  value={formData.company}
-                  onChange={(e) => handleInputChange('company', e.target.value)}
-                  disabled={!isEditing || isLoading || (!isEnterpriseUser && !isEditing ? true : false)}
-                  placeholder={isEnterpriseUser ? "Nome da empresa" : "Disponível no plano Enterprise"}
-                  className={!isEnterpriseUser ? "bg-gray-50" : ""}
-                />
-              )}
+          {/* Formulário de dados */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Informações Pessoais</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Nome Completo</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      type="text"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      placeholder="Seu nome completo"
+                    />
+                  </div>
 
-              {!isEnterpriseUser && !linkedCompanyName && isEditing && (
-                <p className="text-xs text-gray-500">
-                  O campo empresa está disponível apenas para usuários do plano Enterprise
+                  <div>
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="(11) 99999-9999"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="company" className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Empresa
+                  </Label>
+                  {agencyName ? (
+                    <div className="mt-1">
+                      <Input
+                        value={agencyName}
+                        disabled
+                        className="bg-gray-50"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Você faz parte da agência: {agencyName}
+                      </p>
+                    </div>
+                  ) : hasEnterprisePlan ? (
+                    <Input
+                      id="company"
+                      name="company"
+                      type="text"
+                      value={formData.company}
+                      onChange={handleInputChange}
+                      placeholder="Nome da sua empresa"
+                      className="mt-1"
+                    />
+                  ) : (
+                    <div className="mt-1">
+                      <Input
+                        value="Upgrade para Enterprise necessário"
+                        disabled
+                        className="bg-gray-50"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Disponível apenas no plano Enterprise
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full"
+                >
+                  {loading ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Informações adicionais */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações da Conta</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Tipo de Usuário</Label>
+                <div className="mt-1">
+                  <Badge variant="outline">
+                    {profile?.user_type === 'company_owner' ? 'Proprietário de Empresa' :
+                     profile?.user_type === 'employee' ? 'Funcionário' :
+                     profile?.user_type === 'admin' ? 'Administrador' : 'Individual'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div>
+                <Label>Conta criada em</Label>
+                <p className="text-sm text-gray-600 mt-1">
+                  {profile?.created_at ? 
+                    new Date(profile.created_at).toLocaleDateString('pt-BR') : 
+                    'Não disponível'
+                  }
                 </p>
-              )}
-              {linkedCompanyName && (
-                <p className="text-xs text-gray-500">
-                  Você pertence à empresa acima, este campo não pode ser editado.
-                </p>
-              )}
+              </div>
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            {!isEditing ? (
-              <>
-                <Button
-                  onClick={() => setIsEditing(true)}
-                  className={`flex-1 bg-gradient-to-r ${currentTheme.primary}`}
-                >
-                  Editar Perfil
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={signOut}
-                  className="flex-1"
-                >
-                  Sair
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  onClick={handleSave}
-                  disabled={isLoading}
-                  className={`flex-1 bg-gradient-to-r ${currentTheme.primary}`}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isLoading ? 'Salvando...' : 'Salvar'}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditing(false);
-                    // Reset form data e linkedCompanyName
-                    if (user && profile) {
-                      if (profile.company_name) {
-                        setLinkedCompanyName(profile.company_name);
-                      } else {
-                        setLinkedCompanyName(null);
-                      }
-                      setFormData({
-                        name: getUserDisplayName(),
-                        email: user.email || '',
-                        phone: profile.phone || '',
-                        company: '',
-                      });
-                    }
-                  }}
-                  disabled={isLoading}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
