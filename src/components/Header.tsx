@@ -22,7 +22,7 @@ import {
   Building,
   FileText,
   Eye,
-  EyeOff,
+  EyeOff, 
 } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -51,12 +51,12 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'calculator', label: 'Calculadora', icon: Calculator },
-    ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
-    ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
-    ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
-    { id: 'management', label: 'Gerenciamento', icon: Building },
+    { id: 'dashboard', label: '', icon: Home },
+    { id: 'calculator', label: '', icon: Calculator },
+    ...(hasEnterprisePlan ? [{ id: '', label: 'Projetos', icon: Video }] : []),
+    ...(hasPremiumPlan ? [{ id: '', label: 'Financeiro', icon: CreditCard }] : []),
+    ...(hasPremiumPlan ? [{ id: '', label: 'Clientes', icon: UserCheck }] : []),
+    { id: 'management', label: '', icon: Building },
   ];
 
   return (
