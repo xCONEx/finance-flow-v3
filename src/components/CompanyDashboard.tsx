@@ -1,531 +1,426 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { 
+  Building2, 
   Users, 
   Plus, 
-  Building2,
+  Trash2, 
+  Mail, 
   Crown,
-  Trash2,
-  AlertTriangle,
+  Calculator,
+  Package,
+  Clock,
+  TrendingUp,
   UserPlus,
-  RefreshCw,
-  User
+  Settings
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
-import { supabase } from '@/integrations/supabase/client';
-
-// Interface alinhada com o schema real da base de dados
-interface Agency {
-  id: string;
-  name: string;
-  description?: string;
-  owner_uid: string; // Usar owner_uid conforme o schema atual
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
+import { useAgency } from '../contexts/AgencyContext';
+import { supabase } from '../integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface Collaborator {
   id: string;
   user_id: string;
-  agency_id: string;
+  email: string;
+  name?: string;
   role: string;
-  added_at: string;
-  user_email?: string;
-  user_name?: string;
+  joined_at: string;
+  subscription?: string;
+  subscription_given_by_agency?: boolean;
+}
+
+interface CompanyStats {
+  totalCollaborators: number;
+  activeProjects: number;
+  monthlyRevenue: number;
+  totalExpenses: number;
 }
 
 const CompanyDashboard = () => {
-  const { user } = useSupabaseAuth();
+  const { user, profile } = useSupabaseAuth();
+  const { currentContext, agencies } = useAgency();
   const { toast } = useToast();
-  
-  const [userAgencies, setUserAgencies] = useState<Agency[]>([]);
-  const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
+
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [stats, setStats] = useState<CompanyStats>({
+    totalCollaborators: 0,
+    activeProjects: 0,
+    monthlyRevenue: 0,
+    totalExpenses: 0
+  });
   const [loading, setLoading] = useState(true);
-  
-  // Invite dialog
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
 
-  // Carregar agências do usuário (onde ele é owner)
-  const loadUserAgencies = async () => {
-    if (!user) return;
+  // Verificar se é owner da empresa atual
+  const currentAgency = currentContext !== 'individual' ? currentContext : null;
+  const isOwner = currentAgency && agencies.find(a => a.id === currentAgency.id)?.is_owner;
 
-    try {
-      console.log('🏢 Carregando agências do usuário...');
-      
-      // Buscar agências onde o usuário é owner usando owner_uid
-      const { data, error } = await supabase
-        .from('agencies')
-        .select('*')
-        .eq('owner_uid', user.id);
-
-      if (error) {
-        console.error('❌ Erro ao carregar agências:', error);
-        throw error;
-      }
-
-      console.log('✅ Agências do usuário:', data?.length || 0);
-      setUserAgencies(data || []);
-      
-      // Selecionar primeira agência automaticamente
-      if (data && data.length > 0 && !selectedAgency) {
-        setSelectedAgency(data[0]);
-      }
-      
-    } catch (error: any) {
-      console.error('❌ Erro ao carregar agências:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao carregar suas empresas',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  // Carregar colaboradores da agência selecionada
-  const loadCollaborators = async (agencyId: string) => {
-    try {
-      console.log('👥 Carregando colaboradores da agência:', agencyId);
-      
-      const { data, error } = await supabase
-        .from('agency_collaborators')
-        .select(`
-          id,
-          user_id,
-          agency_id,
-          role,
-          added_at
-        `)
-        .eq('agency_id', agencyId);
-
-      if (error) {
-        console.error('❌ Erro ao carregar colaboradores:', error);
-        throw error;
-      }
-
-      // Buscar dados dos usuários colaboradores
-      if (data && data.length > 0) {
-        const userIds = data.map(c => c.user_id);
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, email, name')
-          .in('id', userIds);
-
-        if (profilesError)  {
-          console.error('❌ Erro ao carregar perfis:', profilesError);
-        }
-
-        const collaboratorsWithProfiles = data.map(collab => {
-          const profile = profiles?.find(p => p.id === collab.user_id);
-          return {
-            ...collab,
-            user_email: profile?.email || 'Email não encontrado',
-            user_name: profile?.name || profile?.email || 'N/A'
-          };
-        });
-
-        setCollaborators(collaboratorsWithProfiles);
-      } else {
-        setCollaborators([]);
-      }
-
-      console.log('✅ Colaboradores carregados:', data?.length || 0);
-      
-    } catch (error: any) {
-      console.error('❌ Erro ao carregar colaboradores:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao carregar colaboradores',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  // Convidar colaborador (simplificado - adiciona diretamente)
-  const handleInviteCollaborator = async () => {
-    if (!selectedAgency || !inviteEmail.trim()) {
-      toast({
-        title: 'Erro',
-        description: 'Email do colaborador é obrigatório',
-        variant: 'destructive'
-      });
+  // Carregar dados da empresa
+  const loadCompanyData = async () => {
+    if (!currentAgency || !isOwner) {
+      setLoading(false);
       return;
     }
 
     try {
-      console.log('👤 Adicionando colaborador:', inviteEmail);
+      setLoading(true);
 
-      // Usar a função RPC que adiciona colaborador e atualiza o perfil
-      const { data, error } = await supabase
-        .rpc('add_collaborator_direct', {
-          target_agency_id: selectedAgency.id,
-          collaborator_email: inviteEmail.trim(),
-          collaborator_role: 'editor'
+      // Carregar colaboradores
+      const { data: collabData, error: collabError } = await (supabase as any)
+        .rpc('get_company_collaborators_admin', { company_id: currentAgency.id });
+
+      if (collabError) throw collabError;
+
+      setCollaborators(collabData || []);
+
+      // Carregar projetos ativos
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('kanban_boards')
+        .select('*')
+        .eq('agency_id', currentAgency.id)
+        .neq('status', 'entregue');
+
+      if (projectsError) throw projectsError;
+
+      // Carregar estatísticas
+      setStats({
+        totalCollaborators: collabData?.length || 0,
+        activeProjects: projectsData?.length || 0,
+        monthlyRevenue: 0, // Implementar depois
+        totalExpenses: 0   // Implementar depois
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao carregar dados da empresa:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar dados da empresa",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Convidar colaborador
+  const handleInviteCollaborator = async () => {
+    if (!currentAgency || !inviteEmail.trim()) return;
+
+    try {
+      setInviteLoading(true);
+
+      const { error } = await (supabase as any)
+        .rpc('invite_collaborator_admin', {
+          company_id: currentAgency.id,
+          collaborator_email: inviteEmail.trim()
         });
 
-      if (error) {
-        console.error('❌ Erro ao adicionar colaborador:', error);
-        throw error;
+      if (error) throw error;
+
+      // Dar o mesmo plano do owner para o colaborador
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          subscription: profile?.subscription || 'free',
+          subscription_given_by_agency: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('email', inviteEmail.trim());
+
+      if (updateError) {
+        console.warn('Aviso: Não foi possível atualizar o plano do colaborador:', updateError);
       }
 
-      console.log('✅ Colaborador adicionado:', data);
-
       toast({
-        title: 'Sucesso',
-        description: `Colaborador ${inviteEmail} adicionado com sucesso`
+        title: "Sucesso",
+        description: `Colaborador ${inviteEmail} convidado com sucesso!`
       });
 
-      setIsInviteDialogOpen(false);
       setInviteEmail('');
-      loadCollaborators(selectedAgency.id);
+      setShowInviteDialog(false);
+      loadCompanyData();
+
     } catch (error: any) {
-      console.error('❌ Erro ao adicionar colaborador:', error);
       toast({
-        title: 'Erro',
-        description: 'Erro ao adicionar colaborador: ' + (error?.message || 'Erro desconhecido'),
-        variant: 'destructive'
+        title: "Erro",
+        description: error.message || "Erro ao convidar colaborador",
+        variant: "destructive"
       });
+    } finally {
+      setInviteLoading(false);
     }
   };
 
   // Remover colaborador
-  const handleRemoveCollaborator = async (collaboratorId: string, collaboratorEmail: string) => {
-    if (!confirm(`Tem certeza que deseja remover ${collaboratorEmail} da equipe?`)) {
-      return;
-    }
+  const handleRemoveCollaborator = async (collaboratorId: string, email: string) => {
+    const confirmRemove = confirm(`Tem certeza que deseja remover ${email} da empresa?`);
+    if (!confirmRemove) return;
 
     try {
-      console.log('🗑️ Removendo colaborador:', collaboratorId);
+      const { error } = await (supabase as any)
+        .rpc('remove_collaborator_admin', { collaborator_id: collaboratorId });
 
-      const { error } = await supabase
-        .from('agency_collaborators')
-        .delete()
-        .eq('id', collaboratorId);
+      if (error) throw error;
 
-      if (error) {
-        console.error('❌ Erro ao remover colaborador:', error);
-        throw error;
+      // Remover plano se foi dado pela agência
+      const collaborator = collaborators.find(c => c.id === collaboratorId);
+      if (collaborator?.subscription_given_by_agency) {
+        await supabase
+          .from('profiles')
+          .update({
+            subscription: 'free',
+            subscription_given_by_agency: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('email', email);
       }
 
-      console.log('✅ Colaborador removido');
-
       toast({
-        title: 'Sucesso',
-        description: `${collaboratorEmail} foi removido da equipe`
+        title: "Sucesso",
+        description: `${email} foi removido da empresa`
       });
 
-      if (selectedAgency) {
-        loadCollaborators(selectedAgency.id);
-      }
+      loadCompanyData();
+
     } catch (error: any) {
-      console.error('❌ Erro ao remover colaborador:', error);
       toast({
-        title: 'Erro',
-        description: 'Erro ao remover colaborador',
-        variant: 'destructive'
+        title: "Erro",
+        description: error.message || "Erro ao remover colaborador",
+        variant: "destructive"
       });
     }
   };
 
   useEffect(() => {
-    if (user) {
-      loadUserAgencies();
-    }
-  }, [user]);
+    loadCompanyData();
+  }, [currentContext, isOwner]);
 
-  useEffect(() => {
-    if (selectedAgency) {
-      loadCollaborators(selectedAgency.id);
-    }
-  }, [selectedAgency]);
-
-  useEffect(() => {
-    setLoading(false);
-  }, []);
+  // Se não é owner, mostrar acesso negado
+  if (!isOwner || currentContext === 'individual') {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Acesso Restrito
+              </h3>
+              <p className="text-gray-500">
+                Apenas proprietários de empresa podem acessar este painel.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-4 md:p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Carregando...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-4 md:p-6">
-        <div className="max-w-7xl mx-auto text-center py-8">
-          <AlertTriangle className="h-16 w-16 mx-auto text-amber-600 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Acesso Restrito
-          </h3>
-          <p className="text-gray-600">Você precisa estar logado para acessar esta página.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (userAgencies.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-4 md:p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-3">
-              <div className="p-3 bg-purple-100 rounded-full">
-                <Building2 className="h-8 w-8 text-purple-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                  Gestão de Equipe
-                </h1>
-                <p className="text-gray-600">Gerencie sua equipe e colaboradores</p>
-              </div>
-            </div>
-          </div>
-
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Building2 className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Nenhuma Empresa Encontrada
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Você não possui nenhuma empresa ainda. Entre em contato com o administrador para criar uma empresa.
-              </p>
-            </CardContent>
-          </Card>
+      <div className="container mx-auto p-6">
+        <div className="text-center">
+          <p>Carregando dados da empresa...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3">
-            <div className="p-3 bg-purple-100 rounded-full">
-              <Building2 className="h-8 w-8 text-purple-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Gestão de Equipe
-              </h1>
-              <p className="text-gray-600">Gerencie sua equipe e colaboradores</p>
-            </div>
-          </div>
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Building2 className="text-blue-600" />
+            Dashboard da Empresa
+          </h1>
+          <p className="text-gray-600 mt-2">
+            {currentAgency?.name} - Painel de Controle
+          </p>
         </div>
 
-        {/* Seletor de Empresa */}
-        {userAgencies.length > 1 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Selecionar Empresa
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {userAgencies.map((agency) => (
-                  <Card 
-                    key={agency.id} 
-                    className={`cursor-pointer transition-all ${
-                      selectedAgency?.id === agency.id 
-                        ? 'ring-2 ring-purple-500 bg-purple-50' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => setSelectedAgency(agency)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 rounded-full">
-                          <Building2 className="h-4 w-4 text-purple-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{agency.name}</h3>
-                          <p className="text-sm text-gray-600">
-                            Criada em {new Date(agency.created_at).toLocaleDateString('pt-BR')}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {selectedAgency && (
-          <>
-            {/* Empresa Selecionada */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Crown className="h-5 w-5 text-yellow-600" />
-                    <span className="truncate">{selectedAgency.name}</span>
-                  </CardTitle>
-                  <Badge variant="secondary">Proprietário</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-blue-600" />
-                      <span className="font-medium">Colaboradores</span>
-                    </div>
-                    <p className="text-2xl font-bold text-blue-600 mt-2">
-                      {collaborators.length}
-                    </p>
-                  </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5 text-green-600" />
-                      <span className="font-medium">Status</span>
-                    </div>
-                    <p className="text-lg font-semibold text-green-600 mt-2 capitalize">
-                      {selectedAgency.status}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Gerenciar Colaboradores */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Colaboradores ({collaborators.length})
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (selectedAgency) {
-                          loadCollaborators(selectedAgency.id);
-                        }
-                      }}
-                      className="hidden sm:flex"
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Atualizar
-                    </Button>
-                    <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" className="flex items-center gap-2">
-                          <div className="relative">
-                            <User className="h-4 w-4" />
-                            <Plus className="h-3 w-3 absolute -top-1 -right-1 bg-white rounded-full" />
-                          </div>
-                          <span className="hidden sm:inline">Adicionar</span>
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="mx-4 max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Adicionar Colaborador</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="bg-gray-50 p-3 rounded-lg">
-                            <p className="text-sm text-gray-600">Empresa:</p>
-                            <p className="font-medium truncate">{selectedAgency.name}</p>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Email do Colaborador</label>
-                            <Input
-                              type="email"
-                              placeholder="Digite o email do colaborador"
-                              value={inviteEmail}
-                              onChange={(e) => setInviteEmail(e.target.value)}
-                              className="w-full"
-                            />
-                            <p className="text-xs text-gray-500">
-                              O usuário deve estar cadastrado no sistema
-                            </p>
-                          </div>
-                          <div className="flex flex-col sm:flex-row justify-end gap-2">
-                            <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)} className="w-full sm:w-auto">
-                              Cancelar
-                            </Button>
-                            <Button onClick={handleInviteCollaborator} className="w-full sm:w-auto">
-                              <UserPlus className="h-4 w-4 mr-2" />
-                              Adicionar
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {collaborators.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <p className="text-gray-500">Nenhum colaborador encontrado</p>
-                    <p className="text-sm text-gray-400 mt-2">
-                      Adicione pessoas para colaborar em sua empresa
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {collaborators.map((collaborator) => (
-                      <div key={collaborator.id} className="flex items-center justify-between p-3 sm:p-4 border rounded-lg bg-white">
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className="p-2 bg-gray-100 rounded-full flex-shrink-0">
-                            <User className="h-4 w-4 text-gray-600" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-gray-900 truncate">
-                              {collaborator.user_name}
-                            </p>
-                            <p className="text-sm text-gray-600 truncate">
-                              {collaborator.user_email}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {collaborator.role}
-                              </Badge>
-                              <span className="text-xs text-gray-500">
-                                Desde {new Date(collaborator.added_at).toLocaleDateString('pt-BR')}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRemoveCollaborator(collaborator.id, collaborator.user_email || '')}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </>
-        )}
+        <Button
+          onClick={() => setShowInviteDialog(true)}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          <UserPlus className="h-4 w-4 mr-2" />
+          Convidar Colaborador
+        </Button>
       </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Colaboradores</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalCollaborators}</div>
+            <p className="text-xs text-muted-foreground">
+              Membros ativos da equipe
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Projetos Ativos</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activeProjects}</div>
+            <p className="text-xs text-muted-foreground">
+              Em andamento
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Receita Mensal</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R$ {stats.monthlyRevenue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Este mês
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Gastos Totais</CardTitle>
+            <Calculator className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R$ {stats.totalExpenses.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Custos operacionais
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Colaboradores */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Colaboradores da Empresa
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {collaborators.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-gray-500">Nenhum colaborador cadastrado</p>
+              <Button
+                onClick={() => setShowInviteDialog(true)}
+                className="mt-4"
+                variant="outline"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Convidar Primeiro Colaborador
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {collaborators.map((collaborator) => (
+                <div
+                  key={collaborator.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Users className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{collaborator.name || collaborator.email}</p>
+                      <p className="text-sm text-gray-500">{collaborator.email}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary">{collaborator.role}</Badge>
+                        {collaborator.subscription && (
+                          <Badge variant="outline">
+                            {collaborator.subscription}
+                            {collaborator.subscription_given_by_agency && (
+                              <Crown className="h-3 w-3 ml-1" />
+                            )}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-500">
+                      Desde {new Date(collaborator.joined_at).toLocaleDateString('pt-BR')}
+                    </p>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleRemoveCollaborator(collaborator.id, collaborator.email)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialog de Convite */}
+      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convidar Colaborador</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Email do Colaborador</label>
+              <Input
+                type="email"
+                placeholder="Digite o email do colaborador"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+            </div>
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <Crown className="h-4 w-4 inline mr-1" />
+                O colaborador receberá automaticamente o plano <strong>{profile?.subscription || 'free'}</strong> da empresa.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowInviteDialog(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleInviteCollaborator}
+                disabled={!inviteEmail.trim() || inviteLoading}
+                className="flex-1"
+              >
+                {inviteLoading ? 'Convidando...' : 'Enviar Convite'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
