@@ -1,4 +1,3 @@
-
 import { supabase } from '../integrations/supabase/client';
 
 export interface KanbanProject {
@@ -45,10 +44,10 @@ class SupabaseKanbanService {
         createdAt: item.created_at,
         updatedAt: item.updated_at,
         user_id: item.user_id,
-        agency_id: null
+        agency_id: null // Forçar null para projetos individuais
       }));
 
-      console.log('✅ [INDIVIDUAL] Board carregado:', projects.length, 'projetos');
+      console.log('✅ [INDIVIDUAL] Board carregado:', projects.length, 'projetos individuais');
       return projects;
     } catch (error) {
       console.error('❌ [INDIVIDUAL] Erro ao carregar board:', error);
@@ -83,7 +82,7 @@ class SupabaseKanbanService {
         createdAt: item.created_at,
         updatedAt: item.updated_at,
         user_id: item.user_id || '',
-        agency_id: agencyId
+        agency_id: agencyId // Garantir que o agency_id seja sempre a string correta
       }));
 
       console.log('✅ [AGENCY] Board da agência carregado:', projects.length, 'projetos para agência', agencyId);
@@ -96,18 +95,21 @@ class SupabaseKanbanService {
 
   async saveProject(project: KanbanProject): Promise<void> {
     try {
+      // CORREÇÃO PRINCIPAL: Garantir que agency_id seja sempre null ou string válida, nunca undefined
+      const normalizedAgencyId = project.agency_id === undefined ? null : project.agency_id;
+      
       console.log('💾 [SAVE] Salvando projeto:', {
         id: project.id,
         title: project.title,
-        agency_id: project.agency_id,
+        agency_id: normalizedAgencyId,
         user_id: project.user_id,
-        mode: project.agency_id ? 'AGENCY' : 'INDIVIDUAL'
+        mode: normalizedAgencyId ? 'AGENCY' : 'INDIVIDUAL'
       });
       
       const projectData = {
         id: project.id,
         user_id: project.user_id,
-        agency_id: project.agency_id, // IMPORTANTE: sempre incluir o agency_id (null ou valor)
+        agency_id: normalizedAgencyId, // IMPORTANTE: sempre null ou string válida
         title: project.title,
         client: project.client,
         due_date: project.dueDate || null,
@@ -118,7 +120,7 @@ class SupabaseKanbanService {
         updated_at: new Date().toISOString()
       };
 
-      console.log('💾 [SAVE] Dados a serem salvos:', projectData);
+      console.log('💾 [SAVE] Dados normalizados a serem salvos:', projectData);
 
       const { error } = await supabase
         .from('kanban_boards')
@@ -131,7 +133,7 @@ class SupabaseKanbanService {
         throw error;
       }
 
-      console.log('✅ [SAVE] Projeto salvo com sucesso:', project.title);
+      console.log('✅ [SAVE] Projeto salvo com sucesso:', project.title, 'Mode:', normalizedAgencyId ? 'AGENCY' : 'INDIVIDUAL');
     } catch (error) {
       console.error('❌ [SAVE] Erro ao salvar projeto:', error);
       throw error;
@@ -159,7 +161,6 @@ class SupabaseKanbanService {
     }
   }
 
-  // Métodos legados mantidos para compatibilidade
   async saveBoard(userId: string, projects: KanbanProject[]): Promise<void> {
     try {
       console.log('💾 [LEGACY] Salvando board individual:', projects.length, 'projetos');
