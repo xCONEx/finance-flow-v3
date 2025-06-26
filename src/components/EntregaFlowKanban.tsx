@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +56,15 @@ const EntregaFlowKanban = () => {
   const { user } = useSupabaseAuth();
   const { isAgencyMode, currentAgencyId, currentUserId, contextLabel } = useKanbanContext();
 
+  // Função para gerar UUID válido
+  const generateUUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
   const columns: Column[] = [
     {
       id: 'filmado',
@@ -112,7 +120,10 @@ const EntregaFlowKanban = () => {
   }, [user, isAgencyMode, currentAgencyId, currentUserId]);
 
   const loadProjects = async () => {
-    if (!currentUserId) return;
+    if (!currentUserId) {
+      console.log('❌ Nenhum usuário logado para carregar projetos');
+      return;
+    }
     
     try {
       setLoading(true);
@@ -187,44 +198,6 @@ const EntregaFlowKanban = () => {
     }
   };
 
-  // Estado adicional
-  const [editData, setEditData] = useState<Partial<KanbanProject> | null>(null);
-
-  useEffect(() => {
-    if (selectedProject) {
-      setEditData({ ...selectedProject });
-    }
-  }, [selectedProject]);
-
-  const handleEditSave = async () => {
-    if (!selectedProject || !editData) return;
-
-    try {
-      const updatedProject = { ...selectedProject, ...editData, updatedAt: new Date().toISOString() };
-      
-      await supabaseKanbanService.saveProject(updatedProject);
-      
-      const updatedProjects = projects.map(p =>
-        p.id === selectedProject.id ? updatedProject : p
-      );
-      setProjects(updatedProjects);
-      
-      toast({
-        title: "Projeto Atualizado",
-        description: `"${editData.title}" foi salvo com sucesso`
-      });
-
-      setShowEditModal(false);
-    } catch (error) {
-      console.error('❌ Erro ao salvar projeto:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar projeto",
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleAddProject = async () => {
     if (!newProject.title || !newProject.client) {
       toast({
@@ -237,7 +210,7 @@ const EntregaFlowKanban = () => {
 
     try {
       const project: KanbanProject = {
-        id: `project_${Date.now()}`,
+        id: generateUUID(),
         title: newProject.title!,
         client: newProject.client!,
         dueDate: newProject.dueDate || '',
@@ -279,21 +252,6 @@ const EntregaFlowKanban = () => {
         variant: "destructive"
       });
     }
-  };
-
-  const priorityLabels: Record<string, string> = {
-    alta: "Alta",
-    media: "Média",
-    baixa: "Baixa",
-  };
-
-  const priorityStyles: Record<
-    string,
-    { label: string; bgColor: string; textColor?: string }
-  > = {
-    alta: { label: "Alta", bgColor: "bg-red-500", textColor: "text-white" },
-    media: { label: "Média", bgColor: "bg-yellow-400", textColor: "text-black" },
-    baixa: { label: "Baixa", bgColor: "bg-green-500", textColor: "text-white" },
   };
 
   const handleDeleteProject = async (projectId: string) => {
@@ -379,7 +337,7 @@ const EntregaFlowKanban = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 pb-20 md:pb-6 overflow-x-hidden px-4">
+      <div className="space-y-6 pb-20 md:pb-6">
         <div className="text-center">
           <p>Carregando projetos...</p>
         </div>
@@ -388,12 +346,12 @@ const EntregaFlowKanban = () => {
   }
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6 overflow-x-hidden px-4">
+    <div className="space-y-6 pb-20 md:pb-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-purple-800 rounded-lg flex items-center justify-center">
+            <div className={`w-10 h-10 bg-gradient-to-r ${currentTheme.primary} rounded-lg flex items-center justify-center`}>
               <Video className="text-white font-bold text-2xl"/>
             </div>
             <div>
@@ -409,7 +367,7 @@ const EntregaFlowKanban = () => {
 
         <Button 
           onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition-all duration-300 hover:scale-105"
+          className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
         >
           <Plus className="h-4 w-4 mr-2" />
           Novo Projeto
@@ -532,17 +490,9 @@ const EntregaFlowKanban = () => {
                                   <CardContent className="p-4">
                                     <div className="space-y-3">
                                       {/* Priority Badge */}
-                                      {project.priority && (
-                                        <Badge
-                                          className={`text-white text-xs ${
-                                            project.priority === 'alta'
-                                              ? 'bg-red-500'
-                                              : project.priority === 'media'
-                                              ? 'bg-yellow-500'
-                                              : 'bg-green-500'
-                                          }`}
-                                        >
-                                          {priorityLabels[project.priority] || project.priority}
+                                      {project.priority === 'alta' && (
+                                        <Badge className="bg-red-500 text-white text-xs">
+                                          {project.priority.charAt(0).toUpperCase() + project.priority.slice(1)}
                                         </Badge>
                                       )}
 
@@ -624,12 +574,9 @@ const EntregaFlowKanban = () => {
 
       {/* Add Project Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="max-w-sm sm:max-w-md md:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden px-4">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Novo Projeto</DialogTitle>
-            <DialogDescription>
-              Adicione um novo projeto ao seu pipeline de produção
-            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -686,6 +633,40 @@ const EntregaFlowKanban = () => {
                 rows={3}
               />
             </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Links de Entrega</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Cole o link aqui"
+                  value={newLink}
+                  onChange={(e) => setNewLink(e.target.value)}
+                />
+                <Button 
+                  onClick={() => {
+                    if (newLink) {
+                      setNewProject({
+                        ...newProject,
+                        links: [...(newProject.links || []), newLink]
+                      });
+                      setNewLink('');
+                    }
+                  }}
+                  variant="outline"
+                >
+                  Adicionar
+                </Button>
+              </div>
+              {newProject.links && newProject.links.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {newProject.links.map((link, index) => (
+                    <div key={index} className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                      {link}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-2 pt-4">
@@ -708,19 +689,13 @@ const EntregaFlowKanban = () => {
 
       {/* Edit Project Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-sm sm:max-w-md md:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden px-4">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2">
                 Editar Projeto
-                {selectedProject?.priority && (
-                  <Badge
-                    className={`${priorityStyles[selectedProject.priority]?.bgColor} ${
-                      priorityStyles[selectedProject.priority]?.textColor || "text-white"
-                    }`}
-                  >
-                    {priorityStyles[selectedProject.priority]?.label || selectedProject.priority}
-                  </Badge>
+                {selectedProject?.priority === 'alta' && (
+                  <Badge className="bg-red-500 text-white">Alta</Badge>
                 )}
                 <Badge variant="outline">{selectedProject?.status}</Badge>
               </DialogTitle>
@@ -728,87 +703,80 @@ const EntregaFlowKanban = () => {
                 size="sm"
                 variant="destructive"
                 onClick={() => selectedProject && handleDeleteProject(selectedProject.id)}
-                className='mt-4'>
+              >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-            <DialogDescription>
-              Edite as informações do projeto
-            </DialogDescription>
           </DialogHeader>
-
-          {editData && (
-            <div className="space-y-6 p-4 md:p-6 max-w-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Título</label>
-                  <Input
-                    className="w-full"
-                    value={editData.title || ''}
-                    onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                  />
-                </div>
+          
+          {selectedProject && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700">Cliente</label>
-                  <Input
-                    className="w-full"
-                    value={editData.client || ''}
-                    onChange={(e) => setEditData({ ...editData, client: e.target.value })}
-                  />
+                  <p className="text-sm text-gray-900">{selectedProject.client}</p>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700">Data de Entrega</label>
-                  <Input
-                    type="date"
-                    className="w-full"
-                    value={editData.dueDate || ''}
-                    onChange={(e) => setEditData({ ...editData, dueDate: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Prioridade</label>
-                  <Select
-                    value={editData.priority || 'media'}
-                    onValueChange={(value: 'alta' | 'media' | 'baixa') =>
-                      setEditData({ ...editData, priority: value })
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione a prioridade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="alta">Alta</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <p className={`text-sm ${
+                    selectedProject.dueDate && isOverdue(selectedProject.dueDate) && selectedProject.status !== 'entregue' ? 
+                    'text-red-600 font-medium' : 'text-gray-900'
+                  }`}>
+                    {selectedProject.dueDate ? new Date(selectedProject.dueDate).toLocaleDateString('pt-BR') : 'Não definido'}
+                  </p>
                 </div>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-gray-700">Descrição</label>
-                <Textarea
-                  rows={3}
-                  className="w-full"
-                  value={editData.description || ''}
-                  onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                />
+                <p className="text-sm text-gray-900 mt-1">{selectedProject.description || 'Sem descrição'}</p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                <Button
-                  onClick={() => setShowEditModal(false)}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-gray-700">Links de Entrega</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Cole o link aqui"
+                      value={newLink}
+                      onChange={(e) => setNewLink(e.target.value)}
+                      className="w-64"
+                    />
+                    <Button onClick={handleAddLink} className="bg-black text-white">
+                      Adicionar
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {(!selectedProject.links || selectedProject.links.length === 0) ? (
+                    <p className="text-sm text-gray-500 italic">Nenhum link adicionado</p>
+                  ) : (
+                    selectedProject.links.map((link, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                        <ExternalLink className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm text-gray-700 flex-1">{link}</span>
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={link} target="_blank" rel="noopener noreferrer">
+                            Abrir
+                          </a>
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  onClick={() => setShowEditModal(false)} 
                   variant="outline"
-                  className="flex-1 w-full sm:w-auto"
+                  className="flex-1"
                 >
                   Fechar
                 </Button>
-                <Button
-                  onClick={handleEditSave}
-                  className="flex-1 w-full sm:w-auto bg-black text-white hover:bg-gray-800"
+                <Button 
+                  className="flex-1 bg-black text-white hover:bg-gray-800"
                 >
                   Salvar Alterações
                 </Button>
