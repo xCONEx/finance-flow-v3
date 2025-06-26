@@ -13,9 +13,8 @@ const ManagementSection = () => {
   const [activeTab, setActiveTab] = useState('costs');
   const { currentContext, agencies } = useAgency();
 
-  // Verificar se é owner da agência atual
-  const currentAgency = currentContext !== 'individual' ? currentContext : null;
-  const isOwner = currentAgency && agencies.find(a => a.id === currentAgency.id)?.is_owner;
+  // Verificar se é owner de QUALQUER agência (não apenas a do contexto atual)
+  const isOwnerOfAnyAgency = agencies.some(agency => agency.is_owner);
 
   return (
    <div className="p-4 sm:p-6 space-y-6 pb-20 md:pb-6">
@@ -29,7 +28,7 @@ const ManagementSection = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full ${isOwner ? 'grid-cols-4' : 'grid-cols-3'} h-auto`}>
+        <TabsList className={`grid w-full ${isOwnerOfAnyAgency ? 'grid-cols-4' : 'grid-cols-3'} h-auto`}>
           <TabsTrigger value="costs" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
             <DollarSign className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Custos</span>
@@ -42,7 +41,7 @@ const ManagementSection = () => {
             <Calendar className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Rotina</span>
           </TabsTrigger>
-          {isOwner && (
+          {isOwnerOfAnyAgency && (
             <TabsTrigger value="collaborators" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
               <Users className="w-4 h-4" />
               <span className="text-xs sm:text-sm">Colaboradores</span>
@@ -62,7 +61,7 @@ const ManagementSection = () => {
           <WorkRoutine />
         </TabsContent>
 
-        {isOwner && (
+        {isOwnerOfAnyAgency && (
           <TabsContent value="collaborators" className="mt-6">
             <AgencyCollaborators />
           </TabsContent>
