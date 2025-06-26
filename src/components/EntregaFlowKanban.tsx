@@ -26,6 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { supabaseKanbanService, KanbanProject } from '../services/supabaseKanbanService';
+import { useKanbanContext } from '../hooks/useKanbanContext';
 
 interface Column {
   id: string;
@@ -39,7 +40,7 @@ const EntregaFlowKanban = () => {
   const [projects, setProjects] = useState<KanbanProject[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const { isDark, currentTheme, toggleDarkMode, changeTheme } = useTheme();
+  const { currentTheme } = useTheme();
   const [selectedProject, setSelectedProject] = useState<KanbanProject | null>(null);
   const [loading, setLoading] = useState(true);
   const [newProject, setNewProject] = useState<Partial<KanbanProject>>({
@@ -54,6 +55,7 @@ const EntregaFlowKanban = () => {
   const [newLink, setNewLink] = useState('');
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
+  const { isAgencyMode, currentAgencyId, currentUserId, contextLabel } = useKanbanContext();
 
   const columns: Column[] = [
     {
@@ -107,16 +109,33 @@ const EntregaFlowKanban = () => {
 
   useEffect(() => {
     loadProjects();
-  }, [user]);
+  }, [user, isAgencyMode, currentAgencyId, currentUserId]);
 
   const loadProjects = async () => {
-    if (!user?.id) return;
+    if (!currentUserId) return;
     
     try {
       setLoading(true);
-      const loadedProjects = await supabaseKanbanService.loadBoard(user.id);
+      console.log('🔄 Carregando projetos para contexto:', {
+        isAgencyMode,
+        currentAgencyId,
+        currentUserId,
+        contextLabel
+      });
+
+      let loadedProjects: KanbanProject[] = [];
+
+      if (isAgencyMode && currentAgencyId) {
+        // Carregar projetos da empresa
+        loadedProjects = await supabaseKanbanService.loadAgencyBoard(currentAgencyId);
+        console.log('🏢 Projetos da empresa carregados:', loadedProjects.length);
+      } else {
+        // Carregar projetos individuais
+        loadedProjects = await supabaseKanbanService.loadBoard(currentUserId);
+        console.log('👤 Projetos individuais carregados:', loadedProjects.length);
+      }
+
       setProjects(loadedProjects);
-      console.log('📦 Projetos carregados:', loadedProjects.length);
     } catch (error) {
       console.error('❌ Erro ao carregar projetos:', error);
       toast({
@@ -130,11 +149,24 @@ const EntregaFlowKanban = () => {
   };
 
   const saveProjects = async (projectsData: KanbanProject[]) => {
-    if (!user?.id) return;
+    if (!currentUserId) return;
     
     try {
-      await supabaseKanbanService.saveBoard(user.id, projectsData);
-      localStorage.setItem('entregaFlowProjects', JSON.stringify(projectsData));
+      if (isAgencyMode && currentAgencyId) {
+        // Salvar projetos da empresa
+        await supabaseKanbanService.saveAgencyBoard(currentAgencyId, projectsData);
+        console.log('🏢 Projetos da empresa salvos');
+      } else {
+        // Salvar projetos individuais
+        await supabaseKanbanService.saveBoard(currentUserId, projectsData);
+        console.log('👤 Projetos individuais salvos');
+      }
+      
+      // Backup no localStorage
+      const storageKey = isAgencyMode && currentAgencyId 
+        ? `entregaFlowProjects_agency_${currentAgencyId}` 
+        : `entregaFlowProjects_user_${currentUserId}`;
+      localStorage.setItem(storageKey, JSON.stringify(projectsData));
     } catch (error) {
       console.error('❌ Erro ao salvar projetos:', error);
       toast({
@@ -217,7 +249,8 @@ const EntregaFlowKanban = () => {
       links: newProject.links || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      user_id: user?.id || ''
+      user_id: currentUserId || '',
+      agency_id: isAgencyMode ? currentAgencyId : null
     };
 
     const updatedProjects = [...projects, project];
@@ -338,8 +371,10 @@ const EntregaFlowKanban = () => {
               <Video className="text-white font-bold text-2xl"/>
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Projetos</h1>
-              <p className="text-sm text-gray-600">Gerenciador de Entregas</p>
+              <h1 className="text-2xl font-bold">Projetos - {contextLabel}</h1>
+              <p className="text-sm text-gray-600">
+                {isAgencyMode ? 'Gerenciamento em equipe' : 'Gerenciamento individual'}
+              </p>
             </div>
           </div>
           <h2 className="text-xl font-semibold">Bem-vindo ao EntregaFlow! 🎬</h2>
