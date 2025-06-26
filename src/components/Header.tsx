@@ -16,7 +16,6 @@ import {
   Moon
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +39,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
+  const isAdmin = profile?.user_type === 'admin';
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -48,6 +48,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
     ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
     ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
     { id: 'management', label: 'Gerenciamento', icon: Building },
+    ...(showTeamOption ? [{ id: 'team', label: 'Equipe', icon: UserCheck }] : []),
     { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
@@ -72,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
               <span className="font-semibold text-lg hidden sm:block">EntregaFlow</span>
             </div>
             
-            {/* Context Selector - Mostra para owners e colaboradores */}
+            {/* Context Selector */}
             <ContextSelector />
           </div>
 
@@ -92,15 +93,22 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                 >
                   <Icon className="h-4 w-4" />
                   <span className="hidden lg:inline">{item.label}</span>
-                  {item.id === 'kanban' && hasEnterprisePlan && (
-                    <Badge variant="secondary" className="ml-1 text-xs">PRO</Badge>
-                  )}
-                  {(item.id === 'financial' || item.id === 'clients') && hasPremiumPlan && (
-                    <Badge variant="secondary" className="ml-1 text-xs">PREMIUM</Badge>
-                  )}
                 </Button>
               );
             })}
+            
+            {/* Admin Button - só mostra para admins */}
+            {isAdmin && (
+              <Button
+                variant={activeTab === 'admin' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => onTabChange('admin')}
+                className="flex items-center gap-2"
+              >
+                <Crown className="h-4 w-4" />
+                <span className="hidden lg:inline">Admin</span>
+              </Button>
+            )}
           </nav>
 
           {/* User Menu */}
