@@ -46,17 +46,6 @@ export const useUsageTracking = () => {
     }
   }, [user?.id, toast]);
 
-  const getCurrentUsage = useCallback(async () => {
-    if (!user?.id) return { jobs: 0, projects: 0 };
-
-    try {
-      return await usageTrackingService.getAllUsageForUser(user.id);
-    } catch (error) {
-      console.error('❌ Erro ao buscar uso atual:', error);
-      return { jobs: 0, projects: 0 };
-    }
-  }, [user?.id]);
-
   const resetUsageCounters = useCallback(async () => {
     if (!user?.id) {
       console.warn('Usuário não autenticado para resetar contadores');
@@ -82,7 +71,6 @@ export const useUsageTracking = () => {
   return {
     incrementJobUsage,
     incrementProjectUsage,
-    getCurrentUsage,
     resetUsageCounters
   };
 };

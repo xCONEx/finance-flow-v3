@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,7 +21,6 @@ interface SupabaseAuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
-  deleteAccount: () => Promise<boolean>;
 }
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(undefined);
@@ -349,31 +349,6 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const deleteAccount = async (): Promise<boolean> => {
-    if (!user) return false;
-
-    try {
-      // First delete user data from profiles
-      await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', user.id);
-
-      // Then delete the auth user (this might require admin privileges in production)
-      const { error } = await supabase.auth.admin.deleteUser(user.id);
-      
-      if (error) {
-        console.error('Error deleting account:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error deleting account:', error);
-      return false;
-    }
-  };
-
   const value = {
     user,
     profile,
@@ -388,7 +363,6 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     signOut,
     resetPassword,
     updateProfile,
-    deleteAccount,
   };
 
   return (
