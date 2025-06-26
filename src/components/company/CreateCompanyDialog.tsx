@@ -44,22 +44,23 @@ const CreateCompanyDialog: React.FC<CreateCompanyDialogProps> = ({
   ) {
     setLoading(true);
     try {
-      const { data: user, error: userError } = await supabase
-        .from('users')
+      // Find the user by email in profiles instead of users table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
         .select('id')
         .eq('email', ownerEmail)
         .single();
 
-      if (userError || !user) {
+      if (profileError || !profile) {
         throw new Error('Usuário proprietário não encontrado');
       }
 
       const { error } = await supabase.from('agencies').insert([
         {
           name,
-          owner_id: user.id,
-          cnpj,
-          description,
+          owner_id: profile.id, // Use owner_id as expected by the schema
+          // Note: cnpj and description fields don't exist in agencies table schema
+          // You might need to add them or store them elsewhere
         },
       ]);
 
