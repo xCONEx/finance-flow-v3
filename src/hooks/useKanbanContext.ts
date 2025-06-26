@@ -21,8 +21,8 @@ export const useKanbanContext = (): KanbanContextData => {
   });
 
   useEffect(() => {
-    console.log('🔄 useKanbanContext - Recalculando contexto...', {
-      currentContext,
+    console.log('🔄 [CONTEXT] useKanbanContext - Recalculando contexto...', {
+      currentContext: currentContext === 'individual' ? 'individual' : (currentContext ? `agency:${currentContext.id}` : 'undefined'),
       profile: profile ? {
         user_type: profile.user_type,
         agency_id: profile.agency_id,
@@ -32,7 +32,7 @@ export const useKanbanContext = (): KanbanContextData => {
     });
 
     if (!user) {
-      console.log('❌ Usuário não autenticado - KanbanContext');
+      console.log('❌ [CONTEXT] Usuário não autenticado');
       setContextData({
         isAgencyMode: false,
         currentAgencyId: null,
@@ -44,7 +44,7 @@ export const useKanbanContext = (): KanbanContextData => {
 
     // Se o contexto é 'individual', sempre modo individual
     if (currentContext === 'individual') {
-      console.log('👤 KanbanContext - Modo Individual ativado');
+      console.log('👤 [CONTEXT] Modo Individual ativado');
       setContextData({
         isAgencyMode: false,
         currentAgencyId: null,
@@ -56,7 +56,10 @@ export const useKanbanContext = (): KanbanContextData => {
 
     // Se currentContext é um objeto (agência selecionada)
     if (currentContext && typeof currentContext === 'object' && currentContext.id) {
-      console.log('🏢 KanbanContext - Modo Empresa ativado:', currentContext);
+      console.log('🏢 [CONTEXT] Modo Empresa ativado:', {
+        agencyId: currentContext.id,
+        agencyName: currentContext.name
+      });
       setContextData({
         isAgencyMode: true,
         currentAgencyId: currentContext.id,
@@ -68,7 +71,7 @@ export const useKanbanContext = (): KanbanContextData => {
 
     // Fallback: se há agência no perfil mas contexto não definido
     if (profile?.agency_id && (profile.user_type === 'company_owner' || profile.user_type === 'employee')) {
-      console.log('🏢 KanbanContext - Usando agency_id do perfil como fallback:', profile.agency_id);
+      console.log('🏢 [CONTEXT] Usando agency_id do perfil como fallback:', profile.agency_id);
       setContextData({
         isAgencyMode: true,
         currentAgencyId: profile.agency_id,
@@ -79,7 +82,7 @@ export const useKanbanContext = (): KanbanContextData => {
     }
 
     // Último fallback para modo individual
-    console.log('⚠️ KanbanContext - Fallback final para modo individual');
+    console.log('⚠️ [CONTEXT] Fallback final para modo individual');
     setContextData({
       isAgencyMode: false,
       currentAgencyId: null,
@@ -88,7 +91,11 @@ export const useKanbanContext = (): KanbanContextData => {
     });
   }, [currentContext, user, profile]);
 
-  console.log('📋 useKanbanContext - Estado final:', contextData);
+  console.log('📋 [CONTEXT] Estado final do Kanban:', {
+    isAgencyMode: contextData.isAgencyMode,
+    currentAgencyId: contextData.currentAgencyId,
+    contextLabel: contextData.contextLabel
+  });
 
   return contextData;
 };
