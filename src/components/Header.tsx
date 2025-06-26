@@ -81,56 +81,52 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-3">
-  {menuItems.map((item) => {
-    const Icon = item.icon;
-    const isActive = activeTab === item.id;
+            {menuItems.map(({ id, label, icon: Icon }) => {
+              const isActive = activeTab === id;
+              return (
+                <div key={id} className="relative group">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-10 w-10 rounded-full transition-colors ${
+                      isActive
+                        ? `${currentTheme.primary} text-primary-foreground`
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
+                    }`}
+                    onClick={() => onTabChange(id)}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </Button>
+                  <div className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                    {label}
+                  </div>
+                </div>
+              );
+            })}
 
-    return (
-      <div key={item.id} className="relative group">
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`h-10 w-10 rounded-full transition-colors ${
-            isActive
-              ? `${currentTheme.primary} text-white`
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
-          }`}
-          onClick={() => onTabChange(item.id)}
-        >
-          <Icon className="h-5 w-5" />
-        </Button>
-        <div className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-          {item.label}
-        </div>
-      </div>
-    );
-  })}
+            {showTeamOption && (
+              <div className="relative group">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-10 w-10 rounded-full transition-colors ${
+                    activeTab === 'team'
+                      ? `${currentTheme.primary} text-primary-foreground`
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
+                  }`}
+                  onClick={() => onTabChange('team')}
+                >
+                  <Users className="h-5 w-5" />
+                </Button>
+                <div className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                  Equipe
+                </div>
+              </div>
+            )}
+          </nav>
 
-  {showTeamOption && (
-    <div className="relative group">
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`h-10 w-10 rounded-full transition-colors ${
-          activeTab === 'team'
-            ? `${currentTheme.primary} text-white`
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
-        }`}
-        onClick={() => onTabChange('team')}
-      >
-        <Users className="h-5 w-5" />
-      </Button>
-      <div className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-        Equipe
-      </div>
-    </div>
-  )}
-</nav>
-
-
-          {/* User Menu */}
+          {/* User Area */}
           <div className="flex items-center space-x-3">
-            {/* Privacy Toggle */}
             <Button
               variant="ghost"
               size="sm"
@@ -138,15 +134,11 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
               title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
             >
-              {valuesHidden ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
+              {valuesHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </Button>
 
             <NotificationBell />
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -158,71 +150,78 @@ const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption 
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-auto p-2" align="end" forceMount>
-  <div className="flex items-center justify-center flex-col gap-2 px-2 pt-2">
-    <Avatar className="h-12 w-12">
-      <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-      <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white`}>
-        {user?.email?.charAt(0).toUpperCase()}
-      </AvatarFallback>
-    </Avatar>
-    <div className="text-center">
-      <p className="text-sm font-medium">{user?.email}</p>
-      <p className="text-xs text-muted-foreground">
-        {profile?.subscription === 'free' ? 'Plano Gratuito' : 
-         profile?.subscription === 'premium' ? 'Plano Premium' : 
-         'Plano Enterprise'}
-      </p>
-    </div>
-  </div>
 
-  <DropdownMenuSeparator />
+              <DropdownMenuContent
+                className="w-[260px] max-w-[90vw] p-2"
+                align="end"
+                sideOffset={8}
+                forceMount
+              >
+                <div className="flex items-center justify-center flex-col gap-2 px-2 pt-2">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
+                    <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white`}>
+                      {user?.email?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="text-center">
+                    <p className="text-sm font-medium">{user?.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {profile?.subscription === 'free'
+                        ? 'Plano Gratuito'
+                        : profile?.subscription === 'premium'
+                        ? 'Plano Premium'
+                        : 'Plano Enterprise'}
+                    </p>
+                  </div>
+                </div>
 
-  {/* Ícones de opções */}
-  <div className="grid grid-cols-3 gap-2 p-2">
-    {[
-      { id: 'profile', icon: User, label: 'Perfil' },
-      { id: 'settings', icon: Settings, label: 'Configurações' },
-      { id: 'subscription', icon: Crown, label: 'Assinatura' },
-      ...(isAdmin ? [{ id: 'admin', icon: FileText, label: 'Admin' }] : []),
-    ].map(({ id, icon: Icon, label }) => {
-      const isActive = activeTab === id;
-      return (
-        <div key={id} className="relative group">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-10 w-10 rounded-full ${
-              isActive
-                ? `${currentTheme.primary} text-white`
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
-            }`}
-            onClick={() => onTabChange(id)}
-          >
-            <Icon className="w-5 h-5" />
-          </Button>
-          <div className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
-            {label}
-          </div>
-        </div>
-      );
-    })}
-  </div>
+                <DropdownMenuSeparator />
 
-  <DropdownMenuSeparator />
+                <div className="grid grid-cols-3 gap-2 p-2">
+                  {[
+                    { id: 'profile', icon: User, label: 'Perfil' },
+                    { id: 'settings', icon: Settings, label: 'Configurações' },
+                    { id: 'subscription', icon: Crown, label: 'Assinatura' },
+                    ...(isAdmin ? [{ id: 'admin', icon: FileText, label: 'Admin' }] : []),
+                  ].map(({ id, icon: Icon, label }) => {
+                    const isActive = activeTab === id;
+                    return (
+                      <div key={id} className="relative group">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`h-10 w-10 rounded-full ${
+                            isActive
+                              ? `${currentTheme.primary} text-primary-foreground`
+                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
+                          }`}
+                          onClick={() => onTabChange(id)}
+                        >
+                          <Icon className="w-5 h-5" />
+                        </Button>
+                        <div className="absolute bottom-[-28px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                          {label}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-  <div className="flex justify-center p-2">
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={handleLogout}
-      className="text-red-600 hover:text-red-800"
-      title="Sair"
-    >
-      <LogOut className="w-5 h-5" />
-    </Button>
-  </div>
-</DropdownMenuContent>
+                <DropdownMenuSeparator />
+
+                <div className="flex justify-center p-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    className="text-red-600 hover:text-red-800"
+                    title="Sair"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </Button>
+                </div>
+              </DropdownMenuContent>
 
             </DropdownMenu>
           </div>
