@@ -1,7 +1,6 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useSubscription } from './useSubscription';
-import { useApp } from '@/contexts/AppContext';
 import { useUsageTracking } from './useUsageTracking';
 
 export interface SubscriptionLimits {
@@ -22,19 +21,40 @@ export interface SubscriptionLimits {
 
 export const useSubscriptionPermissions = () => {
   const { subscription, loading } = useSubscription();
-  const { jobs, monthlyCosts } = useApp();
   const { getCurrentUsage } = useUsageTracking();
   const [currentUsageData, setCurrentUsageData] = useState({ jobs: 0, projects: 0 });
+  const [usageLoading, setUsageLoading] = useState(true);
 
-  // Carregar dados de uso do Supabase
+  // Carregar dados de uso do Supabase apenas uma vez
   useEffect(() => {
+    let mounted = true;
+    
     const loadUsageData = async () => {
-      const usage = await getCurrentUsage();
-      setCurrentUsageData(usage);
+      if (loading) return; // Aguardar subscription carregar
+      
+      try {
+        const usage = await getCurrentUsage();
+        if (mounted) {
+          setCurrentUsageData(usage);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar uso:', error);
+        if (mounted) {
+          setCurrentUsageData({ jobs: 0, projects: 0 });
+        }
+      } finally {
+        if (mounted) {
+          setUsageLoading(false);
+        }
+      }
     };
 
     loadUsageData();
-  }, [getCurrentUsage]);
+    
+    return () => {
+      mounted = false;
+    };
+  }, [getCurrentUsage, loading]);
 
   const limits = useMemo<SubscriptionLimits>(() => {
     switch (subscription) {
@@ -142,7 +162,7 @@ export const useSubscriptionPermissions = () => {
 
   return {
     subscription,
-    loading,
+    loading: loading || usageLoading,
     limits,
     currentUsage,
     canCreateJob,
