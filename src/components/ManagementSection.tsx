@@ -2,10 +2,11 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Package, Calendar } from 'lucide-react';
+import { DollarSign, Package, Calendar, Users } from 'lucide-react';
 import MonthlyCosts from './MonthlyCosts';
 import WorkItems from './WorkItems';
 import WorkRoutine from './WorkRoutine';
+import AgencyCollaborators from './AgencyCollaborators';
 
 const ManagementSection = () => {
   const [activeTab, setActiveTab] = useState('costs');
@@ -17,12 +18,12 @@ const ManagementSection = () => {
           Gerenciamento
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm sm:text-base">
-          Gerencie seus custos, itens e rotina de trabalho
+          Gerencie seus custos, itens, rotina de trabalho e colaboradores
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-auto">
+        <TabsList className="grid w-full grid-cols-4 h-auto">
           <TabsTrigger value="costs" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
             <DollarSign className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Custos</span>
@@ -34,6 +35,10 @@ const ManagementSection = () => {
           <TabsTrigger value="routine" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
             <Calendar className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Rotina</span>
+          </TabsTrigger>
+          <TabsTrigger value="collaborators" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
+            <Users className="w-4 h-4" />
+            <span className="text-xs sm:text-sm">Colaboradores</span>
           </TabsTrigger>
         </TabsList>
 
@@ -47,6 +52,10 @@ const ManagementSection = () => {
 
         <TabsContent value="routine" className="mt-6">
           <WorkRoutine />
+        </TabsContent>
+
+        <TabsContent value="collaborators" className="mt-6">
+          <AgencyCollaborators />
         </TabsContent>
       </Tabs>
     </div>
