@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Plus, Filter, Search, Calendar, User, Clock, AlertCircle, Badge as BadgeIcon, Trash2 } from 'lucide-react';
@@ -25,6 +26,8 @@ interface KanbanCard {
   links: { name: string; url: string }[];
   created_at: string;
   updated_at: string;
+  user_id: string;
+  agency_id?: string;
 }
 
 interface Column {
@@ -77,9 +80,15 @@ const ImprovedKanban: React.FC = () => {
 
   useEffect(() => {
     if (user) {
+      console.log('🔄 ImprovedKanban - Carregando dados...', {
+        isAgencyMode,
+        currentAgencyId,
+        currentUserId,
+        contextLabel
+      });
       loadKanbanData();
     }
-  }, [user, isAgencyMode, currentAgencyId]);
+  }, [user, isAgencyMode, currentAgencyId, currentUserId]);
 
   const loadKanbanData = async () => {
     if (!user) return;
@@ -89,14 +98,13 @@ const ImprovedKanban: React.FC = () => {
       let query = supabase.from('kanban_boards').select('*');
       
       if (isAgencyMode && currentAgencyId) {
-        // Modo agência: buscar por agency_id (se a tabela tiver essa coluna)
-        // Por enquanto, vamos usar user_id até implementarmos agency_id na tabela kanban_boards
-        query = query.eq('user_id', user.id);
+        // Modo agência: buscar projetos da agência
+        query = query.eq('agency_id', currentAgencyId);
         console.log('🏢 Carregando Kanban da agência:', currentAgencyId);
       } else {
-        // Modo individual: buscar por user_id
-        query = query.eq('user_id', user.id);
-        console.log('👤 Carregando Kanban individual');
+        // Modo individual: buscar projetos do usuário (sem agency_id ou null)
+        query = query.eq('user_id', user.id).is('agency_id', null);
+        console.log('👤 Carregando Kanban individual do usuário:', user.id);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -111,8 +119,27 @@ const ImprovedKanban: React.FC = () => {
         return;
       }
 
-      const cards = data || [];
-      console.log(`📋 ${cards.length} projetos carregados (${contextLabel})`);
+      const rawCards = data || [];
+      console.log(`📋 ${rawCards.length} projetos carregados (${contextLabel}):`, rawCards);
+
+      // Transformar dados do Supabase para o formato esperado
+      const cards: KanbanCard[] = rawCards.map(item => {
+        const boardData = item.board_data as any;
+        return {
+          id: item.id,
+          title: boardData?.title || 'Projeto sem título',
+          client: boardData?.client || 'Cliente não informado',
+          due_date: boardData?.due_date,
+          priority: boardData?.priority || 'media',
+          status: boardData?.status || 'filmado',
+          description: boardData?.description || '',
+          links: boardData?.links || [],
+          created_at: item.created_at || new Date().toISOString(),
+          updated_at: item.updated_at || new Date().toISOString(),
+          user_id: item.user_id || user.id,
+          agency_id: item.agency_id
+        };
+      });
 
       // Organizar cards por coluna
       const newColumns = COLUMNS.map(col => ({
@@ -121,8 +148,14 @@ const ImprovedKanban: React.FC = () => {
       }));
 
       setColumns(newColumns);
+      console.log('✅ Colunas organizadas:', newColumns);
     } catch (error) {
-      console.error('❌ Erro ao carregar Kanban:', error);
+      console.error('❌ Erro geral ao carregar Kanban:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao carregar projetos",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -133,18 +166,32 @@ const ImprovedKanban: React.FC = () => {
     if (!user) return;
 
     try {
-      const cardData = {
-        ...formData,
-        user_id: user.id,
-        links: formData.links.filter(link => link.name && link.url),
-        due_date: formData.due_date || null
+      const boardData = {
+        title: formData.title,
+        client: formData.client,
+        due_date: formData.due_date || null,
+        priority: formData.priority,
+        status: formData.status,
+        description: formData.description,
+        links: formData.links.filter(link => link.name && link.url)
       };
+
+      const cardData = {
+        user_id: user.id,
+        agency_id: isAgencyMode ? currentAgencyId : null,
+        board_data: boardData
+      };
+
+      console.log('💾 Salvando projeto:', { cardData, isAgencyMode, currentAgencyId });
 
       if (editingCard) {
         // Atualizar card existente
         const { error } = await supabase
           .from('kanban_boards')
-          .update(cardData)
+          .update({
+            board_data: boardData,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', editingCard.id);
 
         if (error) throw error;
@@ -201,12 +248,26 @@ const ImprovedKanban: React.FC = () => {
     if (source.droppableId === destination.droppableId) return;
 
     try {
+      // Encontrar o card que está sendo movido
+      const sourceColumn = columns.find(col => col.id === source.droppableId);
+      const card = sourceColumn?.cards.find(c => c.id === draggableId);
+      
+      if (!card) return;
+
       // Atualizar status no banco
       const newStatus = destination.droppableId as 'filmado' | 'edicao' | 'revisao' | 'entregue';
       
+      const updatedBoardData = {
+        ...card,
+        status: newStatus
+      };
+
       const { error } = await supabase
         .from('kanban_boards')
-        .update({ status: newStatus })
+        .update({ 
+          board_data: updatedBoardData,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', draggableId);
 
       if (error) throw error;
@@ -218,11 +279,11 @@ const ImprovedKanban: React.FC = () => {
         const destCol = newColumns.find(col => col.id === destination.droppableId);
         
         if (sourceCol && destCol) {
-          const card = sourceCol.cards.find(c => c.id === draggableId);
-          if (card) {
+          const cardToMove = sourceCol.cards.find(c => c.id === draggableId);
+          if (cardToMove) {
             sourceCol.cards = sourceCol.cards.filter(c => c.id !== draggableId);
-            card.status = newStatus;
-            destCol.cards.push(card);
+            cardToMove.status = newStatus;
+            destCol.cards.push(cardToMove);
           }
         }
         
@@ -397,7 +458,7 @@ const ImprovedKanban: React.FC = () => {
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`bg-white border rounded-lg p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow ${
+                              className={`bg-white border rounded-lg p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow group ${
                                 snapshot.isDragging ? 'rotate-2 shadow-lg' : ''
                               }`}
                               onClick={() => openEditDialog(card)}
