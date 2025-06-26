@@ -1,21 +1,40 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, Zap, Crown, Building, Users, HardDrive, Clock } from 'lucide-react';
 import { useSubscriptionPermissions } from '@/hooks/useSubscriptionPermissions';
+import { useUsageTracking } from '@/hooks/useUsageTracking';
 
 export const SubscriptionStatus: React.FC = () => {
   const { 
     subscription,
     limits,
-    currentUsage,
     getUsagePercentage,
     loading
   } = useSubscriptionPermissions();
+  
+  const { getCurrentUsage } = useUsageTracking();
+  const [currentUsage, setCurrentUsage] = useState({ jobs: 0, projects: 0 });
+  const [usageLoading, setUsageLoading] = useState(true);
 
-  if (loading) {
+  useEffect(() => {
+    const loadUsage = async () => {
+      try {
+        const usage = await getCurrentUsage();
+        setCurrentUsage(usage);
+      } catch (error) {
+        console.error('Erro ao carregar uso:', error);
+      } finally {
+        setUsageLoading(false);
+      }
+    };
+
+    loadUsage();
+  }, [getCurrentUsage]);
+
+  if (loading || usageLoading) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -93,9 +112,9 @@ export const SubscriptionStatus: React.FC = () => {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Jobs Aprovados</span>
-                <span>{currentUsage.jobsCount} de {formatLimit(limits.maxJobs)}</span>
+                <span>{currentUsage.jobs} de {formatLimit(limits.maxJobs)}</span>
               </div>
-              <Progress value={getUsagePercentage(currentUsage.jobsCount, limits.maxJobs)} />
+              <Progress value={getUsagePercentage(currentUsage.jobs, limits.maxJobs)} />
             </div>
           )}
           
@@ -104,9 +123,9 @@ export const SubscriptionStatus: React.FC = () => {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Projetos</span>
-                <span>{currentUsage.projectsCount} de {formatLimit(limits.maxProjects)}</span>
+                <span>{currentUsage.projects} de {formatLimit(limits.maxProjects)}</span>
               </div>
-              <Progress value={getUsagePercentage(currentUsage.projectsCount, limits.maxProjects)} />
+              <Progress value={getUsagePercentage(currentUsage.projects, limits.maxProjects)} />
             </div>
           )}
         </div>
