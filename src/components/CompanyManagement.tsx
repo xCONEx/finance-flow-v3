@@ -125,7 +125,7 @@ const CompanyManagement = () => {
         .from('agencies')
         .insert({
           name,
-          owner_id: owner.id,
+          owner_id: owner.id, // correto com base no schema
           status: 'active'
         });
       if (error) throw error;
