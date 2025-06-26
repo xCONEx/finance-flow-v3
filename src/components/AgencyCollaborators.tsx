@@ -43,11 +43,10 @@ const AgencyCollaborators = () => {
 
   // Verificar se é owner da agência atual
   const currentAgency = currentContext !== 'individual' ? currentContext : null;
-  const isOwner = currentAgency && agencies.find(a => a.id === currentAgency.id)?.is_owner;
 
   // Carregar colaboradores da agência
   const loadCollaborators = async () => {
-    if (!currentAgency || !isOwner) {
+    if (!currentAgency) {
       setLoading(false);
       return;
     }
@@ -165,26 +164,7 @@ const AgencyCollaborators = () => {
 
   useEffect(() => {
     loadCollaborators();
-  }, [currentContext, isOwner]);
-
-  // Se não é owner da agência, mostrar mensagem
-  if (!isOwner || currentContext === 'individual') {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Acesso Restrito
-            </h3>
-            <p className="text-gray-500">
-              Apenas proprietários de agência podem gerenciar colaboradores.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  }, [currentContext]);
 
   if (loading) {
     return (
