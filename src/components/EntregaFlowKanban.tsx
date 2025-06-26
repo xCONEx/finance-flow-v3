@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -118,7 +117,7 @@ const EntregaFlowKanban = () => {
   });
 
   useEffect(() => {
-    console.log('🔄 EntregaFlowKanban useEffect - Contexto alterado:', {
+    console.log('🔄 [KANBAN] Contexto alterado, recarregando projetos:', {
       isAgencyMode,
       currentAgencyId,
       currentUserId,
@@ -129,7 +128,7 @@ const EntregaFlowKanban = () => {
 
   const loadProjects = async () => {
     if (!currentUserId) {
-      console.log('❌ Nenhum usuário logado para carregar projetos');
+      console.log('❌ [KANBAN] Nenhum usuário logado para carregar projetos');
       setProjects([]);
       setLoading(false);
       return;
@@ -137,7 +136,7 @@ const EntregaFlowKanban = () => {
     
     try {
       setLoading(true);
-      console.log('🔄 Carregando projetos para contexto:', {
+      console.log('🔄 [KANBAN] Carregando projetos para contexto:', {
         isAgencyMode,
         currentAgencyId,
         currentUserId,
@@ -148,19 +147,19 @@ const EntregaFlowKanban = () => {
 
       if (isAgencyMode && currentAgencyId) {
         // Carregar projetos da empresa
-        console.log('🏢 Carregando projetos da agência:', currentAgencyId);
+        console.log('🏢 [KANBAN] Carregando projetos da agência:', currentAgencyId);
         loadedProjects = await supabaseKanbanService.loadAgencyBoard(currentAgencyId);
-        console.log('🏢 Projetos da empresa carregados:', loadedProjects.length);
+        console.log('🏢 [KANBAN] Projetos da empresa carregados:', loadedProjects.length);
       } else {
         // Carregar projetos individuais
-        console.log('👤 Carregando projetos individuais para usuário:', currentUserId);
+        console.log('👤 [KANBAN] Carregando projetos individuais para usuário:', currentUserId);
         loadedProjects = await supabaseKanbanService.loadBoard(currentUserId);
-        console.log('👤 Projetos individuais carregados:', loadedProjects.length);
+        console.log('👤 [KANBAN] Projetos individuais carregados:', loadedProjects.length);
       }
 
       setProjects(loadedProjects);
     } catch (error) {
-      console.error('❌ Erro ao carregar projetos:', error);
+      console.error('❌ [KANBAN] Erro ao carregar projetos:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar projetos",
@@ -190,14 +189,15 @@ const EntregaFlowKanban = () => {
       const updatedProject = updatedProjects.find(p => p.id === result.draggableId);
       if (updatedProject) {
         try {
-          console.log('💾 Movendo projeto:', {
+          console.log('💾 [KANBAN] Movendo projeto:', {
             projectId: updatedProject.id,
             newStatus: destination.droppableId,
-            agencyId: updatedProject.agency_id
+            agencyId: updatedProject.agency_id,
+            mode: updatedProject.agency_id ? 'AGENCY' : 'INDIVIDUAL'
           });
           await supabaseKanbanService.saveProject(updatedProject);
         } catch (error) {
-          console.error('❌ Erro ao salvar status do projeto:', error);
+          console.error('❌ [KANBAN] Erro ao salvar status do projeto:', error);
           toast({
             title: "Erro",
             description: "Erro ao salvar alteração",
@@ -239,14 +239,15 @@ const EntregaFlowKanban = () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         user_id: currentUserId || '',
-        agency_id: isAgencyMode ? currentAgencyId : null
+        agency_id: isAgencyMode ? currentAgencyId : null // IMPORTANTE: definir corretamente o agency_id
       };
 
-      console.log('💾 Salvando novo projeto:', {
+      console.log('💾 [KANBAN] Salvando novo projeto:', {
         title: project.title,
         agencyId: project.agency_id,
         isAgencyMode,
-        currentAgencyId
+        currentAgencyId,
+        mode: project.agency_id ? 'AGENCY' : 'INDIVIDUAL'
       });
 
       await supabaseKanbanService.saveProject(project);
@@ -270,7 +271,7 @@ const EntregaFlowKanban = () => {
         description: `"${project.title}" foi adicionado com sucesso`
       });
     } catch (error) {
-      console.error('❌ Erro ao criar projeto:', error);
+      console.error('❌ [KANBAN] Erro ao criar projeto:', error);
       toast({
         title: "Erro",
         description: "Erro ao criar projeto",
@@ -283,10 +284,11 @@ const EntregaFlowKanban = () => {
     try {
       const projectToDelete = projects.find(p => p.id === projectId);
       
-      console.log('🗑️ Deletando projeto:', {
+      console.log('🗑️ [KANBAN] Deletando projeto:', {
         projectId,
         title: projectToDelete?.title,
-        agencyId: projectToDelete?.agency_id
+        agencyId: projectToDelete?.agency_id,
+        mode: projectToDelete?.agency_id ? 'AGENCY' : 'INDIVIDUAL'
       });
 
       await supabaseKanbanService.deleteProject(projectId);
@@ -301,7 +303,7 @@ const EntregaFlowKanban = () => {
         description: `"${projectToDelete?.title}" foi excluído com sucesso`
       });
     } catch (error) {
-      console.error('❌ Erro ao deletar projeto:', error);
+      console.error('❌ [KANBAN] Erro ao deletar projeto:', error);
       toast({
         title: "Erro",
         description: "Erro ao excluir projeto",
@@ -320,10 +322,11 @@ const EntregaFlowKanban = () => {
         updatedAt: new Date().toISOString()
       };
 
-      console.log('🔗 Adicionando link ao projeto:', {
+      console.log('🔗 [KANBAN] Adicionando link ao projeto:', {
         projectId: updatedProject.id,
         agencyId: updatedProject.agency_id,
-        newLink
+        newLink,
+        mode: updatedProject.agency_id ? 'AGENCY' : 'INDIVIDUAL'
       });
 
       await supabaseKanbanService.saveProject(updatedProject);
@@ -340,7 +343,7 @@ const EntregaFlowKanban = () => {
         description: "Link de entrega adicionado com sucesso"
       });
     } catch (error) {
-      console.error('❌ Erro ao adicionar link:', error);
+      console.error('❌ [KANBAN] Erro ao adicionar link:', error);
       toast({
         title: "Erro",
         description: "Erro ao adicionar link",
@@ -349,7 +352,6 @@ const EntregaFlowKanban = () => {
     }
   };
 
-  // Helper functions
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'alta': return 'bg-red-100 text-red-800';
