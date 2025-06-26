@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,13 +21,13 @@ import {
   CheckCircle,
   Edit,
   Scissors,
-  Eye
+  Eye,
+  Building
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { supabaseKanbanService, KanbanProject } from '../services/supabaseKanbanService';
 import { useKanbanContext } from '../hooks/useKanbanContext';
-import ContextSelector from './ContextSelector';
 
 interface Column {
   id: string;
@@ -117,12 +118,20 @@ const EntregaFlowKanban = () => {
   });
 
   useEffect(() => {
+    console.log('🔄 EntregaFlowKanban useEffect - Contexto alterado:', {
+      isAgencyMode,
+      currentAgencyId,
+      currentUserId,
+      contextLabel
+    });
     loadProjects();
   }, [user, isAgencyMode, currentAgencyId, currentUserId]);
 
   const loadProjects = async () => {
     if (!currentUserId) {
       console.log('❌ Nenhum usuário logado para carregar projetos');
+      setProjects([]);
+      setLoading(false);
       return;
     }
     
@@ -139,10 +148,12 @@ const EntregaFlowKanban = () => {
 
       if (isAgencyMode && currentAgencyId) {
         // Carregar projetos da empresa
+        console.log('🏢 Carregando projetos da agência:', currentAgencyId);
         loadedProjects = await supabaseKanbanService.loadAgencyBoard(currentAgencyId);
         console.log('🏢 Projetos da empresa carregados:', loadedProjects.length);
       } else {
         // Carregar projetos individuais
+        console.log('👤 Carregando projetos individuais para usuário:', currentUserId);
         loadedProjects = await supabaseKanbanService.loadBoard(currentUserId);
         console.log('👤 Projetos individuais carregados:', loadedProjects.length);
       }
@@ -155,6 +166,7 @@ const EntregaFlowKanban = () => {
         description: "Erro ao carregar projetos",
         variant: "destructive"
       });
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -178,6 +190,11 @@ const EntregaFlowKanban = () => {
       const updatedProject = updatedProjects.find(p => p.id === result.draggableId);
       if (updatedProject) {
         try {
+          console.log('💾 Movendo projeto:', {
+            projectId: updatedProject.id,
+            newStatus: destination.droppableId,
+            agencyId: updatedProject.agency_id
+          });
           await supabaseKanbanService.saveProject(updatedProject);
         } catch (error) {
           console.error('❌ Erro ao salvar status do projeto:', error);
@@ -225,6 +242,13 @@ const EntregaFlowKanban = () => {
         agency_id: isAgencyMode ? currentAgencyId : null
       };
 
+      console.log('💾 Salvando novo projeto:', {
+        title: project.title,
+        agencyId: project.agency_id,
+        isAgencyMode,
+        currentAgencyId
+      });
+
       await supabaseKanbanService.saveProject(project);
       
       const updatedProjects = [...projects, project];
@@ -259,6 +283,12 @@ const EntregaFlowKanban = () => {
     try {
       const projectToDelete = projects.find(p => p.id === projectId);
       
+      console.log('🗑️ Deletando projeto:', {
+        projectId,
+        title: projectToDelete?.title,
+        agencyId: projectToDelete?.agency_id
+      });
+
       await supabaseKanbanService.deleteProject(projectId);
       
       const updatedProjects = projects.filter(p => p.id !== projectId);
@@ -289,6 +319,12 @@ const EntregaFlowKanban = () => {
         links: [...selectedProject.links, newLink],
         updatedAt: new Date().toISOString()
       };
+
+      console.log('🔗 Adicionando link ao projeto:', {
+        projectId: updatedProject.id,
+        agencyId: updatedProject.agency_id,
+        newLink
+      });
 
       await supabaseKanbanService.saveProject(updatedProject);
       
@@ -348,7 +384,7 @@ const EntregaFlowKanban = () => {
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
-      {/* Header - Simplificado, apenas para empresa */}
+      {/* Header com indicador de contexto */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -356,9 +392,24 @@ const EntregaFlowKanban = () => {
               <Video className="text-white font-bold text-2xl"/>
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Projetos Audiovisuais</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold">Projetos Audiovisuais</h1>
+                {isAgencyMode && currentAgencyId && (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Building className="h-3 w-3" />
+                    {contextLabel}
+                    <span className="text-xs text-gray-500">ID: {currentAgencyId}</span>
+                  </Badge>
+                )}
+                {!isAgencyMode && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Individual
+                  </Badge>
+                )}
+              </div>
               <p className="text-sm text-gray-600">
-                Gerenciamento de projetos da empresa
+                {isAgencyMode ? 'Gerenciamento de projetos da empresa' : 'Seus projetos pessoais'}
               </p>
             </div>
           </div>
@@ -373,7 +424,6 @@ const EntregaFlowKanban = () => {
           <Plus className="h-4 w-4 mr-2" />
           Novo Projeto
         </Button>
-        
       </div>
 
       {/* Stats Cards */}
@@ -537,6 +587,14 @@ const EntregaFlowKanban = () => {
                                           </span>
                                         </div>
                                       )}
+
+                                      {/* Agency indicator */}
+                                      {project.agency_id && (
+                                        <div className="flex items-center gap-1">
+                                          <Building className="h-3 w-3 text-purple-500" />
+                                          <span className="text-xs text-purple-600">Empresa</span>
+                                        </div>
+                                      )}
                                     </div>
                                   </CardContent>
                                 </Card>
@@ -578,7 +636,15 @@ const EntregaFlowKanban = () => {
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Novo Projeto</DialogTitle>
+            <DialogTitle>
+              Novo Projeto
+              {isAgencyMode && currentAgencyId && (
+                <Badge variant="outline" className="ml-2">
+                  <Building className="h-3 w-3 mr-1" />
+                  {contextLabel}
+                </Badge>
+              )}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -669,6 +735,23 @@ const EntregaFlowKanban = () => {
                 </div>
               )}
             </div>
+
+            {/* Indicador de contexto */}
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-sm text-gray-600">
+                {isAgencyMode && currentAgencyId ? (
+                  <>
+                    <Building className="h-4 w-4 inline mr-1" />
+                    Este projeto será criado para a empresa: <strong>{contextLabel}</strong>
+                  </>
+                ) : (
+                  <>
+                    <User className="h-4 w-4 inline mr-1" />
+                    Este projeto será criado como <strong>projeto pessoal</strong>
+                  </>
+                )}
+              </p>
+            </div>
           </div>
 
           <div className="flex gap-2 pt-4">
@@ -700,6 +783,12 @@ const EntregaFlowKanban = () => {
                   <Badge className="bg-red-500 text-white">Alta</Badge>
                 )}
                 <Badge variant="outline">{selectedProject?.status}</Badge>
+                {selectedProject?.agency_id && (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Building className="h-3 w-3" />
+                    Empresa
+                  </Badge>
+                )}
               </DialogTitle>
               <Button
                 size="sm"
@@ -776,11 +865,6 @@ const EntregaFlowKanban = () => {
                   className="flex-1"
                 >
                   Fechar
-                </Button>
-                <Button 
-                  className="flex-1 bg-black text-white hover:bg-gray-800"
-                >
-                  Salvar Alterações
                 </Button>
               </div>
             </div>
