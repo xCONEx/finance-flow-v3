@@ -26,13 +26,18 @@ const UserProfile = () => {
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
 
+  // Buscar nome da agência do usuário (dono ou colaborador)
   const userAgency = (() => {
+    if (!agencies || agencies.length === 0) return null;
+
     if (profile?.user_type === 'company_owner') {
-      return agencies.find(agency => agency.owner_id === user?.id);
+      return agencies.find(agency => agency.owner_id === user?.id) || null;
     }
-    if (profile?.user_type === 'employee') {
-      return agencies.find(agency => agency.id === profile.agency_id);
+
+    if (profile?.user_type === 'employee' && profile?.agency_id) {
+      return agencies.find(agency => agency.id === profile.agency_id) || null;
     }
+
     return null;
   })();
 
@@ -66,7 +71,7 @@ const UserProfile = () => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
-        
+
         const { error } = await supabase
           .from('profiles')
           .update({ image_user: base64, updated_at: new Date().toISOString() })
@@ -87,7 +92,7 @@ const UserProfile = () => {
         }
       };
       reader.readAsDataURL(file);
-    } catch (error) {
+    } catch {
       toast({
         title: "Erro",
         description: "Erro ao processar imagem",
@@ -100,10 +105,10 @@ const UserProfile = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
-      
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -117,12 +122,12 @@ const UserProfile = () => {
       if (error) throw error;
 
       await updateProfile();
-      
+
       toast({
         title: "Sucesso",
         description: "Perfil atualizado com sucesso!"
       });
-    } catch (error: any) {
+    } catch {
       toast({
         title: "Erro",
         description: "Erro ao atualizar perfil",
@@ -158,6 +163,7 @@ const UserProfile = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Foto de perfil */}
           <Card className="md:col-span-1">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -189,16 +195,16 @@ const UserProfile = () => {
                   className="hidden"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <h3 className="font-semibold text-lg">
                   {profile?.name || user?.email?.split('@')[0]}
                 </h3>
                 <p className="text-sm text-gray-600">{user?.email}</p>
                 <Badge className={getSubscriptionBadgeColor(profile?.subscription || 'free')}>
-                  {profile?.subscription === 'enterprise-annual' ? 'Enterprise Anual' : 
-                   profile?.subscription === 'enterprise' ? 'Enterprise' :
-                   profile?.subscription === 'premium' ? 'Premium' : 'Free'}
+                  {profile?.subscription === 'enterprise-annual' ? 'Enterprise Anual' :
+                    profile?.subscription === 'enterprise' ? 'Enterprise' :
+                      profile?.subscription === 'premium' ? 'Premium' : 'Free'}
                 </Badge>
                 {profile?.user_type === 'company_owner' && (
                   <div className="flex items-center justify-center gap-1 text-sm text-amber-600">
@@ -210,6 +216,7 @@ const UserProfile = () => {
             </CardContent>
           </Card>
 
+          {/* Informações pessoais */}
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Informações Pessoais</CardTitle>
@@ -282,11 +289,7 @@ const UserProfile = () => {
                   )}
                 </div>
 
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full"
-                >
+                <Button type="submit" disabled={loading} className="w-full">
                   {loading ? 'Salvando...' : 'Salvar Alterações'}
                 </Button>
               </form>
@@ -294,6 +297,7 @@ const UserProfile = () => {
           </Card>
         </div>
 
+        {/* Informações da conta */}
         <Card>
           <CardHeader>
             <CardTitle>Informações da Conta</CardTitle>
@@ -305,8 +309,8 @@ const UserProfile = () => {
                 <div className="mt-1">
                   <Badge variant="outline">
                     {profile?.user_type === 'company_owner' ? 'Proprietário de Empresa' :
-                     profile?.user_type === 'employee' ? 'Funcionário' :
-                     profile?.user_type === 'admin' ? 'Administrador' : 'Individual'}
+                      profile?.user_type === 'employee' ? 'Funcionário' :
+                        profile?.user_type === 'admin' ? 'Administrador' : 'Individual'}
                   </Badge>
                 </div>
               </div>
@@ -314,10 +318,9 @@ const UserProfile = () => {
               <div>
                 <Label>Conta criada em</Label>
                 <p className="text-sm text-gray-600 mt-1">
-                  {profile?.created_at ? 
-                    new Date(profile.created_at).toLocaleDateString('pt-BR') : 
-                    'Não disponível'
-                  }
+                  {profile?.created_at ?
+                    new Date(profile.created_at).toLocaleDateString('pt-BR') :
+                    'Não disponível'}
                 </p>
               </div>
             </div>
