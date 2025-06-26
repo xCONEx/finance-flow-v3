@@ -44,11 +44,11 @@ const CreateCompanyDialog: React.FC<CreateCompanyDialogProps> = ({
   ) {
     setLoading(true);
     try {
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', ownerEmail)
-        .single();
+const { data: user, error: userError } = await supabase
+  .from('profiles')
+  .select('id')
+  .eq('email', ownerEmail)
+  .single();
 
       if (userError || !user) {
         throw new Error('Usuário proprietário não encontrado');
