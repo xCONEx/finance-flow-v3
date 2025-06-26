@@ -13,6 +13,7 @@ import EntregaFlowKanban from './EntregaFlowKanban_old';
 import SubscriptionPlans from './SubscriptionPlans';
 import FinancialManagement from './financial/FinancialManagement';
 import ClientsManagement from './clients/ClientsManagement';
+import { AgencyProvider } from '@/contexts/AgencyContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 
 const MainApp = () => {
@@ -54,23 +55,25 @@ const MainApp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab}
-        showTeamOption={showTeamOption}
-      />
-      
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {renderContent()}
-      </main>
+    <AgencyProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Header 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          showTeamOption={showTeamOption}
+        />
+        
+        <main className="max-w-7xl mx-auto px-4 py-6">
+          {renderContent()}
+        </main>
 
-      <Navigation 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab}
-        showTeamOption={showTeamOption}
-      />
-    </div>
+        <Navigation 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          showTeamOption={showTeamOption}
+        />
+      </div>
+    </AgencyProvider>
   );
 };
 
