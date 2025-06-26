@@ -26,7 +26,7 @@ interface Agency {
   id: string;
   name: string;
   description?: string;
-  owner_uid: string; // Usar owner_uid conforme o schema atual
+  owner_id: string; // Usar owner_id conforme o schema atual
   status: string;
   created_at: string;
   updated_at: string;
@@ -62,11 +62,11 @@ const CompanyDashboard = () => {
     try {
       console.log('🏢 Carregando agências do usuário...');
       
-      // Buscar agências onde o usuário é owner usando owner_uid
+      // Buscar agências onde o usuário é owner usando owner_id
       const { data, error } = await supabase
         .from('agencies')
         .select('*')
-        .eq('owner_uid', user.id);
+        .eq('owner_id', user.id);
 
       if (error) {
         console.error('❌ Erro ao carregar agências:', error);
@@ -416,7 +416,7 @@ const CompanyDashboard = () => {
                     <Crown className="h-5 w-5 text-yellow-600" />
                     <span className="truncate">{selectedAgency.name}</span>
                   </CardTitle>
-                  <Badge variant="secondary">Proprietário</Badge>
+                  <Badge>Proprietário</Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -453,21 +453,19 @@ const CompanyDashboard = () => {
                   </CardTitle>
                   <div className="flex gap-2">
                     <Button
-                      variant="outline"
-                      size="sm"
                       onClick={() => {
                         if (selectedAgency) {
                           loadCollaborators(selectedAgency.id);
                         }
                       }}
-                      className="hidden sm:flex"
+                      className="hidden sm:flex btn-outline"
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Atualizar
                     </Button>
                     <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button size="sm" className="flex items-center gap-2">
+                        <Button className="flex items-center gap-2">
                           <div className="relative">
                             <User className="h-4 w-4" />
                             <Plus className="h-3 w-3 absolute -top-1 -right-1 bg-white rounded-full" />
@@ -498,7 +496,7 @@ const CompanyDashboard = () => {
                             </p>
                           </div>
                           <div className="flex flex-col sm:flex-row justify-end gap-2">
-                            <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)} className="w-full sm:w-auto">
+                            <Button onClick={() => setIsInviteDialogOpen(false)} className="w-full sm:w-auto">
                               Cancelar
                             </Button>
                             <Button onClick={handleInviteCollaborator} className="w-full sm:w-auto">
@@ -537,7 +535,7 @@ const CompanyDashboard = () => {
                               {collaborator.user_email}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
+                              <Badge className="text-xs">
                                 {collaborator.role}
                               </Badge>
                               <span className="text-xs text-gray-500">
@@ -547,10 +545,8 @@ const CompanyDashboard = () => {
                           </div>
                         </div>
                         <Button
-                          variant="outline"
-                          size="sm"
                           onClick={() => handleRemoveCollaborator(collaborator.id, collaborator.user_email || '')}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 border border-gray-300 bg-white"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
