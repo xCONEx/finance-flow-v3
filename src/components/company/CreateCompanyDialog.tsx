@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -23,12 +22,14 @@ interface CreateCompanyDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   users: UserProfile[];
+  onCreateCompany: (name: string, ownerEmail: string, cnpj: string, description: string) => Promise<void>;
 }
 
 const CreateCompanyDialog: React.FC<CreateCompanyDialogProps> = ({
   isOpen,
   onOpenChange,
   users,
+  onCreateCompany,
 }) => {
   const [newCompanyName, setNewCompanyName] = useState('');
   const [selectedOwnerEmail, setSelectedOwnerEmail] = useState('');
@@ -36,38 +37,16 @@ const CreateCompanyDialog: React.FC<CreateCompanyDialogProps> = ({
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function onCreateCompany(
-    name: string,
-    ownerEmail: string,
-    cnpj: string,
-    description: string
-  ) {
+  async function handleCreateCompany() {
+    if (!newCompanyName.trim() || !selectedOwnerEmail.trim()) {
+      alert('Por favor, preencha o nome da empresa e selecione o proprietário');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Find the user by email in profiles instead of users table
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', ownerEmail)
-        .single();
-
-      if (profileError || !profile) {
-        throw new Error('Usuário proprietário não encontrado');
-      }
-
-      const { error } = await supabase.from('agencies').insert([
-        {
-          name,
-          owner_id: profile.id, // Use owner_id as expected by the schema
-          // Note: cnpj and description fields don't exist in agencies table schema
-          // You might need to add them or store them elsewhere
-        },
-      ]);
-
-      if (error) {
-        throw error;
-      }
-
+      await onCreateCompany(newCompanyName, selectedOwnerEmail, cnpj, description);
+      
       setNewCompanyName('');
       setSelectedOwnerEmail('');
       setCnpj('');
@@ -131,7 +110,7 @@ const CreateCompanyDialog: React.FC<CreateCompanyDialogProps> = ({
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancelar
             </Button>
-            <Button onClick={() => onCreateCompany(newCompanyName, selectedOwnerEmail, cnpj, description)} disabled={loading}>
+            <Button onClick={handleCreateCompany} disabled={loading}>
               {loading ? 'Criando...' : 'Criar'}
             </Button>
           </div>
