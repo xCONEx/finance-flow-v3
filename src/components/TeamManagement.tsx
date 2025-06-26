@@ -1,5 +1,4 @@
 
-// Substituir completamente por CompanyDashboard
 import CompanyDashboard from './CompanyDashboard';
 
 const TeamManagement = () => {
