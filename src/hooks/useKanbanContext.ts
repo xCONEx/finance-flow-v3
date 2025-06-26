@@ -32,7 +32,7 @@ export const useKanbanContext = (): KanbanContextData => {
     });
 
     if (!user) {
-      console.log('❌ Usuário não autenticado');
+      console.log('❌ Usuário não autenticado - EntregaFlowKanban');
       setContextData({
         isAgencyMode: false,
         currentAgencyId: null,
@@ -46,7 +46,7 @@ export const useKanbanContext = (): KanbanContextData => {
     const hasAgency = profile?.agency_id && (profile.user_type === 'company_owner' || profile.user_type === 'employee');
     
     if (currentContext === 'individual' || !hasAgency) {
-      console.log('👤 Modo Individual ativado');
+      console.log('👤 EntregaFlowKanban - Modo Individual ativado');
       setContextData({
         isAgencyMode: false,
         currentAgencyId: null,
@@ -54,7 +54,7 @@ export const useKanbanContext = (): KanbanContextData => {
         contextLabel: 'Individual'
       });
     } else if (currentContext !== 'individual' && typeof currentContext === 'object') {
-      console.log('🏢 Modo Empresa ativado:', currentContext);
+      console.log('🏢 EntregaFlowKanban - Modo Empresa ativado:', currentContext);
       setContextData({
         isAgencyMode: true,
         currentAgencyId: currentContext.id,
@@ -63,7 +63,7 @@ export const useKanbanContext = (): KanbanContextData => {
       });
     } else {
       // Fallback para modo individual
-      console.log('⚠️ Fallback para modo individual');
+      console.log('⚠️ EntregaFlowKanban - Fallback para modo individual');
       setContextData({
         isAgencyMode: false,
         currentAgencyId: null,
@@ -73,7 +73,7 @@ export const useKanbanContext = (): KanbanContextData => {
     }
   }, [currentContext, user, profile]);
 
-  console.log('📋 useKanbanContext - Estado atual:', contextData);
+  console.log('📋 useKanbanContext - Estado atual EntregaFlowKanban:', contextData);
 
   return contextData;
 };
