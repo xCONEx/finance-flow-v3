@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Theme, UserSettings } from '../types';
 
@@ -7,6 +6,7 @@ interface ThemeContextType {
   currentTheme: Theme;
   settings: UserSettings;
   toggleDarkMode: () => void;
+  toggleTheme: () => void;
   changeTheme: (themeName: string) => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
 }
@@ -66,6 +66,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setSettings(prev => ({ ...prev, theme: prev.theme === 'light' ? 'dark' : 'light' }));
   };
 
+  const toggleTheme = () => {
+    setSettings(prev => {
+      const currentTheme = prev.theme;
+      let newTheme: 'light' | 'dark' | 'system';
+      
+      if (currentTheme === 'light') {
+        newTheme = 'dark';
+      } else if (currentTheme === 'dark') {
+        newTheme = 'system';
+      } else {
+        newTheme = 'light';
+      }
+      
+      return { ...prev, theme: newTheme };
+    });
+  };
+
   const changeTheme = (themeName: string) => {
     setSettings(prev => ({ ...prev, colorTheme: themeName }));
   };
@@ -80,6 +97,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       currentTheme: defaultThemes[settings.colorTheme],
       settings,
       toggleDarkMode,
+      toggleTheme,
       changeTheme,
       updateSettings
     }}>
