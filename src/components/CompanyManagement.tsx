@@ -113,43 +113,36 @@ const CompanyManagement = () => {
   // ➕ Create Company
   const handleCreateCompany = async (name: string, ownerEmail: string, cnpj: string, description: string) => {
     try {
-      // Buscar usuário na tabela profiles
+      // Buscar usuário dono pelo email
       const { data: user, error: userError } = await supabase
         .from('profiles')
         .select('id')
         .eq('email', ownerEmail)
         .single();
 
-      if (userError || !user) {
-        throw new Error('Usuário proprietário não encontrado');
-      }
+      if (userError || !user) throw new Error('Usuário proprietário não encontrado');
 
-      // Inserir agência
+      // Criar empresa
       const { error: agencyError } = await supabase
         .from('agencies')
         .insert({
           name,
-          owner_uid: user.id,
-          status: 'active'
+          owner_id: user.id,
+          status: 'active',
+          cnpj,
+          description,
         });
 
-      if (agencyError) {
-        throw agencyError;
-      }
+      if (agencyError) throw agencyError;
 
-      // Atualizar perfil do usuário para company_owner
-      const { error: profileError } = await supabase
+      // Atualizar perfil do dono
+      await supabase
         .from('profiles')
         .update({
           user_type: 'company_owner',
-          role: 'owner',
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
-
-      if (profileError) {
-        console.error('Erro ao atualizar perfil do usuário:', profileError);
-      }
 
       toast({
         title: "Sucesso",
