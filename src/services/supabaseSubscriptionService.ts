@@ -11,19 +11,29 @@ export interface SubscriptionData {
   currency?: string;
 }
 
+// Cache para evitar múltiplas chamadas
+const subscriptionCache = new Map<string, { data: SubscriptionData | null, timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
 export const subscriptionService = {
   async getUserSubscription(userId: string): Promise<SubscriptionData | null> {
     try {
+      // Verificar cache primeiro
+      const cached = subscriptionCache.get(userId);
+      if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+        console.log('📋 Usando subscription do cache');
+        return cached.data;
+      }
+
       console.log('🔍 Buscando assinatura para usuário:', userId);
       
       const { data: currentUser, error: userError } = await supabase.auth.getUser();
       
       if (userError || !currentUser.user) {
         console.error('❌ Erro de autenticação:', userError);
-        return {
-          plan: 'free',
-          status: 'inactive'
-        };
+        const fallbackData = { plan: 'free' as const, status: 'inactive' as const };
+        subscriptionCache.set(userId, { data: fallbackData, timestamp: Date.now() });
+        return fallbackData;
       }
 
       const isOwnUser = currentUser.user.id === userId;
@@ -45,7 +55,7 @@ export const subscriptionService = {
             console.log('✅ Dados de assinatura encontrados via RPC:', userSubscription);
             const subscriptionDetails = userSubscription.subscription_data as any;
 
-            return {
+            const result = {
               plan: userSubscription.subscription || 'free',
               status: subscriptionDetails?.status || 'inactive',
               current_period_start: subscriptionDetails?.current_period_start,
@@ -54,6 +64,10 @@ export const subscriptionService = {
               amount: subscriptionDetails?.amount,
               currency: subscriptionDetails?.currency || 'BRL'
             };
+
+            // Armazenar no cache
+            subscriptionCache.set(userId, { data: result, timestamp: Date.now() });
+            return result;
           } else {
             console.log('⚠️ RPC não retornou dados:', rpcError);
           }
@@ -65,25 +79,22 @@ export const subscriptionService = {
       // Se não é próprio usuário nem admin, retornar free
       if (!isOwnUser && !isSuperAdmin) {
         console.log('⚠️ Usuário não autorizado, retornando plano free');
-        return {
-          plan: 'free',
-          status: 'inactive'
-        };
+        const fallbackData = { plan: 'free' as const, status: 'inactive' as const };
+        subscriptionCache.set(userId, { data: fallbackData, timestamp: Date.now() });
+        return fallbackData;
       }
 
       // Retorno padrão se tudo falhar
       console.log('⚠️ Retornando plano free como fallback');
-      return {
-        plan: 'free',
-        status: 'inactive'
-      };
+      const fallbackData = { plan: 'free' as const, status: 'inactive' as const };
+      subscriptionCache.set(userId, { data: fallbackData, timestamp: Date.now() });
+      return fallbackData;
 
     } catch (error) {
       console.error('❌ Erro geral ao buscar assinatura:', error);
-      return {
-        plan: 'free',
-        status: 'inactive'
-      };
+      const fallbackData = { plan: 'free' as const, status: 'inactive' as const };
+      subscriptionCache.set(userId, { data: fallbackData, timestamp: Date.now() });
+      return fallbackData;
     }
   },
 
@@ -120,6 +131,8 @@ export const subscriptionService = {
 
           if (!rpcError) {
             console.log('✅ Assinatura atualizada via RPC admin');
+            // Limpar cache
+            subscriptionCache.delete(userId);
             return true;
           } else {
             console.error('❌ Erro na atualização via RPC admin:', rpcError);
@@ -144,6 +157,8 @@ export const subscriptionService = {
 
           if (!error) {
             console.log('✅ Assinatura atualizada via consulta direta');
+            // Limpar cache
+            subscriptionCache.delete(userId);
             return true;
           } else {
             console.error('❌ Erro na atualização direta:', error);
