@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useTheme } from '../contexts/ThemeContext';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { 
@@ -148,35 +148,6 @@ const EntregaFlowKanban = () => {
     }
   };
 
-  const saveProjects = async (projectsData: KanbanProject[]) => {
-    if (!currentUserId) return;
-    
-    try {
-      if (isAgencyMode && currentAgencyId) {
-        // Salvar projetos da empresa
-        await supabaseKanbanService.saveAgencyBoard(currentAgencyId, projectsData);
-        console.log('🏢 Projetos da empresa salvos');
-      } else {
-        // Salvar projetos individuais
-        await supabaseKanbanService.saveBoard(currentUserId, projectsData);
-        console.log('👤 Projetos individuais salvos');
-      }
-      
-      // Backup no localStorage
-      const storageKey = isAgencyMode && currentAgencyId 
-        ? `entregaFlowProjects_agency_${currentAgencyId}` 
-        : `entregaFlowProjects_user_${currentUserId}`;
-      localStorage.setItem(storageKey, JSON.stringify(projectsData));
-    } catch (error) {
-      console.error('❌ Erro ao salvar projetos:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar projetos",
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleDragEnd = async (result: any) => {
     if (!result.destination) return;
 
@@ -190,7 +161,21 @@ const EntregaFlowKanban = () => {
       );
       
       setProjects(updatedProjects);
-      await saveProjects(updatedProjects);
+      
+      // Salvar projeto individual
+      const updatedProject = updatedProjects.find(p => p.id === result.draggableId);
+      if (updatedProject) {
+        try {
+          await supabaseKanbanService.saveProject(updatedProject);
+        } catch (error) {
+          console.error('❌ Erro ao salvar status do projeto:', error);
+          toast({
+            title: "Erro",
+            description: "Erro ao salvar alteração",
+            variant: "destructive"
+          });
+        }
+      }
 
       const movedProject = projects.find(p => p.id === result.draggableId);
       const destColumn = columns.find(c => c.id === destination.droppableId);
@@ -214,18 +199,30 @@ const EntregaFlowKanban = () => {
   const handleEditSave = async () => {
     if (!selectedProject || !editData) return;
 
-    const updatedProjects = projects.map(p =>
-      p.id === selectedProject.id ? { ...selectedProject, ...editData, updatedAt: new Date().toISOString() } : p
-    );
+    try {
+      const updatedProject = { ...selectedProject, ...editData, updatedAt: new Date().toISOString() };
+      
+      await supabaseKanbanService.saveProject(updatedProject);
+      
+      const updatedProjects = projects.map(p =>
+        p.id === selectedProject.id ? updatedProject : p
+      );
+      setProjects(updatedProjects);
+      
+      toast({
+        title: "Projeto Atualizado",
+        description: `"${editData.title}" foi salvo com sucesso`
+      });
 
-    setProjects(updatedProjects);
-    await saveProjects(updatedProjects);
-    toast({
-      title: "Projeto Atualizado",
-      description: `"${editData.title}" foi salvo com sucesso`
-    });
-
-    setShowEditModal(false);
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('❌ Erro ao salvar projeto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar projeto",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleAddProject = async () => {
@@ -238,40 +235,50 @@ const EntregaFlowKanban = () => {
       return;
     }
 
-    const project: KanbanProject = {
-      id: `project_${Date.now()}`,
-      title: newProject.title!,
-      client: newProject.client!,
-      dueDate: newProject.dueDate || '',
-      priority: newProject.priority || 'media',
-      status: newProject.status || 'filmado',
-      description: newProject.description || '',
-      links: newProject.links || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      user_id: currentUserId || '',
-      agency_id: isAgencyMode ? currentAgencyId : null
-    };
+    try {
+      const project: KanbanProject = {
+        id: `project_${Date.now()}`,
+        title: newProject.title!,
+        client: newProject.client!,
+        dueDate: newProject.dueDate || '',
+        priority: newProject.priority || 'media',
+        status: newProject.status || 'filmado',
+        description: newProject.description || '',
+        links: newProject.links || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        user_id: currentUserId || '',
+        agency_id: isAgencyMode ? currentAgencyId : null
+      };
 
-    const updatedProjects = [...projects, project];
-    setProjects(updatedProjects);
-    await saveProjects(updatedProjects);
+      await supabaseKanbanService.saveProject(project);
+      
+      const updatedProjects = [...projects, project];
+      setProjects(updatedProjects);
 
-    setNewProject({
-      title: '',
-      client: '',
-      dueDate: '',
-      priority: 'media',
-      status: 'filmado',
-      description: '',
-      links: []
-    });
-    setShowAddModal(false);
+      setNewProject({
+        title: '',
+        client: '',
+        dueDate: '',
+        priority: 'media',
+        status: 'filmado',
+        description: '',
+        links: []
+      });
+      setShowAddModal(false);
 
-    toast({
-      title: "Projeto Criado",
-      description: `"${project.title}" foi adicionado com sucesso`
-    });
+      toast({
+        title: "Projeto Criado",
+        description: `"${project.title}" foi adicionado com sucesso`
+      });
+    } catch (error) {
+      console.error('❌ Erro ao criar projeto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar projeto",
+        variant: "destructive"
+      });
+    }
   };
 
   const priorityLabels: Record<string, string> = {
@@ -290,42 +297,61 @@ const EntregaFlowKanban = () => {
   };
 
   const handleDeleteProject = async (projectId: string) => {
-    const projectToDelete = projects.find(p => p.id === projectId);
-    const updatedProjects = projects.filter(p => p.id !== projectId);
-    
-    setProjects(updatedProjects);
-    await saveProjects(updatedProjects);
-    setSelectedProject(null);
-    setShowEditModal(false);
+    try {
+      const projectToDelete = projects.find(p => p.id === projectId);
+      
+      await supabaseKanbanService.deleteProject(projectId);
+      
+      const updatedProjects = projects.filter(p => p.id !== projectId);
+      setProjects(updatedProjects);
+      setSelectedProject(null);
+      setShowEditModal(false);
 
-    toast({
-      title: "Projeto Excluído",
-      description: `"${projectToDelete?.title}" foi excluído com sucesso`
-    });
+      toast({
+        title: "Projeto Excluído",
+        description: `"${projectToDelete?.title}" foi excluído com sucesso`
+      });
+    } catch (error) {
+      console.error('❌ Erro ao deletar projeto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir projeto",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleAddLink = async () => {
     if (!selectedProject || !newLink) return;
 
-    const updatedProject = {
-      ...selectedProject,
-      links: [...selectedProject.links, newLink],
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      const updatedProject = {
+        ...selectedProject,
+        links: [...selectedProject.links, newLink],
+        updatedAt: new Date().toISOString()
+      };
 
-    const updatedProjects = projects.map(p => 
-      p.id === selectedProject.id ? updatedProject : p
-    );
+      await supabaseKanbanService.saveProject(updatedProject);
+      
+      const updatedProjects = projects.map(p => 
+        p.id === selectedProject.id ? updatedProject : p
+      );
+      setProjects(updatedProjects);
+      setSelectedProject(updatedProject);
+      setNewLink('');
 
-    setProjects(updatedProjects);
-    await saveProjects(updatedProjects);
-    setSelectedProject(updatedProject);
-    setNewLink('');
-
-    toast({
-      title: "Link Adicionado",
-      description: "Link de entrega adicionado com sucesso"
-    });
+      toast({
+        title: "Link Adicionado",
+        description: "Link de entrega adicionado com sucesso"
+      });
+    } catch (error) {
+      console.error('❌ Erro ao adicionar link:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar link",
+        variant: "destructive"
+      });
+    }
   };
 
   // Helper functions
@@ -601,6 +627,9 @@ const EntregaFlowKanban = () => {
         <DialogContent className="max-w-sm sm:max-w-md md:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden px-4">
           <DialogHeader>
             <DialogTitle>Novo Projeto</DialogTitle>
+            <DialogDescription>
+              Adicione um novo projeto ao seu pipeline de produção
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -703,6 +732,9 @@ const EntregaFlowKanban = () => {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
+            <DialogDescription>
+              Edite as informações do projeto
+            </DialogDescription>
           </DialogHeader>
 
           {editData && (
