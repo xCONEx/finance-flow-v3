@@ -37,24 +37,21 @@ class SupabaseKanbanService {
         return [];
       }
 
-      // Converter dados do banco para o formato esperado
-      const projects = data.map(item => {
-        const boardData = item.board_data as any;
-        return {
-          id: item.id,
-          title: boardData?.title || '',
-          client: boardData?.client || '',
-          dueDate: boardData?.due_date || '',
-          priority: (boardData?.priority || 'media') as 'alta' | 'media' | 'baixa',
-          status: (boardData?.status || 'filmado') as 'filmado' | 'edicao' | 'revisao' | 'entregue',
-          description: boardData?.description || '',
-          links: boardData?.links || [],
-          createdAt: item.created_at,
-          updatedAt: item.updated_at,
-          user_id: item.user_id,
-          agency_id: null
-        };
-      });
+      // Converter dados do banco para o formato esperado (usando colunas diretas)
+      const projects = data.map(item => ({
+        id: item.id,
+        title: item.title || '',
+        client: item.client || '',
+        dueDate: item.due_date || '',
+        priority: (item.priority || 'media') as 'alta' | 'media' | 'baixa',
+        status: (item.status || 'filmado') as 'filmado' | 'edicao' | 'revisao' | 'entregue',
+        description: item.description || '',
+        links: Array.isArray(item.links) ? item.links : [],
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        user_id: item.user_id,
+        agency_id: null
+      }));
 
       console.log('✅ Board individual carregado com sucesso:', projects.length, 'projetos');
       return projects;
@@ -83,24 +80,21 @@ class SupabaseKanbanService {
         return [];
       }
 
-      // Converter dados do banco para o formato esperado
-      const projects = data.map(item => {
-        const boardData = item.board_data as any;
-        return {
-          id: item.id,
-          title: boardData?.title || '',
-          client: boardData?.client || '',
-          dueDate: boardData?.due_date || '',
-          priority: (boardData?.priority || 'media') as 'alta' | 'media' | 'baixa',
-          status: (boardData?.status || 'filmado') as 'filmado' | 'edicao' | 'revisao' | 'entregue',
-          description: boardData?.description || '',
-          links: boardData?.links || [],
-          createdAt: item.created_at,
-          updatedAt: item.updated_at,
-          user_id: item.user_id || '',
-          agency_id: agencyId
-        };
-      });
+      // Converter dados do banco para o formato esperado (usando colunas diretas)
+      const projects = data.map(item => ({
+        id: item.id,
+        title: item.title || '',
+        client: item.client || '',
+        dueDate: item.due_date || '',
+        priority: (item.priority || 'media') as 'alta' | 'media' | 'baixa',
+        status: (item.status || 'filmado') as 'filmado' | 'edicao' | 'revisao' | 'entregue',
+        description: item.description || '',
+        links: Array.isArray(item.links) ? item.links : [],
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        user_id: item.user_id || '',
+        agency_id: agencyId
+      }));
 
       console.log('✅ Board da agência carregado com sucesso:', projects.length, 'projetos');
       return projects;
@@ -114,21 +108,18 @@ class SupabaseKanbanService {
     try {
       console.log('💾 Salvando projeto:', project.title, 'Agency ID:', project.agency_id);
       
-      const boardData = {
+      // Usar colunas diretas em vez de board_data
+      const projectData = {
+        id: project.id,
+        user_id: project.user_id,
+        agency_id: project.agency_id || null,
         title: project.title,
         client: project.client,
         due_date: project.dueDate || null,
         priority: project.priority,
         status: project.status,
         description: project.description || '',
-        links: project.links || []
-      };
-
-      const projectData = {
-        id: project.id,
-        user_id: project.user_id,
-        agency_id: project.agency_id || null,
-        board_data: boardData,
+        links: project.links || [],
         updated_at: new Date().toISOString()
       };
 
@@ -167,7 +158,7 @@ class SupabaseKanbanService {
     }
   }
 
-  // Métodos legados mantidos para compatibilidade, mas agora usando saveProject
+  // Métodos legados mantidos para compatibilidade
   async saveBoard(userId: string, projects: KanbanProject[]): Promise<void> {
     try {
       console.log('💾 Salvando board individual:', projects.length, 'projetos');
