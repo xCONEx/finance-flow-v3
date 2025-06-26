@@ -1,447 +1,319 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { Plus, Filter, Search, Calendar, User, Clock, AlertCircle, Badge as BadgeIcon, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { 
-  Video, 
-  Clock, 
-  Calendar,
-  User, 
-  Plus, 
-  Edit, 
-  Trash2,
-  Link,
-  Upload,
-  Eye,
-  CheckCircle,
-  AlertTriangle,
-  Scissors,
-  Search,
-  FileVideo,
-  ExternalLink,
-  Building2
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
-import { useAgency } from '../contexts/AgencyContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { useKanbanContext } from '@/hooks/useKanbanContext';
+import { toast } from '@/hooks/use-toast';
 
-// Definições de tipos específicas para projetos audiovisuais
-interface VideoProject {
+interface KanbanCard {
   id: string;
   title: string;
-  description: string;
-  clientName: string;
-  deadline: string;
-  priority: 'alta' | 'média' | 'baixa';
-  projectType: 'Casamento' | 'Evento Corporativo' | 'Comercial' | 'Documentário' | 'Social Media' | 'Outro';
-  estimatedDuration: string; // Ex: "5 minutos"
-  deliveryLinks: DeliveryLink[];
-  createdAt: string;
-  assignedTo: string;
-  notes: string;
+  client: string;
+  due_date?: string;
+  priority: 'alta' | 'media' | 'baixa';
   status: 'filmado' | 'edicao' | 'revisao' | 'entregue';
+  description: string;
+  links: { name: string; url: string }[];
+  created_at: string;
+  updated_at: string;
 }
 
-interface DeliveryLink {
+interface Column {
   id: string;
-  url: string;
-  platform: 'WeTransfer' | 'Google Drive' | 'Dropbox' | 'YouTube' | 'Vimeo' | 'Outro';
-  description: string;
-  uploadedAt: string;
-  isPublic: boolean; // Se o cliente pode ver
-}
-
-interface ProjectColumn {
   title: string;
-  color: string;
-  icon: React.ComponentType<any>;
-  description: string;
-  projects: VideoProject[];
+  status: string;
+  cards: KanbanCard[];
 }
 
-interface ProjectBoard {
-  [key: string]: ProjectColumn;
-}
+const COLUMNS: Omit<Column, 'cards'>[] = [
+  { id: 'filmado', title: 'Filmado', status: 'filmado' },
+  { id: 'edicao', title: 'Em Edição', status: 'edicao' },
+  { id: 'revisao', title: 'Em Revisão', status: 'revisao' },
+  { id: 'entregue', title: 'Entregue', status: 'entregue' },
+];
 
-const ImprovedKanban = () => {
-  const [board, setBoard] = useState<ProjectBoard>({});
-  const [newProject, setNewProject] = useState<Partial<VideoProject>>({
-    title: '',
-    description: '',
-    clientName: '',
-    deadline: '',
-    priority: 'média',
-    projectType: 'Comercial',
-    estimatedDuration: '',
-    assignedTo: '',
-    notes: '',
-    deliveryLinks: []
-  });
-  const [selectedColumn, setSelectedColumn] = useState('filmado');
-  const [selectedProject, setSelectedProject] = useState<VideoProject | null>(null);
-  const [isEditingProject, setIsEditingProject] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+const PRIORITY_COLORS = {
+  alta: 'bg-red-100 text-red-800 border-red-200',
+  media: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  baixa: 'bg-green-100 text-green-800 border-green-200',
+};
+
+const PRIORITY_LABELS = {
+  alta: 'Alta',
+  media: 'Média',
+  baixa: 'Baixa',
+};
+
+const ImprovedKanban: React.FC = () => {
+  const [columns, setColumns] = useState<Column[]>([]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingCard, setEditingCard] = useState<KanbanCard | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newDeliveryLink, setNewDeliveryLink] = useState({
-    url: '',
-    platform: 'WeTransfer' as const,
-    description: '',
-    isPublic: false
-  });
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+  
+  const { user } = useSupabaseAuth();
+  const { isAgencyMode, currentAgencyId, currentUserId, contextLabel } = useKanbanContext();
 
-  const { user, profile } = useSupabaseAuth();
-  const { currentContext } = useAgency();
-  const { toast } = useToast();
+  // Form states
+  const [formData, setFormData] = useState({
+    title: '',
+    client: '',
+    due_date: '',
+    priority: 'media' as 'alta' | 'media' | 'baixa',
+    status: 'filmado' as 'filmado' | 'edicao' | 'revisao' | 'entregue',
+    description: '',
+    links: [{ name: '', url: '' }]
+  });
 
   useEffect(() => {
     if (user) {
-      loadProjectData();
+      loadKanbanData();
     }
-  }, [user, currentContext]);
+  }, [user, isAgencyMode, currentAgencyId]);
 
-  const loadProjectData = async () => {
-    if (!user?.id) return;
-    
+  const loadKanbanData = async () => {
+    if (!user) return;
+
+    setLoading(true);
     try {
-      setIsLoading(true);
-      console.log('📦 Carregando projetos para contexto:', currentContext);
+      let query = supabase.from('kanban_boards').select('*');
       
-      let kanbanData;
-      
-      if (currentContext === 'individual') {
-        // Carregar kanban individual
-        const { data, error } = await (supabase as any).rpc('get_user_kanban');
-        if (error) {
-          console.error('❌ Erro ao carregar kanban individual:', error);
-          kanbanData = [];
-        } else {
-          kanbanData = data && data.length > 0 ? JSON.parse(data[0].board_data || '[]') : [];
-        }
+      if (isAgencyMode && currentAgencyId) {
+        // Modo agência: buscar por agency_id (se a tabela tiver essa coluna)
+        // Por enquanto, vamos usar user_id até implementarmos agency_id na tabela kanban_boards
+        query = query.eq('user_id', user.id);
+        console.log('🏢 Carregando Kanban da agência:', currentAgencyId);
       } else {
-        // Carregar kanban da agência
-        const { data, error } = await (supabase as any).rpc('get_agency_kanban', {
-          target_agency_id: currentContext.id
-        });
-        if (error) {
-          console.error('❌ Erro ao carregar kanban da agência:', error);
-          kanbanData = [];
-        } else {
-          kanbanData = data && data.length > 0 ? JSON.parse(data[0].board_data || '[]') : [];
-        }
+        // Modo individual: buscar por user_id
+        query = query.eq('user_id', user.id);
+        console.log('👤 Carregando Kanban individual');
       }
 
-      // Criar board inicial com colunas específicas para projetos audiovisuais
-      const initialBoard: ProjectBoard = {
-        'filmado': {
-          title: 'Filmado',
-          color: 'bg-blue-50 border-blue-200',
-          icon: Video,
-          description: 'Material gravado, aguardando edição',
-          projects: kanbanData.filter((p: VideoProject) => p.status === 'filmado') || []
-        },
-        'edicao': {
-          title: 'Em Edição',
-          color: 'bg-orange-50 border-orange-200',
-          icon: Scissors,
-          description: 'Projeto sendo editado',
-          projects: kanbanData.filter((p: VideoProject) => p.status === 'edicao') || []
-        },
-        'revisao': {
-          title: 'Revisão',
-          color: 'bg-yellow-50 border-yellow-200',
-          icon: Eye,
-          description: 'Aguardando aprovação do cliente',
-          projects: kanbanData.filter((p: VideoProject) => p.status === 'revisao') || []
-        },
-        'entregue': {
-          title: 'Entregue',
-          color: 'bg-green-50 border-green-200',
-          icon: CheckCircle,
-          description: 'Projeto finalizado e entregue',
-          projects: kanbanData.filter((p: VideoProject) => p.status === 'entregue') || []
-        }
-      };
+      const { data, error } = await query.order('created_at', { ascending: false });
 
-      setBoard(initialBoard);
-      setIsLoading(false);
+      if (error) {
+        console.error('❌ Erro ao carregar Kanban:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar projetos do Kanban",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const cards = data || [];
+      console.log(`📋 ${cards.length} projetos carregados (${contextLabel})`);
+
+      // Organizar cards por coluna
+      const newColumns = COLUMNS.map(col => ({
+        ...col,
+        cards: cards.filter(card => card.status === col.status)
+      }));
+
+      setColumns(newColumns);
     } catch (error) {
-      console.error('❌ Erro ao carregar projetos:', error);
-      setIsLoading(false);
+      console.error('❌ Erro ao carregar Kanban:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const saveProjectData = async (projectsData: VideoProject[]) => {
-    if (!user?.id) return;
-    
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
     try {
-      if (currentContext === 'individual') {
-        // Salvar kanban individual
-        const { error } = await (supabase as any).rpc('save_user_kanban', {
-          kanban_data: JSON.stringify(projectsData)
+      const cardData = {
+        ...formData,
+        user_id: user.id,
+        links: formData.links.filter(link => link.name && link.url),
+        due_date: formData.due_date || null
+      };
+
+      if (editingCard) {
+        // Atualizar card existente
+        const { error } = await supabase
+          .from('kanban_boards')
+          .update(cardData)
+          .eq('id', editingCard.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Projeto atualizado com sucesso"
         });
-        if (error) {
-          console.error('❌ Erro ao salvar kanban individual:', error);
-          throw error;
-        }
       } else {
-        // Salvar kanban da agência
-        const { error } = await (supabase as any).rpc('save_agency_kanban', {
-          target_agency_id: currentContext.id,
-          kanban_data: JSON.stringify(projectsData)
+        // Criar novo card
+        const { error } = await supabase
+          .from('kanban_boards')
+          .insert([cardData]);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Novo projeto criado com sucesso"
         });
-        if (error) {
-          console.error('❌ Erro ao salvar kanban da agência:', error);
-          throw error;
-        }
       }
+
+      // Recarregar dados
+      await loadKanbanData();
       
-      console.log('💾 Kanban salvo com sucesso para contexto:', currentContext);
-    } catch (error) {
-      console.error('❌ Erro ao salvar kanban:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar alterações",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const getAllProjects = () => {
-    return Object.values(board).flatMap(column => column.projects);
-  };
-
-  const handleDragEnd = async (result: any) => {
-    if (!result.destination) return;
-
-    const { source, destination } = result;
-    
-    if (source.droppableId !== destination.droppableId) {
-      const sourceColumn = board[source.droppableId];
-      const destColumn = board[destination.droppableId];
-      const sourceProjects = [...sourceColumn.projects];
-      const destProjects = [...destColumn.projects];
-      const [movedProject] = sourceProjects.splice(source.index, 1);
-      
-      // Atualizar status do projeto
-      movedProject.status = destination.droppableId as VideoProject['status'];
-      
-      destProjects.splice(destination.index, 0, movedProject);
-      
-      const newBoard = {
-        ...board,
-        [source.droppableId]: {
-          ...sourceColumn,
-          projects: sourceProjects
-        },
-        [destination.droppableId]: {
-          ...destColumn,
-          projects: destProjects
-        }
-      };
-
-      setBoard(newBoard);
-      
-      // Salvar alterações
-      const allProjects = getAllProjects();
-      const updatedProject = allProjects.find(p => p.id === movedProject.id);
-      if (updatedProject) {
-        updatedProject.status = movedProject.status;
-        await saveProjectData(allProjects);
-      }
-      
-      toast({
-        title: "Projeto Movido",
-        description: `"${movedProject.title}" movido para ${destColumn.title}`
-      });
-    }
-  };
-
-  const handleAddProject = async () => {
-    if (!newProject.title || !newProject.clientName) {
-      toast({
-        title: "Erro",
-        description: "Preencha pelo menos o título e nome do cliente",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const project: VideoProject = {
-        id: `project_${Date.now()}`,
-        title: newProject.title!,
-        description: newProject.description || '',
-        clientName: newProject.clientName!,
-        deadline: newProject.deadline || '',
-        priority: newProject.priority || 'média',
-        projectType: newProject.projectType || 'Comercial',
-        estimatedDuration: newProject.estimatedDuration || '',
-        assignedTo: newProject.assignedTo || user?.email || 'Não atribuído',
-        notes: newProject.notes || '',
-        deliveryLinks: [],
-        createdAt: new Date().toISOString(),
-        status: selectedColumn as VideoProject['status']
-      };
-
-      // Atualizar board local
-      const newBoard = {
-        ...board,
-        [selectedColumn]: {
-          ...board[selectedColumn],
-          projects: [...board[selectedColumn].projects, project]
-        }
-      };
-      setBoard(newBoard);
-
-      // Salvar no banco
-      const allProjects = [...getAllProjects(), project];
-      await saveProjectData(allProjects);
-
-      // Limpar formulário
-      setNewProject({
+      // Fechar modal e limpar form
+      setIsAddDialogOpen(false);
+      setEditingCard(null);
+      setFormData({
         title: '',
+        client: '',
+        due_date: '',
+        priority: 'media',
+        status: 'filmado',
         description: '',
-        clientName: '',
-        deadline: '',
-        priority: 'média',
-        projectType: 'Comercial',
-        estimatedDuration: '',
-        assignedTo: '',
-        notes: '',
-        deliveryLinks: []
+        links: [{ name: '', url: '' }]
       });
-      setShowAddModal(false);
 
-      toast({
-        title: "Projeto Criado",
-        description: `"${project.title}" foi adicionado com sucesso`
-      });
     } catch (error) {
-      console.error('❌ Erro ao criar projeto:', error);
+      console.error('❌ Erro ao salvar projeto:', error);
       toast({
         title: "Erro",
-        description: "Erro ao criar projeto",
+        description: "Erro ao salvar projeto",
         variant: "destructive"
       });
     }
   };
 
-  const handleAddDeliveryLink = async () => {
-    if (!selectedProject || !newDeliveryLink.url) return;
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination || !user) return;
 
-    const link: DeliveryLink = {
-      id: `link_${Date.now()}`,
-      url: newDeliveryLink.url,
-      platform: newDeliveryLink.platform,
-      description: newDeliveryLink.description,
-      uploadedAt: new Date().toISOString(),
-      isPublic: newDeliveryLink.isPublic
-    };
-
-    const updatedProject = {
-      ...selectedProject,
-      deliveryLinks: [...selectedProject.deliveryLinks, link]
-    };
+    const { source, destination, draggableId } = result;
+    
+    if (source.droppableId === destination.droppableId) return;
 
     try {
-      // Atualizar projeto no board
-      const newBoard = { ...board };
-      Object.keys(newBoard).forEach(columnId => {
-        newBoard[columnId].projects = newBoard[columnId].projects.map(p =>
-          p.id === selectedProject.id ? updatedProject : p
-        );
-      });
-      setBoard(newBoard);
-      setSelectedProject(updatedProject);
+      // Atualizar status no banco
+      const newStatus = destination.droppableId as 'filmado' | 'edicao' | 'revisao' | 'entregue';
+      
+      const { error } = await supabase
+        .from('kanban_boards')
+        .update({ status: newStatus })
+        .eq('id', draggableId);
 
-      // Salvar alterações
-      const allProjects = Object.values(newBoard).flatMap(column => column.projects);
-      await saveProjectData(allProjects);
+      if (error) throw error;
 
-      // Limpar formulário
-      setNewDeliveryLink({
-        url: '',
-        platform: 'WeTransfer',
-        description: '',
-        isPublic: false
+      // Atualizar estado local
+      setColumns(prevColumns => {
+        const newColumns = [...prevColumns];
+        const sourceCol = newColumns.find(col => col.id === source.droppableId);
+        const destCol = newColumns.find(col => col.id === destination.droppableId);
+        
+        if (sourceCol && destCol) {
+          const card = sourceCol.cards.find(c => c.id === draggableId);
+          if (card) {
+            sourceCol.cards = sourceCol.cards.filter(c => c.id !== draggableId);
+            card.status = newStatus;
+            destCol.cards.push(card);
+          }
+        }
+        
+        return newColumns;
       });
 
       toast({
-        title: "Link Adicionado",
-        description: "Link de entrega adicionado com sucesso"
+        title: "Sucesso",
+        description: "Status do projeto atualizado"
       });
+
     } catch (error) {
-      console.error('❌ Erro ao adicionar link:', error);
+      console.error('❌ Erro ao mover projeto:', error);
       toast({
         title: "Erro",
-        description: "Erro ao adicionar link",
+        description: "Erro ao atualizar status do projeto",
         variant: "destructive"
       });
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'alta': return 'bg-red-100 text-red-800 border-red-200';
-      case 'média': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'baixa': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  const handleDelete = async (cardId: string) => {
+    if (!user || !window.confirm('Tem certeza que deseja excluir este projeto?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('kanban_boards')
+        .delete()
+        .eq('id', cardId);
+
+      if (error) throw error;
+
+      await loadKanbanData();
+      
+      toast({
+        title: "Sucesso",
+        description: "Projeto excluído com sucesso"
+      });
+    } catch (error) {
+      console.error('❌ Erro ao excluir projeto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir projeto",
+        variant: "destructive"
+      });
     }
   };
 
-  const getProjectTypeColor = (type: string) => {
-    const colors = {
-      'Casamento': 'bg-pink-100 text-pink-800',
-      'Evento Corporativo': 'bg-blue-100 text-blue-800',
-      'Comercial': 'bg-purple-100 text-purple-800',
-      'Documentário': 'bg-indigo-100 text-indigo-800',
-      'Social Media': 'bg-green-100 text-green-800',
-      'Outro': 'bg-gray-100 text-gray-800'
-    };
-    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  const filteredColumns = columns.map(col => ({
+    ...col,
+    cards: col.cards.filter(card => {
+      const matchesSearch = card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          card.client.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesPriority = priorityFilter === 'all' || card.priority === priorityFilter;
+      return matchesSearch && matchesPriority;
+    })
+  }));
+
+  const openEditDialog = (card: KanbanCard) => {
+    setEditingCard(card);
+    setFormData({
+      title: card.title,
+      client: card.client,
+      due_date: card.due_date || '',
+      priority: card.priority,
+      status: card.status,
+      description: card.description,
+      links: card.links.length > 0 ? card.links : [{ name: '', url: '' }]
+    });
+    setIsAddDialogOpen(true);
   };
 
-  const isDeadlineNear = (deadline: string) => {
-    if (!deadline) return false;
-    const deadlineDate = new Date(deadline);
-    const today = new Date();
-    const diffTime = deadlineDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 3 && diffDays >= 0; // Próximos 3 dias
+  const addLinkField = () => {
+    setFormData(prev => ({
+      ...prev,
+      links: [...prev.links, { name: '', url: '' }]
+    }));
   };
 
-  const isOverdue = (deadline: string) => {
-    if (!deadline) return false;
-    const deadlineDate = new Date(deadline);
-    const today = new Date();
-    return deadlineDate < today;
+  const removeLinkField = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      links: prev.links.filter((_, i) => i !== index)
+    }));
   };
 
-  // Ordem fixa das colunas
-  const fixedColumnOrder = ['filmado', 'edicao', 'revisao', 'entregue'];
-
-  // Filtrar projetos por busca
-  const filterProjects = (projects: VideoProject[]) => {
-    if (!searchTerm) return projects;
-    return projects.filter(project =>
-      project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Carregando projetos...</p>
         </div>
       </div>
@@ -449,482 +321,278 @@ const ImprovedKanban = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="text-center space-y-2">
-          <h2 className="text-3xl font-bold flex items-center gap-2">
-            <FileVideo className="text-purple-600" />
-            Gestão de Projetos Audiovisuais
-            {currentContext !== 'individual' && (
-              <Badge className="bg-blue-100 text-blue-800 ml-2">
-                <Building2 className="h-3 w-3 mr-1" />
-                {currentContext.name}
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Header com indicador de contexto */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Kanban - Projetos</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline" className="flex items-center gap-1">
+                {isAgencyMode ? '🏢' : '👤'}
+                {contextLabel}
               </Badge>
-            )}
-          </h2>
-          <p className="text-gray-600">
-            Organize seus projetos de filmagem e edição
-            {currentContext !== 'individual' && (
-              <span className="text-blue-600 ml-1">
-                • Colaborativo
+              <span className="text-sm text-gray-600">
+                {filteredColumns.reduce((acc, col) => acc + col.cards.length, 0)} projetos
               </span>
-            )}
-          </p>
+            </div>
+          </div>
+          <Button onClick={() => setIsAddDialogOpen(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Projeto
+          </Button>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Busca */}
-          <div className="relative">
-            <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        {/* Filtros */}
+        <div className="flex gap-4 mb-6">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Buscar projetos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 w-full sm:w-64"
+              className="pl-10"
             />
           </div>
 
-          {/* Botão de novo projeto */}
-          <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-            <DialogTrigger asChild>
-              <Button className="bg-purple-600 hover:bg-purple-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Projeto
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Criar Novo Projeto</DialogTitle>
-                <DialogDescription>
-                  Preencha as informações do projeto audiovisual
-                  {currentContext !== 'individual' && (
-                    <span className="text-blue-600">
-                      {' '}• Agência: {currentContext.name}
-                    </span>
-                  )}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="text-sm font-medium mb-2 block">Título do Projeto *</label>
-                    <Input
-                      placeholder="Ex: Casamento João e Maria"
-                      value={newProject.title || ''}
-                      onChange={(e) => setNewProject({...newProject, title: e.target.value})}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Cliente *</label>
-                    <Input
-                      placeholder="Nome do cliente"
-                      value={newProject.clientName || ''}
-                      onChange={(e) => setNewProject({...newProject, clientName: e.target.value})}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Prazo de Entrega</label>
-                    <Input
-                      type="date"
-                      value={newProject.deadline || ''}
-                      onChange={(e) => setNewProject({...newProject, deadline: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Descrição</label>
-                  <Textarea
-                    placeholder="Detalhes sobre o projeto..."
-                    value={newProject.description || ''}
-                    onChange={(e) => setNewProject({...newProject, description: e.target.value})}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Tipo de Projeto</label>
-                    <Select 
-                      value={newProject.projectType || 'Comercial'} 
-                      onValueChange={(value) => setNewProject({...newProject, projectType: value as VideoProject['projectType']})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Casamento">Casamento</SelectItem>
-                        <SelectItem value="Evento Corporativo">Evento Corporativo</SelectItem>
-                        <SelectItem value="Comercial">Comercial</SelectItem>
-                        <SelectItem value="Documentário">Documentário</SelectItem>
-                        <SelectItem value="Social Media">Social Media</SelectItem>
-                        <SelectItem value="Outro">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Prioridade</label>
-                    <Select 
-                      value={newProject.priority || 'média'} 
-                      onValueChange={(value: 'alta' | 'média' | 'baixa') => setNewProject({...newProject, priority: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="alta">Alta</SelectItem>
-                        <SelectItem value="média">Média</SelectItem>
-                        <SelectItem value="baixa">Baixa</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Duração Estimada</label>
-                    <Input
-                      placeholder="Ex: 5 minutos"
-                      value={newProject.estimatedDuration || ''}
-                      onChange={(e) => setNewProject({...newProject, estimatedDuration: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Observações</label>
-                  <Textarea
-                    placeholder="Notas adicionais..."
-                    value={newProject.notes || ''}
-                    onChange={(e) => setNewProject({...newProject, notes: e.target.value})}
-                    rows={2}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button onClick={handleAddProject} className="flex-1">
-                  Criar Projeto
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAddModal(false)}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-48">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Filtrar prioridade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as prioridades</SelectItem>
+              <SelectItem value="alta">Alta prioridade</SelectItem>
+              <SelectItem value="media">Média prioridade</SelectItem>
+              <SelectItem value="baixa">Baixa prioridade</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Kanban Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid lg:grid-cols-4 gap-6">
-          {fixedColumnOrder.map((columnId) => {
-            const column = board[columnId];
-            if (!column) return null;
-            
-            const filteredProjects = filterProjects(column.projects);
-            const IconComponent = column.icon;
-            
-            return (
-              <Card key={columnId} className={`${column.color} h-fit`}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-center font-semibold flex items-center justify-center gap-2">
-                    <IconComponent className="h-5 w-5" />
-                    {column.title}
-                    <Badge variant="secondary" className="ml-2">
-                      {filteredProjects.length}
-                    </Badge>
-                  </CardTitle>
-                  <p className="text-xs text-center text-gray-600">{column.description}</p>
-                </CardHeader>
-                <CardContent>
-                  <Droppable droppableId={columnId}>
-                    {(provided, snapshot) => (
-                      <div
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        className={`space-y-3 min-h-[300px] p-2 rounded-lg transition-colors ${
-                          snapshot.isDraggingOver ? 'bg-white/50' : ''
-                        }`}
-                      >
-                        {filteredProjects.map((project, index) => (
-                          <Draggable 
-                            key={project.id} 
-                            draggableId={project.id} 
-                            index={index}
-                          >
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                              >
-                                <Card 
-                                  className={`cursor-pointer hover:shadow-md transition-all duration-200 ${
-                                    snapshot.isDragging ? 'rotate-2 shadow-lg' : ''
-                                  }`}
-                                  onClick={() => setSelectedProject(project)}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {filteredColumns.map((column) => (
+            <div key={column.id} className="bg-white rounded-lg shadow-sm border p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900">{column.title}</h3>
+                <Badge variant="secondary">{column.cards.length}</Badge>
+              </div>
+
+              <Droppable droppableId={column.id}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`min-h-[200px] transition-colors ${
+                      snapshot.isDraggingOver ? 'bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg' : ''
+                    }`}
+                  >
+                    <div className="space-y-3">
+                      {column.cards.map((card, index) => (
+                        <Draggable key={card.id} draggableId={card.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`bg-white border rounded-lg p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow ${
+                                snapshot.isDragging ? 'rotate-2 shadow-lg' : ''
+                              }`}
+                              onClick={() => openEditDialog(card)}
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
+                                  {card.title}
+                                </h4>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-100 hover:text-red-600"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(card.id);
+                                  }}
                                 >
-                                  <CardContent className="p-4">
-                                    <div className="space-y-3">
-                                      {/* Header do projeto */}
-                                      <div className="flex justify-between items-start">
-                                        <h4 className="font-semibold text-sm line-clamp-2">{project.title}</h4>
-                                        <div className="flex gap-1 flex-shrink-0 ml-2">
-                                          {isOverdue(project.deadline) && (
-                                            <AlertTriangle className="h-4 w-4 text-red-600" />
-                                          )}
-                                          {isDeadlineNear(project.deadline) && !isOverdue(project.deadline) && (
-                                            <Clock className="h-4 w-4 text-orange-600" />
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      {/* Cliente */}
-                                      <div className="flex items-center gap-2">
-                                        <User className="h-3 w-3 text-gray-500" />
-                                        <span className="text-xs text-gray-600">{project.clientName}</span>
-                                      </div>
-
-                                      {/* Badges */}
-                                      <div className="flex gap-1 flex-wrap">
-                                        <Badge className={`text-xs ${getPriorityColor(project.priority)}`}>
-                                          {project.priority}
-                                        </Badge>
-                                        <Badge className={`text-xs ${getProjectTypeColor(project.projectType)}`}>
-                                          {project.projectType}
-                                        </Badge>
-                                      </div>
-
-                                      {/* Data limite */}
-                                      {project.deadline && (
-                                        <div className="flex items-center gap-2">
-                                          <Calendar className="h-3 w-3 text-gray-500" />
-                                          <span className={`text-xs ${
-                                            isOverdue(project.deadline) ? 'text-red-600 font-medium' :
-                                            isDeadlineNear(project.deadline) ? 'text-orange-600 font-medium' : 
-                                            'text-gray-600'
-                                          }`}>
-                                            {new Date(project.deadline).toLocaleDateString('pt-BR')}
-                                          </span>
-                                        </div>
-                                      )}
-
-                                      {/* Links de entrega */}
-                                      {project.deliveryLinks && project.deliveryLinks.length > 0 && (
-                                        <div className="flex items-center gap-2">
-                                          <Link className="h-3 w-3 text-green-600" />
-                                          <span className="text-xs text-green-600">
-                                            {project.deliveryLinks.length} link(s)
-                                          </span>
-                                        </div>
-                                      )}
-
-                                      {/* Responsável */}
-                                      {project.assignedTo && (
-                                        <div className="text-xs text-gray-500 border-t pt-2">
-                                          Editor: {project.assignedTo}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </CardContent>
-                                </Card>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
                               </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </CardContent>
-              </Card>
-            );
-          })}
+
+                              <div className="flex items-center gap-2 mb-2">
+                                <User className="h-3 w-3 text-gray-400" />
+                                <span className="text-xs text-gray-600 truncate">{card.client}</span>
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-xs ${PRIORITY_COLORS[card.priority]}`}
+                                >
+                                  <BadgeIcon className="h-3 w-3 mr-1" />
+                                  {PRIORITY_LABELS[card.priority]}
+                                </Badge>
+                                
+                                {card.due_date && (
+                                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <Calendar className="h-3 w-3" />
+                                    {new Date(card.due_date).toLocaleDateString('pt-BR')}
+                                  </div>
+                                )}
+                              </div>
+
+                              {card.description && (
+                                <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+                                  {card.description}
+                                </p>
+                              )}
+
+                              {card.links && card.links.length > 0 && (
+                                <div className="mt-2 text-xs text-blue-600">
+                                  {card.links.length} link{card.links.length > 1 ? 's' : ''}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                    </div>
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </div>
+          ))}
         </div>
       </DragDropContext>
 
-      {/* Modal de detalhes do projeto */}
-      <Dialog open={!!selectedProject} onOpenChange={() => setSelectedProject(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      {/* Add/Edit Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Video className="h-5 w-5" />
-                {selectedProject?.title}
-                {currentContext !== 'individual' && (
-                  <Badge className="bg-blue-100 text-blue-800">
-                    <Building2 className="h-3 w-3 mr-1" />
-                    {currentContext.name}
-                  </Badge>
-                )}
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsEditingProject(!isEditingProject)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </div>
+            <DialogTitle>
+              {editingCard ? 'Editar Projeto' : 'Novo Projeto'}
             </DialogTitle>
           </DialogHeader>
           
-          {selectedProject && (
-            <div className="space-y-6">
-              {/* Informações básicas */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Cliente</label>
-                  <p className="text-sm text-gray-900">{selectedProject.clientName}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Tipo de Projeto</label>
-                  <Badge className={`${getProjectTypeColor(selectedProject.projectType)} ml-2`}>
-                    {selectedProject.projectType}
-                  </Badge>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Prioridade</label>
-                  <Badge className={`${getPriorityColor(selectedProject.priority)} ml-2`}>
-                    {selectedProject.priority}
-                  </Badge>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Prazo</label>
-                  <p className={`text-sm ${
-                    selectedProject.deadline && isOverdue(selectedProject.deadline) ? 'text-red-600 font-medium' :
-                    selectedProject.deadline && isDeadlineNear(selectedProject.deadline) ? 'text-orange-600 font-medium' : 
-                    'text-gray-900'
-                  }`}>
-                    {selectedProject.deadline ? new Date(selectedProject.deadline).toLocaleDateString('pt-BR') : 'Não definido'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Duração Estimada</label>
-                  <p className="text-sm text-gray-900">{selectedProject.estimatedDuration || 'Não informado'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Responsável</label>
-                  <p className="text-sm text-gray-900">{selectedProject.assignedTo}</p>
-                </div>
-              </div>
-
-              {/* Descrição */}
-              {selectedProject.description && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Descrição</label>
-                  <p className="text-sm text-gray-900 mt-1">{selectedProject.description}</p>
-                </div>
-              )}
-
-              {/* Observações */}
-              {selectedProject.notes && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Observações</label>
-                  <p className="text-sm text-gray-900 mt-1">{selectedProject.notes}</p>
-                </div>
-              )}
-
-              {/* Links de entrega */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-medium text-gray-700">Links de Entrega</label>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="outline">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Adicionar Link
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Adicionar Link de Entrega</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <Input
-                          placeholder="URL do arquivo (WeTransfer, Google Drive, etc.)"
-                          value={newDeliveryLink.url}
-                          onChange={(e) => setNewDeliveryLink({...newDeliveryLink, url: e.target.value})}
-                        />
-                        <div className="grid grid-cols-2 gap-4">
-                          <Select
-                            value={newDeliveryLink.platform}
-                            onValueChange={(value) => setNewDeliveryLink({...newDeliveryLink, platform: value as any})}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="WeTransfer">WeTransfer</SelectItem>
-                              <SelectItem value="Google Drive">Google Drive</SelectItem>
-                              <SelectItem value="Dropbox">Dropbox</SelectItem>
-                              <SelectItem value="YouTube">YouTube</SelectItem>
-                              <SelectItem value="Vimeo">Vimeo</SelectItem>
-                              <SelectItem value="Outro">Outro</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="isPublic"
-                              checked={newDeliveryLink.isPublic}
-                              onChange={(e) => setNewDeliveryLink({...newDeliveryLink, isPublic: e.target.checked})}
-                            />
-                            <label htmlFor="isPublic" className="text-sm">Visível para o cliente</label>
-                          </div>
-                        </div>
-                        <Input
-                          placeholder="Descrição (opcional)"
-                          value={newDeliveryLink.description}
-                          onChange={(e) => setNewDeliveryLink({...newDeliveryLink, description: e.target.value})}
-                        />
-                        <Button onClick={handleAddDeliveryLink} className="w-full">
-                          Adicionar Link
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-
-                <div className="space-y-2">
-                  {(!selectedProject.deliveryLinks || selectedProject.deliveryLinks.length === 0) ? (
-                    <p className="text-sm text-gray-500 italic">Nenhum link de entrega adicionado</p>
-                  ) : (
-                    selectedProject.deliveryLinks.map((link) => (
-                      <div key={link.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{link.platform}</Badge>
-                            {link.isPublic && (
-                              <Badge variant="secondary" className="bg-green-100 text-green-800">Cliente</Badge>
-                            )}
-                          </div>
-                          {link.description && (
-                            <p className="text-sm text-gray-600 mt-1">{link.description}</p>
-                          )}
-                          <p className="text-xs text-gray-500">
-                            Adicionado em {new Date(link.uploadedAt).toLocaleDateString('pt-BR')}
-                          </p>
-                        </div>
-                        <Button size="sm" variant="outline" asChild>
-                          <a href={link.url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                </div>
+                <Label htmlFor="title">Título do Projeto</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="client">Cliente</Label>
+                <Input
+                  id="client"
+                  value={formData.client}
+                  onChange={(e) => setFormData(prev => ({ ...prev, client: e.target.value }))}
+                  required
+                />
               </div>
             </div>
-          )}
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="due_date">Data de Entrega</Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="priority">Prioridade</Label>
+                <Select value={formData.priority} onValueChange={(value: any) => setFormData(prev => ({ ...prev, priority: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="filmado">Filmado</SelectItem>
+                    <SelectItem value="edicao">Em Edição</SelectItem>
+                    <SelectItem value="revisao">Em Revisão</SelectItem>
+                    <SelectItem value="entregue">Entregue</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="description">Descrição</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label>Links</Label>
+              {formData.links.map((link, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <Input
+                    placeholder="Nome do link"
+                    value={link.name}
+                    onChange={(e) => {
+                      const newLinks = [...formData.links];
+                      newLinks[index].name = e.target.value;
+                      setFormData(prev => ({ ...prev, links: newLinks }));
+                    }}
+                  />
+                  <Input
+                    placeholder="URL"
+                    value={link.url}
+                    onChange={(e) => {
+                      const newLinks = [...formData.links];
+                      newLinks[index].url = e.target.value;
+                      setFormData(prev => ({ ...prev, links: newLinks }));
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeLinkField(index)}
+                    disabled={formData.links.length === 1}
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={addLinkField}>
+                Adicionar Link
+              </Button>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                {editingCard ? 'Atualizar' : 'Criar'} Projeto
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
