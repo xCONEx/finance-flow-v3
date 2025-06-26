@@ -347,7 +347,7 @@ const EntregaFlowKanban = () => {
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
-      {/* Header */}
+      {/* Header - Simplificado, apenas para empresa */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -355,9 +355,9 @@ const EntregaFlowKanban = () => {
               <Video className="text-white font-bold text-2xl"/>
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Projetos - {contextLabel}</h1>
+              <h1 className="text-2xl font-bold">Projetos Audiovisuais</h1>
               <p className="text-sm text-gray-600">
-                {isAgencyMode ? 'Gerenciamento em equipe' : 'Gerenciamento individual'}
+                Gerenciamento de projetos da empresa
               </p>
             </div>
           </div>
