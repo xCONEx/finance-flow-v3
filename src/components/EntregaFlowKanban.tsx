@@ -97,7 +97,6 @@ const EntregaFlowKanban = () => {
     }
   ];
 
-  // Estatísticas do dashboard
   const activeProjects = projects.filter(p => p.status !== 'entregue').length;
   const completedProjects = projects.filter(p => p.status === 'entregue').length;
   const urgentDeadlines = projects.filter(p => {
@@ -117,18 +116,26 @@ const EntregaFlowKanban = () => {
   });
 
   useEffect(() => {
-    console.log('🔄 [KANBAN] Contexto alterado, recarregando projetos:', {
+    console.log('🔄 [KANBAN] useEffect disparado - Contexto alterado:', {
       isAgencyMode,
       currentAgencyId,
       currentUserId,
-      contextLabel
+      contextLabel,
+      userExists: !!user
     });
-    loadProjects();
-  }, [user, isAgencyMode, currentAgencyId, currentUserId]);
+    
+    if (user && currentUserId) {
+      loadProjects();
+    } else {
+      console.log('❌ [KANBAN] Não carregando projetos - usuário ou currentUserId ausente');
+      setProjects([]);
+      setLoading(false);
+    }
+  }, [isAgencyMode, currentAgencyId, currentUserId, user]);
 
   const loadProjects = async () => {
     if (!currentUserId) {
-      console.log('❌ [KANBAN] Nenhum usuário logado para carregar projetos');
+      console.log('❌ [KANBAN] loadProjects: Nenhum usuário logado');
       setProjects([]);
       setLoading(false);
       return;
@@ -136,7 +143,7 @@ const EntregaFlowKanban = () => {
     
     try {
       setLoading(true);
-      console.log('🔄 [KANBAN] Carregando projetos para contexto:', {
+      console.log('🔄 [KANBAN] loadProjects iniciado para contexto:', {
         isAgencyMode,
         currentAgencyId,
         currentUserId,
@@ -146,18 +153,21 @@ const EntregaFlowKanban = () => {
       let loadedProjects: KanbanProject[] = [];
 
       if (isAgencyMode && currentAgencyId) {
-        // Carregar projetos da empresa
         console.log('🏢 [KANBAN] Carregando projetos da agência:', currentAgencyId);
         loadedProjects = await supabaseKanbanService.loadAgencyBoard(currentAgencyId);
-        console.log('🏢 [KANBAN] Projetos da empresa carregados:', loadedProjects.length);
+        console.log('✅ [KANBAN] Projetos da empresa carregados:', loadedProjects.length, 'projetos');
       } else {
-        // Carregar projetos individuais
         console.log('👤 [KANBAN] Carregando projetos individuais para usuário:', currentUserId);
         loadedProjects = await supabaseKanbanService.loadBoard(currentUserId);
-        console.log('👤 [KANBAN] Projetos individuais carregados:', loadedProjects.length);
+        console.log('✅ [KANBAN] Projetos individuais carregados:', loadedProjects.length, 'projetos');
       }
 
       setProjects(loadedProjects);
+      console.log('📊 [KANBAN] Estado final dos projetos atualizados:', {
+        totalProjects: loadedProjects.length,
+        agencyProjects: loadedProjects.filter(p => p.agency_id).length,
+        individualProjects: loadedProjects.filter(p => !p.agency_id).length
+      });
     } catch (error) {
       console.error('❌ [KANBAN] Erro ao carregar projetos:', error);
       toast({
@@ -185,7 +195,6 @@ const EntregaFlowKanban = () => {
       
       setProjects(updatedProjects);
       
-      // Salvar projeto individual
       const updatedProject = updatedProjects.find(p => p.id === result.draggableId);
       if (updatedProject) {
         try {
@@ -227,6 +236,8 @@ const EntregaFlowKanban = () => {
     }
 
     try {
+      const finalAgencyId = isAgencyMode && currentAgencyId ? currentAgencyId : null;
+      
       const project: KanbanProject = {
         id: generateUUID(),
         title: newProject.title!,
@@ -239,14 +250,15 @@ const EntregaFlowKanban = () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         user_id: currentUserId || '',
-        agency_id: isAgencyMode ? currentAgencyId : null // IMPORTANTE: definir corretamente o agency_id
+        agency_id: finalAgencyId
       };
 
-      console.log('💾 [KANBAN] Salvando novo projeto:', {
+      console.log('💾 [KANBAN] Criando novo projeto:', {
         title: project.title,
         agencyId: project.agency_id,
         isAgencyMode,
         currentAgencyId,
+        finalAgencyId,
         mode: project.agency_id ? 'AGENCY' : 'INDIVIDUAL'
       });
 
@@ -386,7 +398,7 @@ const EntregaFlowKanban = () => {
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
-      {/* Header com indicador de contexto */}
+      {/* Header com indicador de contexto MELHORADO */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -396,22 +408,27 @@ const EntregaFlowKanban = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold">Projetos Audiovisuais</h1>
-                {isAgencyMode && currentAgencyId && (
-                  <Badge variant="outline" className="flex items-center gap-1">
+                {isAgencyMode && currentAgencyId ? (
+                  <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 border-blue-200">
                     <Building className="h-3 w-3" />
-                    {contextLabel}
-                    <span className="text-xs text-gray-500">ID: {currentAgencyId}</span>
+                    <span className="font-medium">{contextLabel}</span>
+                    <span className="text-xs text-blue-600">ID: {currentAgencyId}</span>
                   </Badge>
-                )}
-                {!isAgencyMode && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
+                ) : (
+                  <Badge variant="secondary" className="flex items-center gap-1 bg-gray-100">
                     <User className="h-3 w-3" />
                     Individual
                   </Badge>
                 )}
               </div>
               <p className="text-sm text-gray-600">
-                {isAgencyMode ? 'Gerenciamento de projetos da empresa' : 'Seus projetos pessoais'}
+                {isAgencyMode && currentAgencyId ? 
+                  `Gerenciando projetos da empresa ${contextLabel}` : 
+                  'Seus projetos pessoais'
+                }
+              </p>
+              <p className="text-xs text-gray-500">
+                {projects.length} projeto{projects.length !== 1 ? 's' : ''} carregado{projects.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
@@ -506,7 +523,6 @@ const EntregaFlowKanban = () => {
               
               return (
                 <div key={column.id}>
-                  {/* Column Header */}
                   <div className="flex items-center gap-2 mb-4">
                     <div className={`w-3 h-3 rounded-full ${column.id === 'filmado' ? 'bg-blue-500' : column.id === 'edicao' ? 'bg-orange-500' : column.id === 'revisao' ? 'bg-yellow-500' : 'bg-green-500'}`} />
                     <h4 className="font-semibold">{column.title}</h4>
@@ -543,25 +559,21 @@ const EntregaFlowKanban = () => {
                                 >
                                   <CardContent className="p-4">
                                     <div className="space-y-3">
-                                      {/* Priority Badge */}
                                       {project.priority === 'alta' && (
                                         <Badge className="bg-red-500 text-white text-xs">
                                           {project.priority.charAt(0).toUpperCase() + project.priority.slice(1)}
                                         </Badge>
                                       )}
 
-                                      {/* Project Title */}
                                       <h4 className="font-semibold text-sm line-clamp-2">
                                         {project.title}
                                       </h4>
 
-                                      {/* Client */}
                                       <div className="flex items-center gap-2">
                                         <User className="h-3 w-3 text-gray-500" />
                                         <span className="text-xs text-gray-600">{project.client}</span>
                                       </div>
 
-                                      {/* Due Date */}
                                       {project.dueDate && (
                                         <div className="flex items-center gap-2">
                                           <Calendar className="h-3 w-3 text-gray-500" />
@@ -573,14 +585,12 @@ const EntregaFlowKanban = () => {
                                         </div>
                                       )}
 
-                                      {/* Overdue Badge */}
                                       {isOverdue(project.dueDate) && project.status !== 'entregue' && (
                                         <Badge className="bg-red-500 text-white text-xs">
                                           {getDaysOverdue(project.dueDate)} dias atrasado
                                         </Badge>
                                       )}
 
-                                      {/* Links */}
                                       {project.links.length > 0 && (
                                         <div className="flex items-center gap-2">
                                           <ExternalLink className="h-3 w-3 text-blue-500" />
@@ -590,7 +600,6 @@ const EntregaFlowKanban = () => {
                                         </div>
                                       )}
 
-                                      {/* Agency indicator */}
                                       {project.agency_id && (
                                         <div className="flex items-center gap-1">
                                           <Building className="h-3 w-3 text-purple-500" />
@@ -606,7 +615,6 @@ const EntregaFlowKanban = () => {
                         ))}
                         {provided.placeholder}
 
-                        {/* Add Project Button for empty columns */}
                         {columnProjects.length === 0 && (
                           <Card className="border-dashed border-2 border-gray-300">
                             <CardContent className="p-6 text-center">
@@ -634,7 +642,6 @@ const EntregaFlowKanban = () => {
         </DragDropContext>
       </div>
 
-      {/* Add Project Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -738,7 +745,6 @@ const EntregaFlowKanban = () => {
               )}
             </div>
 
-            {/* Indicador de contexto */}
             <div className="bg-gray-50 p-3 rounded-lg">
               <p className="text-sm text-gray-600">
                 {isAgencyMode && currentAgencyId ? (
@@ -774,7 +780,6 @@ const EntregaFlowKanban = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Project Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
