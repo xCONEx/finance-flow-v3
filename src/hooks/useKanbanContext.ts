@@ -32,7 +32,7 @@ export const useKanbanContext = (): KanbanContextData => {
     });
 
     if (!user) {
-      console.log('❌ Usuário não autenticado - EntregaFlowKanban');
+      console.log('❌ Usuário não autenticado - KanbanContext');
       setContextData({
         isAgencyMode: false,
         currentAgencyId: null,
@@ -42,38 +42,53 @@ export const useKanbanContext = (): KanbanContextData => {
       return;
     }
 
-    // Verificar se o usuário tem uma agência associada
-    const hasAgency = profile?.agency_id && (profile.user_type === 'company_owner' || profile.user_type === 'employee');
-    
-    if (currentContext === 'individual' || !hasAgency) {
-      console.log('👤 EntregaFlowKanban - Modo Individual ativado');
+    // Se o contexto é 'individual', sempre modo individual
+    if (currentContext === 'individual') {
+      console.log('👤 KanbanContext - Modo Individual ativado');
       setContextData({
         isAgencyMode: false,
         currentAgencyId: null,
         currentUserId: user.id,
         contextLabel: 'Individual'
       });
-    } else if (currentContext !== 'individual' && typeof currentContext === 'object') {
-      console.log('🏢 EntregaFlowKanban - Modo Empresa ativado:', currentContext);
+      return;
+    }
+
+    // Se currentContext é um objeto (agência selecionada)
+    if (currentContext && typeof currentContext === 'object' && currentContext.id) {
+      console.log('🏢 KanbanContext - Modo Empresa ativado:', currentContext);
       setContextData({
         isAgencyMode: true,
         currentAgencyId: currentContext.id,
         currentUserId: user.id,
         contextLabel: currentContext.name
       });
-    } else {
-      // Fallback para modo individual
-      console.log('⚠️ EntregaFlowKanban - Fallback para modo individual');
-      setContextData({
-        isAgencyMode: false,
-        currentAgencyId: null,
-        currentUserId: user.id,
-        contextLabel: 'Individual'
-      });
+      return;
     }
+
+    // Fallback: se há agência no perfil mas contexto não definido
+    if (profile?.agency_id && (profile.user_type === 'company_owner' || profile.user_type === 'employee')) {
+      console.log('🏢 KanbanContext - Usando agency_id do perfil como fallback:', profile.agency_id);
+      setContextData({
+        isAgencyMode: true,
+        currentAgencyId: profile.agency_id,
+        currentUserId: user.id,
+        contextLabel: 'Empresa'
+      });
+      return;
+    }
+
+    // Último fallback para modo individual
+    console.log('⚠️ KanbanContext - Fallback final para modo individual');
+    setContextData({
+      isAgencyMode: false,
+      currentAgencyId: null,
+      currentUserId: user.id,
+      contextLabel: 'Individual'
+    });
   }, [currentContext, user, profile]);
 
-  console.log('📋 useKanbanContext - Estado atual EntregaFlowKanban:', contextData);
+  console.log('📋 useKanbanContext - Estado final:', contextData);
 
   return contextData;
 };
