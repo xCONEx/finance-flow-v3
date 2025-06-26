@@ -372,6 +372,9 @@ const EntregaFlowKanban = () => {
           <Plus className="h-4 w-4 mr-2" />
           Novo Projeto
         </Button>
+            {/* Context Selector */}
+            <ContextSelector />
+        
       </div>
 
       {/* Stats Cards */}
