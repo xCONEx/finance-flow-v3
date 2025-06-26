@@ -1,7 +1,8 @@
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useSubscription } from './useSubscription';
 import { useApp } from '@/contexts/AppContext';
+import { useUsageTracking } from './useUsageTracking';
 
 export interface SubscriptionLimits {
   maxJobs: number;
@@ -22,6 +23,18 @@ export interface SubscriptionLimits {
 export const useSubscriptionPermissions = () => {
   const { subscription, loading } = useSubscription();
   const { jobs, monthlyCosts } = useApp();
+  const { getCurrentUsage } = useUsageTracking();
+  const [currentUsageData, setCurrentUsageData] = useState({ jobs: 0, projects: 0 });
+
+  // Carregar dados de uso do Supabase
+  useEffect(() => {
+    const loadUsageData = async () => {
+      const usage = await getCurrentUsage();
+      setCurrentUsageData(usage);
+    };
+
+    loadUsageData();
+  }, [getCurrentUsage]);
 
   const limits = useMemo<SubscriptionLimits>(() => {
     switch (subscription) {
@@ -93,14 +106,14 @@ export const useSubscriptionPermissions = () => {
     }
   }, [subscription]);
 
+  // Usar dados do banco de dados para verificar limites
   const currentUsage = useMemo(() => {
-    const approvedJobs = jobs.filter(job => job.status === 'aprovado');
     return {
-      jobsCount: approvedJobs.length,
-      projectsCount: jobs.length,
+      jobsCount: currentUsageData.jobs,
+      projectsCount: currentUsageData.projects,
       teamMembersCount: 1, // Por enquanto sempre 1, pode ser expandido
     };
-  }, [jobs]);
+  }, [currentUsageData]);
 
   const canCreateJob = useMemo(() => {
     if (limits.maxJobs === -1) return true;
