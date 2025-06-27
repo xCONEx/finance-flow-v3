@@ -44,6 +44,14 @@ interface ExpenseData {
   currentInstallment?: number;
 }
 
+interface WorkItemData {
+  id: string;
+  description: string;
+  category: string;
+  value: number;
+  depreciationYears?: number;
+}
+
 export const generateJobPDF = async (
   job: JobData, 
   companyData?: CompanyData,
@@ -265,6 +273,96 @@ export const generateExpensesPDF = async (expenses: ExpenseData[], companyData?:
   return pdfBlob;
 };
 
+export const generateWorkItemsPDF = async (workItems: WorkItemData[], companyData?: CompanyData) => {
+  const doc = new jsPDF();
+  let currentY = 20;
+  
+  // Título
+  doc.setFontSize(20);
+  doc.text('Relatório de Itens de Trabalho', 20, currentY);
+  currentY += 20;
+  
+  // DADOS DA EMPRESA
+  if (companyData) {
+    doc.setFontSize(14);
+    doc.text('DADOS DA EMPRESA', 20, currentY);
+    currentY += 10;
+    
+    doc.setFontSize(10);
+    if (companyData.name) {
+      doc.text(`Nome: ${companyData.name}`, 20, currentY);
+      currentY += 6;
+    }
+    
+    if (companyData.email) {
+      doc.text(`Email: ${companyData.email}`, 20, currentY);
+      currentY += 6;
+    }
+    
+    currentY += 10;
+  }
+  
+  // RESUMO
+  const totalValue = workItems.reduce((sum, item) => sum + item.value, 0);
+  const equipmentValue = workItems
+    .filter(item => item.category.toLowerCase().includes('equipamento') || 
+                   item.category.toLowerCase().includes('câmera') ||
+                   item.category.toLowerCase().includes('lente') ||
+                   item.category.toLowerCase().includes('hardware'))
+    .reduce((sum, item) => sum + item.value, 0);
+  
+  doc.setFontSize(14);
+  doc.text('RESUMO', 20, currentY);
+  currentY += 10;
+  
+  doc.setFontSize(12);
+  doc.text(`Total de Itens: ${workItems.length}`, 20, currentY);
+  currentY += 6;
+  doc.text(`Valor Total: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY);
+  currentY += 6;
+  doc.text(`Valor Equipamentos: R$ ${equipmentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY);
+  currentY += 6;
+  doc.text(`Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, currentY);
+  currentY += 15;
+  
+  // LISTA DE ITENS
+  doc.setFontSize(14);
+  doc.text('ITENS DETALHADOS', 20, currentY);
+  currentY += 10;
+  
+  doc.setFontSize(9);
+  workItems.forEach((item, index) => {
+    // Verificar se precisa de nova página
+    if (currentY > 250) {
+      doc.addPage();
+      currentY = 20;
+    }
+    
+    doc.setFont(undefined, 'bold');
+    doc.text(`${index + 1}. ${item.description}`, 20, currentY);
+    currentY += 6;
+    
+    doc.setFont(undefined, 'normal');
+    doc.text(`   Valor: R$ ${item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY);
+    currentY += 5;
+    doc.text(`   Categoria: ${item.category}`, 20, currentY);
+    currentY += 5;
+    doc.text(`   Depreciação: ${item.depreciationYears || 5} anos`, 20, currentY);
+    currentY += 5;
+    
+    currentY += 5; // Espaçamento entre itens
+  });
+  
+  // Gerar PDF
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  
+  // Abrir em nova aba
+  window.open(pdfUrl, '_blank');
+  
+  return pdfBlob;
+};
+
 export const downloadJobPDF = (job: JobData, companyData?: CompanyData, clientData?: ClientData) => {
   generateJobPDF(job, companyData, clientData).then(() => {
     console.log('PDF gerado com sucesso');
@@ -278,5 +376,13 @@ export const downloadExpensesPDF = (expenses: ExpenseData[], companyData?: Compa
     console.log('PDF de despesas gerado com sucesso');
   }).catch(error => {
     console.error('Erro ao gerar PDF de despesas:', error);
+  });
+};
+
+export const downloadWorkItemsPDF = (workItems: WorkItemData[], companyData?: CompanyData) => {
+  generateWorkItemsPDF(workItems, companyData).then(() => {
+    console.log('PDF de itens de trabalho gerado com sucesso');
+  }).catch(error => {
+    console.error('Erro ao gerar PDF de itens de trabalho:', error);
   });
 };
