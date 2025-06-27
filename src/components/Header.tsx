@@ -1,5 +1,18 @@
 
 import React, { useState } from 'react';
+import { 
+  Calculator, 
+  Video, 
+  CreditCard, 
+  UserCheck, 
+  Settings, 
+  User, 
+  Sun, 
+  Moon, 
+  Building,
+  ChevronDown,
+  Home
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -9,28 +22,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  User, 
-  LogOut, 
-  Settings, 
-  Crown, 
-  Users,
-  Home,
-  Calculator,
-  Video,
-  CreditCard,
-  UserCheck,
-  Building,
-  FileText,
-  Eye,
-  EyeOff
-} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { usePrivacy } from '../contexts/PrivacyContext';
 import NotificationBell from './NotificationBell';
-import ContextSelector from './ContextSelector';
-
 
 interface HeaderProps {
   activeTab: string;
@@ -38,141 +33,140 @@ interface HeaderProps {
   showTeamOption?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, showTeamOption }) => {
-  const { signOut, user, profile } = useSupabaseAuth();
-  const { currentTheme } = useTheme();
-  const { valuesHidden, toggleValuesVisibility } = usePrivacy();
-  const isAdmin = profile?.user_type === 'admin';
-
-  const handleLogout = async () => {
-    await signOut();
-  };
+const Header: React.FC<HeaderProps> = ({ 
+  activeTab, 
+  onTabChange, 
+  showTeamOption 
+}) => {
+  const { user, profile, signOut, agency } = useSupabaseAuth();
+  const { currentTheme, toggleTheme, isDarkMode } = useTheme();
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
+  const isAdmin = profile?.user_type === 'admin';
 
-  const menuItems = [
+  const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'calculator', label: 'Calculadora', icon: Calculator },
     ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
     ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
     ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
     { id: 'management', label: 'Gerenciamento', icon: Building },
+    { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
+
+  const getActiveTabTitle = () => {
+    const activeItem = navigationItems.find(item => item.id === activeTab);
+    return activeItem ? activeItem.label : 'Dashboard';
+  };
+
   return (
-    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${currentTheme.primary} flex items-center justify-center`}>
-                <span className="text-white font-bold text-sm">FF</span>
+    <header className={`${currentTheme.header} border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo e Navegação Desktop */}
+          <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-3">
+              <div className={`w-8 h-8 bg-gradient-to-r ${currentTheme.primary} rounded-lg flex items-center justify-center`}>
+                <Calculator className="text-white font-bold text-xl"/>
               </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                Finance Flow
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
+                FinanceFlow
               </h1>
-            </div>    
+            </div>
+
+            {/* Navegação Desktop */}
+            <nav className="hidden md:flex space-x-1">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+
+                return (
+                  <Button
+                    key={item.id}
+                    variant={isActive ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => onTabChange(item.id)}
+                    className={`flex items-center space-x-2 ${
+                      isActive 
+                        ? `bg-gradient-to-r ${currentTheme.primary} text-white shadow-sm` 
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="hidden lg:inline">{item.label}</span>
+                  </Button>
+                );
+              })}
+            </nav>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-1">
-            {menuItems.map((item) => (
-              <Button
-                key={item.id}
-                variant="ghost"
-                className={`flex items-center space-x-2 ${
-                  activeTab === item.id 
-                    ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90` 
-                    : `hover:bg-gradient-to-r hover:${currentTheme.secondary}`
-                }`}
-                onClick={() => onTabChange(item.id)}
-              >
-                <item.icon className="w-4 h-4" />
-                <span>{item.label}</span>
-              </Button>
-            ))}
+          {/* Mobile: Mostrar apenas o título da aba ativa */}
+          <div className="md:hidden">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {getActiveTabTitle()}
+            </h2>
+          </div>
 
-            {/* Team Option */}
-            {showTeamOption && (
-              <Button
-                variant="ghost"
-                className={`flex items-center space-x-2 ${
-                  activeTab === 'team' 
-                    ? `bg-gradient-to-r ${currentTheme.primary} text-white hover:opacity-90` 
-                    : `hover:bg-gradient-to-r hover:${currentTheme.secondary}`
-                }`}
-                onClick={() => onTabChange('team')}
-              >
-                <Users className="w-4 h-4" />
-                <span>Equipe</span>
-              </Button>
-            )}
-          </nav>
+          {/* Ações do usuário */}
+          <div className="flex items-center space-x-4">
+            <NotificationBell />
 
-          {/* User Menu */}
-          <div className="flex items-center space-x-3">
-            {/* Privacy Toggle */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={toggleValuesVisibility}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-              title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
+              onClick={toggleTheme}
+              className="text-gray-600 dark:text-gray-300"
             >
-              {valuesHidden ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
+              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
 
-            <NotificationBell />
-            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-                    <AvatarFallback className={`bg-gradient-to-r ${currentTheme.primary} text-white`}>
+                <Button variant="ghost" className="flex items-center space-x-2 p-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarFallback>
                       {user?.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {profile?.name || user?.email?.split('@')[0]}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {profile?.subscription || 'Free'}
+                    </p>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <div className="flex flex-col space-y-1 p-2">
-                  <p className="text-sm font-medium leading-none">{user?.email}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {profile?.subscription === 'free' ? 'Plano Gratuito' : 
-                     profile?.subscription === 'premium' ? 'Plano Premium' : 
-                     'Plano Enterprise'}
-                  </p>
-                </div>
-                <DropdownMenuSeparator />
+              <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-800">
                 <DropdownMenuItem onClick={() => onTabChange('profile')}>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Perfil</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onTabChange('settings')}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Configurações</span>
+                  <User className="w-4 h-4 mr-2" />
+                  Meu Perfil
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onTabChange('subscription')}>
-                  <Crown className="mr-2 h-4 w-4" />
-                  <span>Assinatura</span>
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Planos
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem onClick={() => onTabChange('admin')}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    <span>Admin</span>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Admin Panel
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sair</span>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
