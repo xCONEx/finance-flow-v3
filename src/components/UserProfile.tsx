@@ -24,16 +24,38 @@ const UserProfile = () => {
     company: profile?.company || ''
   });
   const [loading, setLoading] = useState(false);
+  const [userAgency, setUserAgency] = useState<any>(null);
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
 
-  // Buscar nome da agência do usuário baseado no agency_id do perfil
-  const userAgency = agencies.find(agency => 
-    profile?.agency_id && agency.id === profile.agency_id
-  );
+  // Buscar a agência do usuário baseado no agency_id do perfil
+  useEffect(() => {
+    const fetchUserAgency = async () => {
+      if (profile?.agency_id) {
+        try {
+          const { data, error } = await supabase
+            .from('agencies')
+            .select('id, name, description, owner_id')
+            .eq('id', profile.agency_id)
+            .single();
 
-  // Verificar se é dono ou colaborador de alguma agência
-  const isOwnerOrEmployee = profile?.user_type === 'company_owner' || profile?.user_type === 'employee';
+          if (!error && data) {
+            setUserAgency(data);
+          }
+        } catch (error) {
+          console.error('Erro ao buscar agência do usuário:', error);
+        }
+      } else {
+        setUserAgency(null);
+      }
+    };
+
+    fetchUserAgency();
+  }, [profile?.agency_id]);
+
+  // Verificar se é dono da agência
+  const isAgencyOwner = userAgency && userAgency.owner_id === user?.id;
+  const isPartOfAgency = !!profile?.agency_id && !!userAgency;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -200,7 +222,7 @@ const UserProfile = () => {
                    profile?.subscription === 'enterprise' ? 'Enterprise' :
                    profile?.subscription === 'premium' ? 'Premium' : 'Free'}
                 </Badge>
-                {profile?.user_type === 'company_owner' && (
+                {isAgencyOwner && (
                   <div className="flex items-center justify-center gap-1 text-sm text-amber-600">
                     <Crown className="h-3 w-3" />
                     <span>Proprietário</span>
@@ -248,15 +270,15 @@ const UserProfile = () => {
                     <Building2 className="h-4 w-4" />
                     Empresa
                   </Label>
-                  {isOwnerOrEmployee && userAgency ? (
+                  {isPartOfAgency ? (
                     <div className="mt-1">
                       <Input
                         value={userAgency.name}
                         disabled
-                        className="bg-gray-50"
+                        className="bg-gray-50 dark:bg-gray-800"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Você faz parte da agência: {userAgency.name}
+                        {isAgencyOwner ? 'Você é proprietário desta agência' : 'Você faz parte desta agência'}
                       </p>
                     </div>
                   ) : hasEnterprisePlan ? (
@@ -274,7 +296,7 @@ const UserProfile = () => {
                       <Input
                         value="Upgrade para Enterprise necessário"
                         disabled
-                        className="bg-gray-50"
+                        className="bg-gray-50 dark:bg-gray-800"
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Disponível apenas no plano Enterprise
@@ -322,6 +344,18 @@ const UserProfile = () => {
                   }
                 </p>
               </div>
+
+              {userAgency && (
+                <div className="md:col-span-2">
+                  <Label>Agência</Label>
+                  <div className="mt-1">
+                    <p className="text-sm font-medium">{userAgency.name}</p>
+                    {userAgency.description && (
+                      <p className="text-xs text-gray-500">{userAgency.description}</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
