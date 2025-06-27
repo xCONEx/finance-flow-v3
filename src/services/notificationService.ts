@@ -116,13 +116,31 @@ class NotificationService {
     // Cancelar notificações anteriores desta despesa
     this.cancelExpenseNotifications(expenseTag);
 
+    // Formatar descrição da notificação baseado nos dados disponíveis
+    const formatExpenseNotification = (expense: any) => {
+      let description = expense.description || 'Despesa';
+      let amount = expense.amount ? `R$ ${expense.amount}` : '';
+      let client = expense.client || '';
+      
+      // Montar mensagem: Descrição, Valor Total e cliente se tiver
+      let message = description;
+      if (amount) {
+        message += `, ${amount}`;
+      }
+      if (client) {
+        message += `, Cliente: ${client}`;
+      }
+      
+      return message;
+    };
+
     // Notificação 3 dias antes
     const threeDaysBefore = new Date(dueDate.getTime() - (3 * 24 * 60 * 60 * 1000));
     if (threeDaysBefore > now) {
       const delay3Days = threeDaysBefore.getTime() - now.getTime();
       await this.scheduleNotification({
         title: 'Despesa vence em 3 dias',
-        body: `${expense.description} - R$ ${expense.amount}`,
+        body: formatExpenseNotification(expense),
         tag: `${expenseTag}-3days`,
         data: { type: 'expense_reminder', expenseId: expense.id, dueDate: expense.dueDate }
       }, delay3Days);
@@ -133,7 +151,7 @@ class NotificationService {
       const delayDueDate = dueDate.getTime() - now.getTime();
       await this.scheduleNotification({
         title: 'Despesa vence hoje!',
-        body: `${expense.description} - R$ ${expense.amount}`,
+        body: formatExpenseNotification(expense),
         tag: `${expenseTag}-today`,
         data: { type: 'expense_due', expenseId: expense.id, dueDate: expense.dueDate }
       }, delayDueDate);
