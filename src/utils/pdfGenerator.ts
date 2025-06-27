@@ -31,6 +31,19 @@ interface ClientData {
   address?: string;
 }
 
+interface ExpenseData {
+  id?: string;
+  description: string;
+  value: number;
+  category: string;
+  month: string;
+  dueDate?: string;
+  client?: string;
+  isRecurring?: boolean;
+  installments?: number;
+  currentInstallment?: number;
+}
+
 export const generateJobPDF = async (
   job: JobData, 
   companyData?: CompanyData,
@@ -151,10 +164,119 @@ export const generateJobPDF = async (
   return pdfBlob;
 };
 
+export const generateExpensesPDF = async (expenses: ExpenseData[], companyData?: CompanyData) => {
+  const doc = new jsPDF();
+  let currentY = 20;
+  
+  // Título
+  doc.setFontSize(20);
+  doc.text('Relatório de Despesas', 20, currentY);
+  currentY += 20;
+  
+  // DADOS DA EMPRESA
+  if (companyData) {
+    doc.setFontSize(14);
+    doc.text('DADOS DA EMPRESA', 20, currentY);
+    currentY += 10;
+    
+    doc.setFontSize(10);
+    if (companyData.name) {
+      doc.text(`Nome: ${companyData.name}`, 20, currentY);
+      currentY += 6;
+    }
+    
+    if (companyData.email) {
+      doc.text(`Email: ${companyData.email}`, 20, currentY);
+      currentY += 6;
+    }
+    
+    currentY += 10;
+  }
+  
+  // RESUMO
+  const totalValue = expenses.reduce((sum, expense) => sum + expense.value, 0);
+  doc.setFontSize(14);
+  doc.text('RESUMO', 20, currentY);
+  currentY += 10;
+  
+  doc.setFontSize(12);
+  doc.text(`Total de Despesas: ${expenses.length}`, 20, currentY);
+  currentY += 6;
+  doc.text(`Valor Total: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY);
+  currentY += 6;
+  doc.text(`Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, currentY);
+  currentY += 15;
+  
+  // LISTA DE DESPESAS
+  doc.setFontSize(14);
+  doc.text('DESPESAS DETALHADAS', 20, currentY);
+  currentY += 10;
+  
+  doc.setFontSize(9);
+  expenses.forEach((expense, index) => {
+    // Verificar se precisa de nova página
+    if (currentY > 250) {
+      doc.addPage();
+      currentY = 20;
+    }
+    
+    doc.setFont(undefined, 'bold');
+    doc.text(`${index + 1}. ${expense.description}`, 20, currentY);
+    currentY += 6;
+    
+    doc.setFont(undefined, 'normal');
+    doc.text(`   Valor: R$ ${expense.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY);
+    currentY += 5;
+    doc.text(`   Categoria: ${expense.category}`, 20, currentY);
+    currentY += 5;
+    doc.text(`   Mês: ${new Date(expense.month + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`, 20, currentY);
+    currentY += 5;
+    
+    if (expense.dueDate) {
+      doc.text(`   Vencimento: ${new Date(expense.dueDate).toLocaleDateString('pt-BR')}`, 20, currentY);
+      currentY += 5;
+    }
+    
+    if (expense.client) {
+      doc.text(`   Cliente: ${expense.client}`, 20, currentY);
+      currentY += 5;
+    }
+    
+    if (expense.isRecurring) {
+      doc.text(`   Despesa Recorrente`, 20, currentY);
+      currentY += 5;
+    }
+    
+    if (expense.installments && expense.installments > 1) {
+      doc.text(`   Parcela: ${expense.currentInstallment || 1}/${expense.installments}`, 20, currentY);
+      currentY += 5;
+    }
+    
+    currentY += 5; // Espaçamento entre despesas
+  });
+  
+  // Gerar PDF
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  
+  // Abrir em nova aba
+  window.open(pdfUrl, '_blank');
+  
+  return pdfBlob;
+};
+
 export const downloadJobPDF = (job: JobData, companyData?: CompanyData, clientData?: ClientData) => {
   generateJobPDF(job, companyData, clientData).then(() => {
     console.log('PDF gerado com sucesso');
   }).catch(error => {
     console.error('Erro ao gerar PDF:', error);
+  });
+};
+
+export const downloadExpensesPDF = (expenses: ExpenseData[], companyData?: CompanyData) => {
+  generateExpensesPDF(expenses, companyData).then(() => {
+    console.log('PDF de despesas gerado com sucesso');
+  }).catch(error => {
+    console.error('Erro ao gerar PDF de despesas:', error);
   });
 };
