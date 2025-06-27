@@ -138,16 +138,7 @@ const Header: React.FC<HeaderProps> = ({
                       {user?.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="hidden sm:block text-left">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {profile?.name || user?.email?.split('@')[0]}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {profile?.subscription === 'enterprise-annual' ? 'Enterprise Anual' : 
-                       profile?.subscription === 'enterprise' ? 'Enterprise' :
-                       profile?.subscription === 'premium' ? 'Premium' : 'Free'}
-                    </p>
-                  </div>
+                  
                   <ChevronDown className="w-4 h-4 text-gray-500" />
                 </Button>
               </DropdownMenuTrigger>
