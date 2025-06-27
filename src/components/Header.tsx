@@ -52,7 +52,6 @@ const Header: React.FC<HeaderProps> = ({
     ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
     ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
     { id: 'management', label: 'Gerenciamento', icon: Building },
-    { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
   const handleSignOut = async () => {
@@ -161,6 +160,10 @@ const Header: React.FC<HeaderProps> = ({
                 <DropdownMenuItem onClick={() => onTabChange('profile')}>
                   <User className="w-4 h-4 mr-2" />
                   Meu Perfil
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onTabChange('settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Configurações</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onTabChange('subscription')}>
                   <CreditCard className="w-4 h-4 mr-2" />
