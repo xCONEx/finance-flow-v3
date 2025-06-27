@@ -76,7 +76,7 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-3">
               <div className={`w-8 h-8 bg-gradient-to-r ${currentTheme.primary} rounded-lg flex items-center justify-center`}>
-                <Calculator className="text-white font-bold text-xl"/>
+                <span className="text-white font-bold text-xl">FF</span>
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
                 FinanceFlow
@@ -143,13 +143,30 @@ const Header: React.FC<HeaderProps> = ({
                       {profile?.name || user?.email?.split('@')[0]}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {profile?.subscription || 'Free'}
+                      {profile?.subscription === 'enterprise-annual' ? 'Enterprise Anual' : 
+                       profile?.subscription === 'enterprise' ? 'Enterprise' :
+                       profile?.subscription === 'premium' ? 'Premium' : 'Free'}
                     </p>
                   </div>
                   <ChevronDown className="w-4 h-4 text-gray-500" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-800">
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {profile?.name || user?.email?.split('@')[0]}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {user?.email}
+                  </p>
+                  <div className="mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      {profile?.subscription === 'enterprise-annual' ? 'Enterprise Anual' : 
+                       profile?.subscription === 'enterprise' ? 'Enterprise' :
+                       profile?.subscription === 'premium' ? 'Premium' : 'Free'}
+                    </Badge>
+                  </div>
+                </div>
                 <DropdownMenuItem onClick={() => onTabChange('profile')}>
                   <User className="w-4 h-4 mr-2" />
                   Meu Perfil
