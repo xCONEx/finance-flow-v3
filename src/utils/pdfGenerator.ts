@@ -52,115 +52,161 @@ interface WorkItemData {
   depreciationYears?: number;
 }
 
+const safeNumber = (value: any): number => {
+  if (typeof value === 'number' && !isNaN(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return !isNaN(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
 export const generateJobPDF = async (
   job: JobData, 
   companyData?: CompanyData,
   clientData?: ClientData
 ) => {
   const doc = new jsPDF();
-  let currentY = 20;
+  let yPosition = 20;
   
-  // Título
-  doc.setFontSize(20);
-  doc.text('Orçamento de Serviço', 20, currentY);
-  currentY += 20;
+  // Cores
+  const primaryColor = [41, 128, 185]; // Azul
+  const secondaryColor = [52, 73, 94]; // Cinza escuro
+  const lightGray = [236, 240, 241]; // Cinza claro
   
-  // DADOS DA EMPRESA
-  doc.setFontSize(14);
-  doc.text('DADOS DA EMPRESA', 20, currentY);
-  currentY += 10;
+  // Header - Título principal
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, 210, 30, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(24);
+  doc.text('ORÇAMENTO DE SERVIÇO', 105, 20, { align: 'center' });
+  
+  yPosition = 45;
+  doc.setTextColor(0, 0, 0);
+  
+  // TABELA - DADOS DA EMPRESA
+  if (companyData) {
+    doc.setFillColor(...lightGray);
+    doc.rect(15, yPosition, 180, 8, 'F');
+    doc.setTextColor(...secondaryColor);
+    doc.setFontSize(12);
+    doc.text('DADOS DA EMPRESA', 20, yPosition + 6);
+    yPosition += 15;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    
+    const companyFields = [
+      { label: 'Razão Social:', value: companyData.name || 'Não informado' },
+      { label: 'E-mail:', value: companyData.email || 'Não informado' },
+      { label: 'CNPJ:', value: companyData.cnpj || 'Não informado' },
+      { label: 'Telefone:', value: companyData.phone || 'Não informado' },
+      { label: 'Endereço:', value: companyData.address || 'Não informado' }
+    ];
+    
+    companyFields.forEach(field => {
+      doc.text(field.label, 20, yPosition);
+      doc.text(field.value, 70, yPosition);
+      yPosition += 6;
+    });
+    
+    yPosition += 10;
+  }
+  
+  // TABELA - DADOS DO CLIENTE
+  if (clientData) {
+    doc.setFillColor(...lightGray);
+    doc.rect(15, yPosition, 180, 8, 'F');
+    doc.setTextColor(...secondaryColor);
+    doc.setFontSize(12);
+    doc.text('DADOS DO CLIENTE', 20, yPosition + 6);
+    yPosition += 15;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    
+    const clientFields = [
+      { label: 'Nome/Razão Social:', value: clientData.name || 'Não informado' },
+      { label: 'E-mail:', value: clientData.email || 'Não informado' },
+      { label: 'Telefone:', value: clientData.phone || 'Não informado' },
+      { label: 'CNPJ/CPF:', value: clientData.cnpj || 'Não informado' },
+      { label: 'Endereço:', value: clientData.address || 'Não informado' }
+    ];
+    
+    clientFields.forEach(field => {
+      doc.text(field.label, 20, yPosition);
+      doc.text(field.value, 70, yPosition);
+      yPosition += 6;
+    });
+    
+    yPosition += 10;
+  }
+  
+  // TABELA - DETALHES DO SERVIÇO
+  doc.setFillColor(...lightGray);
+  doc.rect(15, yPosition, 180, 8, 'F');
+  doc.setTextColor(...secondaryColor);
+  doc.setFontSize(12);
+  doc.text('DETALHES DO SERVIÇO', 20, yPosition + 6);
+  yPosition += 15;
   
   doc.setFontSize(10);
-  if (companyData?.name) {
-    doc.text(`Nome: ${companyData.name}`, 20, currentY);
-    currentY += 6;
-  }
+  doc.setTextColor(0, 0, 0);
   
-  if (companyData?.email) {
-    doc.text(`Email: ${companyData.email}`, 20, currentY);
-    currentY += 6;
-  }
+  const serviceFields = [
+    { label: 'Descrição:', value: job.description || 'Não informado' },
+    { label: 'Data do Evento:', value: job.eventDate ? new Date(job.eventDate).toLocaleDateString('pt-BR') : 'Não informado' },
+    { label: 'Horas Estimadas:', value: `${safeNumber(job.estimatedHours)}h` },
+    { label: 'Nível de Dificuldade:', value: job.difficultyLevel || 'Não informado' }
+  ];
   
-  if (companyData?.cnpj) {
-    doc.text(`CNPJ: ${companyData.cnpj}`, 20, currentY);
-    currentY += 6;
-  }
+  serviceFields.forEach(field => {
+    doc.text(field.label, 20, yPosition);
+    doc.text(field.value, 70, yPosition);
+    yPosition += 6;
+  });
   
-  if (companyData?.phone) {
-    doc.text(`Telefone: ${companyData.phone}`, 20, currentY);
-    currentY += 6;
-  }
+  yPosition += 10;
   
-  if (companyData?.address) {
-    doc.text(`Endereço: ${companyData.address}`, 20, currentY);
-    currentY += 6;
-  }
-  
-  currentY += 10;
-  
-  // DADOS DO CLIENTE
-  doc.setFontSize(14);
-  doc.text('DADOS DO CLIENTE', 20, currentY);
-  currentY += 10;
+  // TABELA - COMPOSIÇÃO DE CUSTOS
+  doc.setFillColor(...lightGray);
+  doc.rect(15, yPosition, 180, 8, 'F');
+  doc.setTextColor(...secondaryColor);
+  doc.setFontSize(12);
+  doc.text('COMPOSIÇÃO DE CUSTOS', 20, yPosition + 6);
+  yPosition += 15;
   
   doc.setFontSize(10);
-  if (clientData?.name) {
-    doc.text(`Nome: ${clientData.name}`, 20, currentY);
-    currentY += 6;
-  }
+  doc.setTextColor(0, 0, 0);
   
-  if (clientData?.phone) {
-    doc.text(`Telefone: ${clientData.phone}`, 20, currentY);
-    currentY += 6;
-  }
+  const costFields = [
+    { label: 'Logística:', value: `R$ ${safeNumber(job.logistics).toFixed(2)}` },
+    { label: 'Equipamentos:', value: `R$ ${safeNumber(job.equipment).toFixed(2)}` },
+    { label: 'Assistência:', value: `R$ ${safeNumber(job.assistance).toFixed(2)}` }
+  ];
   
-  if (clientData?.email) {
-    doc.text(`Email: ${clientData.email}`, 20, currentY);
-    currentY += 6;
-  }
+  costFields.forEach(field => {
+    doc.text(field.label, 20, yPosition);
+    doc.text(field.value, 70, yPosition);
+    yPosition += 6;
+  });
   
-  if (clientData?.cnpj) {
-    doc.text(`CNPJ: ${clientData.cnpj}`, 20, currentY);
-    currentY += 6;
-  }
+  yPosition += 15;
   
-  if (clientData?.address) {
-    doc.text(`Endereço: ${clientData.address}`, 20, currentY);
-    currentY += 6;
-  }
-  
-  currentY += 10;
-  
-  // DETALHES DO SERVIÇO
-  doc.setFontSize(14);
-  doc.text('DETALHES DO SERVIÇO', 20, currentY);
-  currentY += 10;
-  
-  doc.setFontSize(10);
-  doc.text(`Descrição: ${job.description}`, 20, currentY);
-  currentY += 6;
-  
-  doc.text(`Data do Evento: ${new Date(job.eventDate).toLocaleDateString('pt-BR')}`, 20, currentY);
-  currentY += 6;
-  
-  doc.text(`Horas Estimadas: ${job.estimatedHours}h`, 20, currentY);
-  currentY += 6;
-  
-  doc.text(`Nível de Dificuldade: ${job.difficultyLevel}`, 20, currentY);
-  currentY += 6;
-  
-  doc.text(`Logística: R$ ${job.logistics.toFixed(2)}`, 20, currentY);
-  currentY += 6;
-  
-  doc.text(`Equipamentos: R$ ${job.equipment.toFixed(2)}`, 20, currentY);
-  currentY += 6;
-  
-  doc.text(`Assistência: R$ ${job.assistance.toFixed(2)}`, 20, currentY);
-  currentY += 10;
-  
-  // VALOR TOTAL
+  // VALOR TOTAL - Destacado
+  doc.setFillColor(...primaryColor);
+  doc.rect(15, yPosition, 180, 15, 'F');
+  doc.setTextColor(255, 255, 255);
   doc.setFontSize(16);
-  doc.text(`VALOR TOTAL: R$ ${job.totalPrice.toFixed(2)}`, 20, currentY);
+  doc.text('VALOR TOTAL:', 20, yPosition + 10);
+  doc.text(`R$ ${safeNumber(job.totalPrice).toFixed(2)}`, 150, yPosition + 10);
+  
+  yPosition += 25;
+  
+  // Footer
+  doc.setTextColor(100, 100, 100);
+  doc.setFontSize(8);
+  doc.text(`Orçamento gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, yPosition + 10);
   
   // Gerar PDF
   const pdfBlob = doc.output('blob');
@@ -202,7 +248,7 @@ export const generateExpensesPDF = async (expenses: ExpenseData[], companyData?:
   }
   
   // RESUMO
-  const totalValue = expenses.reduce((sum, expense) => sum + expense.value, 0);
+  const totalValue = expenses.reduce((sum, expense) => sum + safeNumber(expense.value), 0);
   doc.setFontSize(14);
   doc.text('RESUMO', 20, currentY);
   currentY += 10;
@@ -233,7 +279,7 @@ export const generateExpensesPDF = async (expenses: ExpenseData[], companyData?:
     currentY += 6;
     
     doc.setFont(undefined, 'normal');
-    doc.text(`   Valor: R$ ${expense.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY);
+    doc.text(`   Valor: R$ ${safeNumber(expense.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY);
     currentY += 5;
     doc.text(`   Categoria: ${expense.category}`, 20, currentY);
     currentY += 5;
@@ -303,13 +349,13 @@ export const generateWorkItemsPDF = async (workItems: WorkItemData[], companyDat
   }
   
   // RESUMO
-  const totalValue = workItems.reduce((sum, item) => sum + item.value, 0);
+  const totalValue = workItems.reduce((sum, item) => sum + safeNumber(item.value), 0);
   const equipmentValue = workItems
     .filter(item => item.category.toLowerCase().includes('equipamento') || 
                    item.category.toLowerCase().includes('câmera') ||
                    item.category.toLowerCase().includes('lente') ||
                    item.category.toLowerCase().includes('hardware'))
-    .reduce((sum, item) => sum + item.value, 0);
+    .reduce((sum, item) => sum + safeNumber(item.value), 0);
   
   doc.setFontSize(14);
   doc.text('RESUMO', 20, currentY);
@@ -343,7 +389,7 @@ export const generateWorkItemsPDF = async (workItems: WorkItemData[], companyDat
     currentY += 6;
     
     doc.setFont(undefined, 'normal');
-    doc.text(`   Valor: R$ ${item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY);
+    doc.text(`   Valor: R$ ${safeNumber(item.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY);
     currentY += 5;
     doc.text(`   Categoria: ${item.category}`, 20, currentY);
     currentY += 5;
