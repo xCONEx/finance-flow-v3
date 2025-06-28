@@ -31,6 +31,11 @@ const UserProfile = () => {
   // Buscar a agência do usuário baseado no agency_id do perfil
   useEffect(() => {
     const fetchUserAgency = async () => {
+      console.log('🔍 Buscando agência do usuário...', { 
+        agencyId: profile?.agency_id, 
+        userId: user?.id 
+      });
+
       if (profile?.agency_id) {
         try {
           const { data, error } = await supabase
@@ -39,13 +44,21 @@ const UserProfile = () => {
             .eq('id', profile.agency_id)
             .single();
 
+          console.log('📊 Resultado da busca de agência:', { data, error });
+
           if (!error && data) {
             setUserAgency(data);
+            console.log('✅ Agência encontrada:', data.name);
+          } else {
+            console.log('❌ Erro ou agência não encontrada:', error);
+            setUserAgency(null);
           }
         } catch (error) {
-          console.error('Erro ao buscar agência do usuário:', error);
+          console.error('🚨 Erro ao buscar agência do usuário:', error);
+          setUserAgency(null);
         }
       } else {
+        console.log('ℹ️ Usuário não possui agency_id');
         setUserAgency(null);
       }
     };
@@ -56,6 +69,14 @@ const UserProfile = () => {
   // Verificar se é dono da agência
   const isAgencyOwner = userAgency && userAgency.owner_id === user?.id;
   const isPartOfAgency = !!profile?.agency_id && !!userAgency;
+
+  console.log('🏢 Estado da agência:', {
+    userAgency,
+    isAgencyOwner,
+    isPartOfAgency,
+    profileAgencyId: profile?.agency_id,
+    userId: user?.id
+  });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -270,7 +291,7 @@ const UserProfile = () => {
                     <Building2 className="h-4 w-4" />
                     Empresa
                   </Label>
-                  {isPartOfAgency ? (
+                  {isPartOfAgency && userAgency ? (
                     <div className="mt-1">
                       <Input
                         value={userAgency.name}
