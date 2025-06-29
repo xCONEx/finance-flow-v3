@@ -3,10 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { Client } from '@/types/client';
 import { AddClientModal } from './AddClientModal';
+import { useClients } from '@/hooks/useClients';
 
 interface ClientSelectorProps {
   onClientSelect: (client: Client) => void;
@@ -15,22 +14,22 @@ interface ClientSelectorProps {
 
 const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelect, placeholder = "Buscar cliente..." }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [clients, setClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const { user } = useSupabaseAuth();
-
-  useEffect(() => {
-    loadClients();
-  }, [user]);
+  const { clients, loading, loadClients } = useClients();
 
   useEffect(() => {
     if (searchTerm) {
+      console.log('Filtering clients with search term:', searchTerm);
+      console.log('Available clients:', clients);
+      
       const filtered = clients.filter(client =>
         client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
       );
+      
+      console.log('Filtered clients:', filtered);
       setFilteredClients(filtered);
       setShowDropdown(true);
     } else {
@@ -39,24 +38,8 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelect, placeho
     }
   }, [searchTerm, clients]);
 
-  const loadClients = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name');
-
-      if (error) throw error;
-      setClients(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
-    }
-  };
-
   const handleClientSelect = (client: Client) => {
+    console.log('Client selected:', client);
     onClientSelect(client);
     setSearchTerm('');
     setShowDropdown(false);
@@ -99,6 +82,14 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({ onClientSelect, placeho
                   </div>
                 </button>
               ))}
+            </div>
+          )}
+
+          {showDropdown && searchTerm && filteredClients.length === 0 && !loading && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 px-4 py-3">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Nenhum cliente encontrado
+              </div>
             </div>
           )}
         </div>

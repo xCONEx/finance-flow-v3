@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,11 +14,10 @@ import { AddClientModal } from './AddClientModal';
 import { EditClientModal } from './EditClientModal';
 import { ClientDetailsModal } from './ClientDetailsModal';
 import { ClientContractsModal } from './ClientContractsModal';
+import { useClients } from '@/hooks/useClients';
 
 const ClientsManagement = () => {
-  const [clients, setClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -25,66 +25,7 @@ const ClientsManagement = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const { user, profile, agency } = useSupabaseAuth();
   const { toast } = useToast();
-
-  const loadClients = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Erro ao carregar clientes:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar clientes.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Atualizar user_email para clientes existentes que não possuem
-      const clientsToUpdate = (data || []).filter(client => !client.user_email);
-      if (clientsToUpdate.length > 0 && user.email) {
-        const updatePromises = clientsToUpdate.map(client =>
-          supabase
-            .from('clients')
-            .update({ user_email: user.email })
-            .eq('id', client.id)
-        );
-        
-        await Promise.all(updatePromises);
-        
-        // Recarregar dados após atualização
-        const { data: updatedData } = await supabase
-          .from('clients')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        setClients(updatedData || []);
-      } else {
-        setClients(data || []);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar clientes.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadClients();
-  }, [user, agency]);
+  const { clients, loading, loadClients } = useClients();
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -104,7 +45,7 @@ const ClientsManagement = () => {
 
       if (error) throw error;
 
-      setClients(clients.filter(c => c.id !== clientId));
+      await loadClients();
       
       toast({
         title: "Sucesso",

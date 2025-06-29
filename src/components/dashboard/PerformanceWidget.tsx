@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Target, Calendar } from 'lucide-react';
@@ -9,27 +8,18 @@ const PerformanceWidget = () => {
   const { jobs, workRoutine } = useApp();
   const { formatValue } = usePrivacy();
 
-  // Force safe array initialization with multiple fallbacks
-  const safeJobs = React.useMemo(() => {
-    if (!jobs) return [];
-    return Array.isArray(jobs) ? jobs : [];
-  }, [jobs]);
-
-  console.log('PerformanceWidget - jobs safety check:', { 
-    jobs: jobs ? 'defined' : 'undefined',
-    isArray: Array.isArray(jobs),
-    length: safeJobs.length 
-  });
+  // Ensure jobs is always an array
+  const safeJobs = jobs || [];
 
   // Calculate performance metrics
   const currentMonth = new Date().toISOString().slice(0, 7);
   const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7);
 
   const currentMonthJobs = safeJobs.filter(job => 
-    job.eventDate && job.eventDate.startsWith(currentMonth) && job.status === 'concluído'
+    job.eventDate && job.eventDate.startsWith(currentMonth) && job.status === 'aprovado'
   );
   const lastMonthJobs = safeJobs.filter(job => 
-    job.eventDate && job.eventDate.startsWith(lastMonth) && job.status === 'concluído'
+    job.eventDate && job.eventDate.startsWith(lastMonth) && job.status === 'aprovado'
   );
 
   const currentMonthRevenue = currentMonthJobs.reduce((sum, job) => sum + (job.valueWithDiscount || 0), 0);

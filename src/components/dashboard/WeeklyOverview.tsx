@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
@@ -10,17 +9,8 @@ const WeeklyOverview = () => {
   const { jobs } = useApp();
   const { formatValue } = usePrivacy();
 
-  // Force safe array initialization with multiple fallbacks
-  const safeJobs = React.useMemo(() => {
-    if (!jobs) return [];
-    return Array.isArray(jobs) ? jobs : [];
-  }, [jobs]);
-
-  console.log('WeeklyOverview - jobs safety check:', { 
-    jobs: jobs ? 'defined' : 'undefined',
-    isArray: Array.isArray(jobs),
-    length: safeJobs.length 
-  });
+  // Ensure jobs is always an array
+  const safeJobs = jobs || [];
 
   // Get last 7 days
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -32,7 +22,7 @@ const WeeklyOverview = () => {
   const weeklyData = last7Days.map(date => {
     const dayJobs = safeJobs.filter(job => job.eventDate && job.eventDate.startsWith(date));
     const revenue = dayJobs.reduce((sum, job) => sum + (job.valueWithDiscount || 0), 0);
-    const completedJobs = dayJobs.filter(job => job.status === 'concluído').length;
+    const completedJobs = dayJobs.filter(job => job.status === 'aprovado').length;
     
     return {
       date,
