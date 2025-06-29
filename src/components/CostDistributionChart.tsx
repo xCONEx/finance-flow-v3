@@ -3,17 +3,14 @@ import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useApp } from '../contexts/AppContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
+import { safeFormatCurrency } from '../utils/formatters';
 
 const CostDistributionChart = () => {
   const { monthlyCosts } = useApp();
   const { formatValue } = usePrivacy();
 
-  // Ensure monthlyCosts is always an array
-  const safeMonthlyCosts = Array.isArray(monthlyCosts) ? monthlyCosts : [];
-
-
   // Filter out financial transactions and reserve items - only show regular monthly costs
-  const regularMonthlyCosts = safeMonthlyCosts.filter(cost => 
+  const regularMonthlyCosts = monthlyCosts.filter(cost => 
     !cost.description?.includes('FINANCIAL_INCOME:') && 
     !cost.description?.includes('FINANCIAL_EXPENSE:') &&
     !cost.description?.includes('RESERVE_') &&

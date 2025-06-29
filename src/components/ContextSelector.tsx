@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAgency } from '@/contexts/AgencyContext';
 import { Button } from '@/components/ui/button';
@@ -13,17 +12,16 @@ import { ChevronDown, User, Building2, Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const ContextSelector = () => {
-  const { 
-    currentContext, 
-    agencies, 
-    setCurrentContext, 
-    loading, 
+  const {
+    currentContext,
+    agencies,
+    setCurrentContext,
+    loading,
     pendingInvitations,
     acceptInvitation,
-    rejectInvitation 
+    rejectInvitation
   } = useAgency();
 
-  // Se não há agências e nem convites, não mostrar o seletor
   if (agencies.length === 0 && pendingInvitations.length === 0) {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground">
@@ -52,25 +50,27 @@ const ContextSelector = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="flex items-center gap-2 h-9 px-3 relative"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex items-center gap-2 h-9 px-3 hover:bg-muted/60 transition-colors"
           disabled={loading}
         >
           {contextInfo.icon}
-          <span className="text-sm font-medium">{contextInfo.label}</span>
+          <span className="text-sm font-medium truncate max-w-[100px]">{contextInfo.label}</span>
+
           {pendingInvitations.length > 0 && (
             <Badge className="bg-red-500 text-white text-xs px-1 py-0 h-4 min-w-4 rounded-full ml-1">
               {pendingInvitations.length}
             </Badge>
           )}
+
           <ChevronDown className="h-3 w-3 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent align="start" className="w-72 bg-white">
-        {/* Contexto Individual */}
-        <DropdownMenuItem 
+        <DropdownMenuItem
           onClick={() => setCurrentContext('individual')}
           className="flex items-center gap-2"
         >
@@ -80,20 +80,19 @@ const ContextSelector = () => {
             <div className="ml-auto h-2 w-2 rounded-full bg-blue-500" />
           )}
         </DropdownMenuItem>
-        
-        {/* Lista de agências - Só mostra se houver agências */}
+
         {agencies.length > 0 && (
           <>
             <DropdownMenuSeparator />
             {agencies.map((agency) => (
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 key={agency.id}
                 onClick={() => setCurrentContext(agency)}
                 className="flex items-center gap-2"
               >
                 <Building2 className="h-4 w-4" />
                 <div className="flex flex-col">
-                  <span className="text-sm">{agency.name}</span>
+                  <span className="text-sm truncate max-w-[160px]">{agency.name}</span>
                   <span className="text-xs text-muted-foreground">
                     {agency.is_owner ? 'Owner' : agency.user_role}
                   </span>
@@ -106,7 +105,6 @@ const ContextSelector = () => {
           </>
         )}
 
-        {/* Convites pendentes - Só mostra se houver convites */}
         {pendingInvitations.length > 0 && (
           <>
             <DropdownMenuSeparator />
@@ -115,7 +113,10 @@ const ContextSelector = () => {
               Convites Pendentes ({pendingInvitations.length})
             </div>
             {pendingInvitations.map((invitation) => (
-              <div key={invitation.id} className="px-2 py-2 border-b border-gray-100 last:border-b-0">
+              <div
+                key={invitation.id}
+                className="px-2 py-2 border-b border-gray-100 last:border-b-0"
+              >
                 <div className="flex flex-col gap-2">
                   <div>
                     <div className="text-sm font-medium">{invitation.agency_name}</div>
