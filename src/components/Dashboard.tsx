@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus, Trash2, Building2, User } from 'lucide-react';
+import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus, Building2, Target, Zap } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
@@ -16,6 +17,10 @@ import ExpenseModal from '@/components/ExpenseModal';
 import { UsageLimitWarning } from './UsageLimitWarning';
 import { SubscriptionStatus } from './SubscriptionStatus';
 import PremiumFeatureBlock from './PremiumFeatureBlock';
+import MetricCard from './dashboard/MetricCard';
+import PerformanceWidget from './dashboard/PerformanceWidget';
+import ActivityTimeline from './dashboard/ActivityTimeline';
+import WeeklyOverview from './dashboard/WeeklyOverview';
 
 const Dashboard = () => {
   const { user, profile, agency } = useSupabaseAuth();
@@ -24,15 +29,11 @@ const Dashboard = () => {
   const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useApp();
   const { limits, canCreateJob, isFreePlan } = useSubscriptionPermissions();
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   // Dashboard sempre usa dados pessoais do usuário
   const isCompanyUser = (user && (profile?.user_type === 'company_owner' || profile?.user_type === 'employee')) && !!agency;
-  
-  // Dashboard sempre mostra dados pessoais
-  const currentData = profile;
-
-  const [showManualModal, setShowManualModal] = useState(false);
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   // Filtrar apenas jobs pessoais (sem companyId)
   const filteredJobs = jobs.filter(job => !job.companyId);
@@ -52,10 +53,10 @@ const Dashboard = () => {
 
   const filteredWorkItems = workItems.filter(item => !item.companyId);
 
-  // Calcular apenas jobs aprovados pessoais
-  const approvedJobs = filteredJobs.filter(job => job.status === 'aprovado');
-  const totalJobs = approvedJobs.length;
-  const totalJobsValue = approvedJobs.reduce((sum, job) => {
+  // Calcular apenas jobs concluídos pessoais
+  const completedJobs = filteredJobs.filter(job => job.status === 'concluído');
+  const totalJobs = completedJobs.length;
+  const totalJobsValue = completedJobs.reduce((sum, job) => {
     const jobValue = job.valueWithDiscount || job.serviceValue || 0;
     return sum + jobValue;
   }, 0);
@@ -68,147 +69,138 @@ const Dashboard = () => {
   const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;
 
-  // Log para debug
-  console.log('📊 Dashboard - Monthly Costs Only:', 'Regular costs:', regularMonthlyCosts.length, 'Total value:', totalMonthlyCosts);
+  // Calculate additional metrics
+  const pendingJobs = filteredJobs.filter(job => job.status === 'pendente').length;
+  const inProgressJobs = filteredJobs.filter(job => job.status === 'em_andamento').length;
+  const avgJobValue = totalJobs > 0 ? totalJobsValue / totalJobs : 0;
+  const monthlyGoal = hourlyRate * (workRoutine?.dailyHours || 8) * (workRoutine?.monthlyDays || 22);
+  const goalProgress = monthlyGoal > 0 ? (totalJobsValue / monthlyGoal) * 100 : 0;
 
   const metrics = [
+    {
+      title: 'Receita Total',
+      value: formatValue(totalJobsValue),
+      icon: TrendingUp,
+      color: 'text-green-600',
+      bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
+      trend: { value: 12.5, isPositive: true }
+    },
+    {
+      title: 'Jobs Concluídos',
+      value: totalJobs.toString(),
+      subtitle: `${pendingJobs} pendentes`,
+      icon: CheckCircle,
+      color: 'text-blue-600',
+      bgColor: 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',
+      trend: { value: 8.3, isPositive: true }
+    },
     {
       title: 'Custos Mensais',
       value: formatValue(totalMonthlyCosts),
       icon: DollarSign,
       color: 'text-red-600',
-      bgColor: 'bg-red-50 dark:bg-red-900/20'
+      bgColor: 'bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20',
+      trend: { value: 3.2, isPositive: false }
     },
     {
-      title: 'Valor Equipamentos',
-      value: formatValue(totalEquipmentValue),
-      icon: Calculator,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20'
+      title: 'Ticket Médio',
+      value: formatValue(avgJobValue),
+      icon: Target,
+      color: 'text-purple-600',
+      bgColor: 'bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20',
+      trend: { value: 5.7, isPositive: true }
     },
     {
       title: 'Valor Hora',
       value: formatValue(hourlyRate),
       icon: Clock,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50 dark:bg-green-900/20'
+      color: 'text-orange-600',
+      bgColor: 'bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20'
     },
     {
-      title: 'Jobs Aprovados',
-      value: totalJobs.toString(),
-      subtitle: formatValue(totalJobsValue),
-      icon: TrendingUp,
-      color: `text-${currentTheme.accent}`,
-      bgColor: `${currentTheme.secondary}`
+      title: 'Meta Mensal',
+      value: `${Math.round(goalProgress)}%`,
+      subtitle: formatValue(monthlyGoal),
+      icon: Zap,
+      color: goalProgress >= 100 ? 'text-green-600' : 'text-orange-600',
+      bgColor: 'bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20'
     }
   ];
 
-  const handleQuickAddCost = () => {
-    addMonthlyCost({
-      description: 'Novo Custo',
-      category: 'Geral',
-      value: 0,
-      month: new Date().toISOString().slice(0, 7),
-      isRecurring: false,
-      notificationEnabled: true
-    });
-  };
-
-  const handleExportReport = () => {
-    if (!limits.canUseAdvancedReports) {
-      alert('Relatórios avançados disponíveis apenas nos planos pagos!');
-      return;
-    }
-
-    // Generate a simple report
-    const report = {
-      data: new Date().toISOString(),
-      totalJobs,
-      totalJobsValue,
-      totalMonthlyCosts,
-      totalEquipmentValue,
-      hourlyRate,
-      completedTasks,
-      totalTasks
-    };
-
-    const dataStr = JSON.stringify(report, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `financeflow-report-pessoal-${new Date().toISOString().slice(0, 10)}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-  };
-
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      {/* Header simplificado */}
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold">Dashboard Pessoal</h1>
+    <div className="space-y-8 pb-20 md:pb-6">
+      {/* Modern Header */}
+      <div className="text-center space-y-6">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 blur-3xl rounded-full"></div>
+          <h1 className="relative text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Dashboard Pessoal
+          </h1>
+        </div>
         
-        {/* Informação para colaboradores */}
+        {/* Company Information */}
         {isCompanyUser && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
-            <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
-              <Building2 className="h-5 w-5" />
-              <p className="text-sm">
-                <strong>Empresa:</strong> {agency?.name} | 
-                <span className="ml-2">Este dashboard mostra seus dados pessoais.</span>
-              </p>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 rounded-xl p-4 max-w-2xl mx-auto backdrop-blur-sm">
+            <div className="flex items-center gap-3 text-blue-800 dark:text-blue-200">
+              <div className="p-2 bg-blue-100 dark:bg-blue-800/30 rounded-lg">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-semibold">Empresa: {agency?.name}</p>
+                <p className="text-sm opacity-75">Este dashboard mostra seus dados pessoais.</p>
+              </div>
             </div>
-            <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-              Para projetos da empresa, acesse o Kanban na navegação.
-            </p>
           </div>
         )}
         
-        <p className="text-gray-600 dark:text-gray-400">
-          Visão geral do seu negócio pessoal
+        <p className="text-gray-600 dark:text-gray-400 text-lg">
+          Visão completa do seu negócio pessoal
         </p>
       </div>
 
-      {/* Avisos de limite de uso */}
+      {/* Usage Warnings */}
       <div className="space-y-4">
         <UsageLimitWarning type="jobs" />
         <UsageLimitWarning type="projects" />
       </div>
 
-      {/* Metrics Cards with Hover Effects */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Enhanced Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {metrics.map((metric, index) => (
-          <Card 
-            key={index} 
-            className={`${metric.bgColor} transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer`}
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{metric.title}</p>
-                  <p className={`text-2xl font-bold ${metric.color}`}>{metric.value}</p>
-                  {metric.subtitle && (
-                    <p className={`text-sm font-medium ${metric.color} opacity-75`}>{metric.subtitle}</p>
-                  )}
-                </div>
-                <metric.icon className={`h-8 w-8 ${metric.color}`} />
-              </div>
-            </CardContent>
-          </Card>
+          <MetricCard
+            key={index}
+            title={metric.title}
+            value={metric.value}
+            subtitle={metric.subtitle}
+            icon={metric.icon}
+            color={metric.color}
+            bgColor={metric.bgColor}
+            trend={metric.trend}
+          />
         ))}
       </div>
 
-      {/* Status da Assinatura */}
+      {/* Subscription Status */}
       <SubscriptionStatus />
+
+      {/* New Information Widgets */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <PerformanceWidget />
+        <ActivityTimeline />
+      </div>
+
+      {/* Weekly Overview */}
+      <WeeklyOverview />
 
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Cost Distribution Chart */}
         {limits.canUseAdvancedReports ? (
-          <Card className="lg:col-span-1 transition-all duration-300 hover:shadow-lg">
+          <Card className="lg:col-span-1 transition-all duration-300 hover:shadow-lg border-0 shadow-md">
             <CardHeader>
-              <CardTitle>Distribuição de Custos</CardTitle>
+              <CardTitle className="bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
+                Distribuição de Custos
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <CostDistributionChart />
@@ -223,7 +215,7 @@ const Dashboard = () => {
         )}
 
         {/* Recent Jobs */}
-        <Card className="lg:col-span-2 transition-all duration-300 hover:shadow-lg">
+        <Card className="lg:col-span-2 border-0 shadow-md">
           <CardContent>
             <RecentJobs />
           </CardContent>
@@ -232,16 +224,18 @@ const Dashboard = () => {
 
       {/* Tasks and Quick Actions */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Task List */}
-        <Card className="transition-all duration-300 hover:shadow-lg">
+        {/* Enhanced Task List */}
+        <Card className="border-0 shadow-md">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-blue-600" />
+              </div>
               Tarefas ({completedTasks}/{totalTasks})
             </CardTitle>
             <Button 
               size="sm" 
-              className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg"
               onClick={() => setShowTaskModal(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -253,14 +247,19 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <Card className="transition-all duration-300 hover:shadow-lg">
+        {/* Enhanced Quick Actions */}
+        <Card className="border-0 shadow-md">
           <CardHeader>
-            <CardTitle>Ações Rápidas</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <Zap className="h-5 w-5 text-green-600" />
+              </div>
+              Ações Rápidas
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <Button
-              className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transition-all duration-300 hover:scale-105 shadow-lg"
               onClick={() => {
                 if (!canCreateJob) {
                   alert('Você atingiu o limite de jobs do seu plano!');
@@ -277,7 +276,7 @@ const Dashboard = () => {
 
             <Button
               variant="outline"
-              className="w-full transition-all duration-300 hover:scale-105"
+              className="w-full transition-all duration-300 hover:scale-105 border-2 hover:border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
               onClick={() => setShowExpenseModal(true)}
             >
               <DollarSign className="mr-2 h-4 w-4" />
@@ -286,23 +285,35 @@ const Dashboard = () => {
 
             <Button
               variant="outline"
-              className="w-full transition-all duration-300 hover:scale-105"
+              className="w-full transition-all duration-300 hover:scale-105 border-2 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
               onClick={() => {
                 if (!limits.canUseAdvancedReports) {
                   alert('Relatórios avançados disponíveis apenas nos planos pagos!');
                   return;
                 }
 
-                // Generate a simple report
+                // Generate enhanced report
                 const report = {
                   data: new Date().toISOString(),
-                  totalJobs,
-                  totalJobsValue,
-                  totalMonthlyCosts,
-                  totalEquipmentValue,
-                  hourlyRate,
-                  completedTasks,
-                  totalTasks
+                  summary: {
+                    totalJobs,
+                    totalJobsValue,
+                    totalMonthlyCosts,
+                    totalEquipmentValue,
+                    hourlyRate,
+                    avgJobValue,
+                    goalProgress
+                  },
+                  tasks: {
+                    completedTasks,
+                    totalTasks,
+                    completionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
+                  },
+                  jobs: {
+                    pending: pendingJobs,
+                    inProgress: inProgressJobs,
+                    completed: totalJobs
+                  }
                 };
 
                 const dataStr = JSON.stringify(report, null, 2);
@@ -321,28 +332,42 @@ const Dashboard = () => {
               {limits.canUseAdvancedReports ? 'Exportar Relatório' : 'Relatório (Premium)'}
             </Button>
 
-            {/* Summary Stats */}
+            {/* Enhanced Summary Stats */}
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="text-sm space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Faturamento Total:</span>
-                  <span className="font-semibold">{formatValue(totalJobsValue)}</span>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Faturamento:</span>
+                    <span className="font-semibold text-green-600">{formatValue(totalJobsValue)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Jobs Pendentes:</span>
-                  <span className="font-semibold">{filteredJobs.filter(j => j.status === 'pendente').length}</span>
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Jobs Pendentes:</span>
+                    <span className="font-semibold text-blue-600">{pendingJobs}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Taxa de Conclusão:</span>
-                  <span className="font-semibold">
-                    {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
-                  </span>
+                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Taxa Conclusão:</span>
+                    <span className="font-semibold text-purple-600">
+                      {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Meta Mensal:</span>
+                    <span className={`font-semibold ${goalProgress >= 100 ? 'text-green-600' : 'text-orange-600'}`}>
+                      {Math.round(goalProgress)}%
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </CardContent>
 
-          {/* Modais que abrem ao clicar nos botões */}
+          {/* Modals */}
           <ManualValueModal open={showManualModal} onOpenChange={setShowManualModal} />
           <ExpenseModal open={showExpenseModal} onOpenChange={setShowExpenseModal} />
         </Card>
