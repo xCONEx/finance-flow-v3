@@ -27,7 +27,12 @@ const Dashboard = () => {
   const { currentTheme } = useTheme();
   const { formatValue } = usePrivacy();
   const { jobs, monthlyCosts, workItems, workRoutine, tasks, addMonthlyCost } = useApp();
-  const { limits, canCreateJob, isFreePlan } = useSubscriptionPermissions();
+const {
+  limits = {},
+  canCreateJob = false,
+  isFreePlan = false
+} = useSubscriptionPermissions() || {};
+
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
