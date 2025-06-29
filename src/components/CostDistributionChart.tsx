@@ -8,9 +8,17 @@ const CostDistributionChart = () => {
   const { monthlyCosts } = useApp();
   const { formatValue } = usePrivacy();
 
-  // Ensure monthlyCosts is always an array with safety check
-  const safeMonthlyCosts = Array.isArray(monthlyCosts) ? monthlyCosts : [];
-  console.log('CostDistributionChart - monthlyCosts safety check:', { costs: safeMonthlyCosts.length });
+  // Force safe array initialization with multiple fallbacks
+  const safeMonthlyCosts = React.useMemo(() => {
+    if (!monthlyCosts) return [];
+    return Array.isArray(monthlyCosts) ? monthlyCosts : [];
+  }, [monthlyCosts]);
+
+  console.log('CostDistributionChart - monthlyCosts safety check:', { 
+    monthlyCosts: monthlyCosts ? 'defined' : 'undefined',
+    isArray: Array.isArray(monthlyCosts),
+    length: safeMonthlyCosts.length 
+  });
 
   // Filter out financial transactions and reserve items - only show regular monthly costs
   const regularMonthlyCosts = safeMonthlyCosts.filter(cost => 
