@@ -8,39 +8,81 @@ const CostDistributionChart = () => {
   const { monthlyCosts } = useApp();
   const { formatValue } = usePrivacy();
 
-  // Ensure monthlyCosts is always an array
-  const safeMonthlyCosts = Array.isArray(monthlyCosts) ? monthlyCosts : [];
-
+  // CRITICAL FIX: Force safe array initialization with comprehensive safety checks
+  const safeMonthlyCosts = React.useMemo(() => {
+    console.log('CostDistributionChart - monthlyCosts debug:', { 
+      monthlyCosts: monthlyCosts ? 'defined' : 'undefined',
+      type: typeof monthlyCosts,
+      isArray: Array.isArray(monthlyCosts),
+      length: Array.isArray(monthlyCosts) ? monthlyCosts.length : 'N/A'
+    });
+    
+    if (!monthlyCosts || !Array.isArray(monthlyCosts)) {
+      console.log('CostDistributionChart - Returning empty array due to invalid monthlyCosts');
+      return [];
+    }
+    return monthlyCosts;
+  }, [monthlyCosts]);
 
   // Filter out financial transactions and reserve items - only show regular monthly costs
-  const regularMonthlyCosts = safeMonthlyCosts.filter(cost => 
-    !cost.description?.includes('FINANCIAL_INCOME:') && 
-    !cost.description?.includes('FINANCIAL_EXPENSE:') &&
-    !cost.description?.includes('RESERVE_') &&
-    !cost.description?.includes('Reserva:') &&
-    !cost.description?.includes('SMART_RESERVE') &&
-    cost.category !== 'Reserva' &&
-    cost.category !== 'Smart Reserve' &&
-    cost.category !== 'Reserve' &&
-    !cost.companyId // Only personal costs
-  );
-
-  const costsByCategory = regularMonthlyCosts.reduce((acc, cost) => {
-    const category = cost.category || 'Outros';
-    // Usar verificação segura para o valor
-    const value = cost.value || 0;
-    const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
+  const regularMonthlyCosts = React.useMemo(() => {
+    if (!Array.isArray(safeMonthlyCosts)) {
+      console.log('CostDistributionChart - safeMonthlyCosts is not array, returning empty');
+      return [];
+    }
     
-    acc[category] = (acc[category] || 0) + safeValue;
-    return acc;
-  }, {} as Record<string, number>);
+    return safeMonthlyCosts.filter(cost => {
+      // Add null/undefined safety checks for cost object
+      if (!cost || typeof cost !== 'object') {
+        console.log('CostDistributionChart - Invalid cost object:', cost);
+        return false;
+      }
+      
+      const description = cost.description || '';
+      const category = cost.category || '';
+      
+      return !description.includes('FINANCIAL_INCOME:') && 
+        !description.includes('FINANCIAL_EXPENSE:') &&
+        !description.includes('RESERVE_') &&
+        !description.includes('Reserva:') &&
+        !description.includes('SMART_RESERVE') &&
+        category !== 'Reserva' &&
+        category !== 'Smart Reserve' &&
+        category !== 'Reserve' &&
+        !cost.companyId; // Only personal costs
+    });
+  }, [safeMonthlyCosts]);
 
-  const data = Object.entries(costsByCategory)
-    .filter(([_, value]) => value > 0) // Filtrar valores zero ou negativos
-    .map(([name, value]) => ({
-      name,
-      value
-    }));
+  const costsByCategory = React.useMemo(() => {
+    if (!Array.isArray(regularMonthlyCosts)) {
+      console.log('CostDistributionChart - regularMonthlyCosts is not array');
+      return {};
+    }
+    
+    return regularMonthlyCosts.reduce((acc, cost) => {
+      // Add safety checks for cost object
+      if (!cost || typeof cost !== 'object') {
+        console.log('CostDistributionChart - Invalid cost in reduce:', cost);
+        return acc;
+      }
+      
+      const category = cost.category || 'Outros';
+      const value = cost.value || 0;
+      const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
+      
+      acc[category] = (acc[category] || 0) + safeValue;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [regularMonthlyCosts]);
+
+  const data = React.useMemo(() => {
+    return Object.entries(costsByCategory)
+      .filter(([_, value]) => value > 0)
+      .map(([name, value]) => ({
+        name,
+        value
+      }));
+  }, [costsByCategory]);
 
   const COLORS = [
     '#8884d8',
