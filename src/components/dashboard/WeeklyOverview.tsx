@@ -22,7 +22,7 @@ const WeeklyOverview = () => {
   const weeklyData = last7Days.map(date => {
     const dayJobs = safeJobs.filter(job => job.eventDate && job.eventDate.startsWith(date));
     const revenue = dayJobs.reduce((sum, job) => sum + (job.valueWithDiscount || 0), 0);
-    const completedJobs = dayJobs.filter(job => job.status === 'aprovado').length;
+    const completedJobs = dayJobs.filter(job => job.status === 'concluído').length;
     
     return {
       date,
