@@ -11,6 +11,8 @@ import {
   Moon, 
   Building,
   ChevronDown,
+  Eye,
+  EyeOff,
   Home
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
