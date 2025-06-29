@@ -9,9 +9,17 @@ const PerformanceWidget = () => {
   const { jobs, workRoutine } = useApp();
   const { formatValue } = usePrivacy();
 
-  // Ensure jobs is always an array with safety check
-  const safeJobs = Array.isArray(jobs) ? jobs : [];
-  console.log('PerformanceWidget - jobs safety check:', { jobs: safeJobs.length });
+  // Force safe array initialization with multiple fallbacks
+  const safeJobs = React.useMemo(() => {
+    if (!jobs) return [];
+    return Array.isArray(jobs) ? jobs : [];
+  }, [jobs]);
+
+  console.log('PerformanceWidget - jobs safety check:', { 
+    jobs: jobs ? 'defined' : 'undefined',
+    isArray: Array.isArray(jobs),
+    length: safeJobs.length 
+  });
 
   // Calculate performance metrics
   const currentMonth = new Date().toISOString().slice(0, 7);
