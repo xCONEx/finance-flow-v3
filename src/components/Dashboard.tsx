@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus, Trash2, Building2, User, Target } from 'lucide-react';
+import { DollarSign, Calculator, TrendingUp, Users, CheckCircle, Clock, Plus, Trash2, Building2, User, Target, Briefcase } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
@@ -112,6 +112,27 @@ const Dashboard = () => {
       title: 'Meta Mensal',
       value: formatValue(monthlyGoal),
       icon: Target,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20'
+    },
+    {
+      title: 'Custos Mensais',
+      value: formatValue(totalMonthlyCosts),
+      icon: Calculator,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50 dark:bg-red-900/20'
+    },
+    {
+      title: 'Valor Equipamentos',
+      value: formatValue(totalEquipmentValue),
+      icon: Briefcase,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50 dark:bg-indigo-900/20'
+    },
+    {
+      title: 'Valor Hora',
+      value: formatValue(hourlyRate),
+      icon: Clock,
       color: `text-${currentTheme.accent}`,
       bgColor: `${currentTheme.secondary}`
     }
@@ -191,10 +212,33 @@ const Dashboard = () => {
       </div>
 
       {/* Metrics Cards with Hover Effects */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((metric, index) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {metrics.slice(0, 4).map((metric, index) => (
           <Card 
             key={index} 
+            className={`${metric.bgColor} transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer`}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{metric.title}</p>
+                  <p className={`text-2xl font-bold ${metric.color}`}>{metric.value}</p>
+                  {metric.subtitle && (
+                    <p className={`text-sm font-medium ${metric.color} opacity-75`}>{metric.subtitle}</p>
+                  )}
+                </div>
+                <metric.icon className={`h-8 w-8 ${metric.color}`} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Additional Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {metrics.slice(4).map((metric, index) => (
+          <Card 
+            key={index + 4} 
             className={`${metric.bgColor} transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer`}
           >
             <CardContent className="p-6">
