@@ -30,8 +30,6 @@ const MainApp = () => {
         return <Dashboard />;
       case 'calculator':
         return <PricingCalculator />;
-      case 'kanban':
-        return <ImprovedKanban />;
       case 'financial':
         return <FinancialManagement />;
       case 'clients':
