@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from './SupabaseAuthContext';
@@ -124,44 +125,77 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  // CRITICAL FIX: Force initialize ALL arrays as empty arrays with immediate initialization
-  const [jobs, setJobs] = useState<Job[]>(() => []);
+  // ULTRA-CRITICAL FIX: Ensure ALL arrays are IMMEDIATELY initialized as empty arrays
+  const [jobs, setJobs] = useState<Job[]>(() => {
+    console.log('AppContext - Initializing jobs as empty array');
+    return [];
+  });
   const [workRoutine, setWorkRoutineState] = useState<WorkRoutine | null>(null);
-  const [workItems, setWorkItems] = useState<WorkItem[]>(() => []);
-  const [tasks, setTasks] = useState<Task[]>(() => []);
-  const [monthlyCosts, setMonthlyCosts] = useState<MonthlyCost[]>(() => []);
-  const [expenses, setExpenses] = useState<Expense[]>(() => []);
+  const [workItems, setWorkItems] = useState<WorkItem[]>(() => {
+    console.log('AppContext - Initializing workItems as empty array');
+    return [];
+  });
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    console.log('AppContext - Initializing tasks as empty array');
+    return [];
+  });
+  const [monthlyCosts, setMonthlyCosts] = useState<MonthlyCost[]>(() => {
+    console.log('AppContext - Initializing monthlyCosts as empty array');
+    return [];
+  });
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    console.log('AppContext - Initializing expenses as empty array');
+    return [];
+  });
   const { user } = useSupabaseAuth();
 
-  // Add console logs to debug the state
-  console.log('AppContext state (FIXED):', { 
-    jobsType: typeof jobs,
-    jobsIsArray: Array.isArray(jobs),
-    jobs: jobs?.length || 0, 
-    tasksType: typeof tasks,
-    tasksIsArray: Array.isArray(tasks),
-    tasks: tasks?.length || 0, 
-    monthlyCostsType: typeof monthlyCosts,
-    monthlyCostsIsArray: Array.isArray(monthlyCosts),
-    monthlyCosts: monthlyCosts?.length || 0, 
-    expensesType: typeof expenses,
-    expensesIsArray: Array.isArray(expenses),
-    expenses: expenses?.length || 0,
-    workItemsType: typeof workItems,
-    workItemsIsArray: Array.isArray(workItems),
-    workItems: workItems?.length || 0
-  });
+  // ULTRA-CRITICAL: Add comprehensive logging for state changes
+  useEffect(() => {
+    console.log('🔥 AppContext ULTRA-DEBUG:', { 
+      timestamp: new Date().toISOString(),
+      jobs: {
+        type: typeof jobs,
+        isArray: Array.isArray(jobs),
+        length: Array.isArray(jobs) ? jobs.length : 'NOT_ARRAY',
+        value: jobs
+      },
+      tasks: {
+        type: typeof tasks,
+        isArray: Array.isArray(tasks),
+        length: Array.isArray(tasks) ? tasks.length : 'NOT_ARRAY',
+        value: tasks
+      },
+      monthlyCosts: {
+        type: typeof monthlyCosts,
+        isArray: Array.isArray(monthlyCosts),
+        length: Array.isArray(monthlyCosts) ? monthlyCosts.length : 'NOT_ARRAY',
+        value: monthlyCosts
+      },
+      expenses: {
+        type: typeof expenses,
+        isArray: Array.isArray(expenses),
+        length: Array.isArray(expenses) ? expenses.length : 'NOT_ARRAY',
+        value: expenses
+      },
+      workItems: {
+        type: typeof workItems,
+        isArray: Array.isArray(workItems),
+        length: Array.isArray(workItems) ? workItems.length : 'NOT_ARRAY',
+        value: workItems
+      }
+    });
+  }, [jobs, tasks, monthlyCosts, expenses, workItems]);
 
   // Load jobs from Supabase
   const refreshJobs = async () => {
     if (!user) {
-      console.log('No user, setting empty jobs array');
+      console.log('🔥 refreshJobs - No user, setting empty jobs array');
       setJobs([]);
       return;
     }
 
     try {
-      console.log('Loading jobs for user:', user.id);
+      console.log('🔥 refreshJobs - Loading jobs for user:', user.id);
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
@@ -169,18 +203,22 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Supabase error loading jobs:', error);
+        console.error('🔥 refreshJobs - Supabase error:', error);
         throw error;
       }
       
-      // CRITICAL FIX: Always ensure array, never allow undefined or null
+      // ULTRA-CRITICAL: Ensure data is always an array
       const jobsData = Array.isArray(data) ? data : [];
-      console.log('Jobs loaded and verified as array:', jobsData.length);
+      console.log('🔥 refreshJobs - Jobs loaded successfully:', {
+        dataType: typeof data,
+        dataIsArray: Array.isArray(data),
+        jobsDataLength: jobsData.length,
+        jobsData: jobsData
+      });
       setJobs(jobsData);
     } catch (error) {
-      console.error('Error loading jobs:', error);
-      // CRITICAL FIX: Always set empty array on error to prevent undefined
-      setJobs([]);
+      console.error('🔥 refreshJobs - Error loading jobs:', error);
+      setJobs([]); // Always ensure empty array on error
     }
   };
 
@@ -270,7 +308,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
-  // Task functions - CRITICAL FIX: ensure arrays are never undefined
+  // Task functions - ULTRA-CRITICAL: Ensure arrays are never undefined
   const addTask = (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newTask: Task = {
       ...task,
@@ -279,16 +317,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       updatedAt: new Date().toISOString()
     };
     setTasks(prev => {
-      // CRITICAL FIX: Always ensure array
       const currentTasks = Array.isArray(prev) ? prev : [];
+      console.log('🔥 addTask - Adding task:', { currentTasks: currentTasks.length, newTask });
       return [...currentTasks, newTask];
     });
   };
 
   const updateTask = (taskId: string, updates: Partial<Task>) => {
     setTasks(prev => {
-      // CRITICAL FIX: Always ensure array
       const currentTasks = Array.isArray(prev) ? prev : [];
+      console.log('🔥 updateTask - Updating task:', { currentTasks: currentTasks.length, taskId, updates });
       return currentTasks.map(task => 
         task.id === taskId 
           ? { ...task, ...updates, updatedAt: new Date().toISOString() }
@@ -299,13 +337,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const deleteTask = (taskId: string) => {
     setTasks(prev => {
-      // CRITICAL FIX: Always ensure array
       const currentTasks = Array.isArray(prev) ? prev : [];
+      console.log('🔥 deleteTask - Deleting task:', { currentTasks: currentTasks.length, taskId });
       return currentTasks.filter(task => task.id !== taskId);
     });
   };
 
-  // Monthly costs functions - CRITICAL FIX: ensure arrays are never undefined
+  // Monthly costs functions - ULTRA-CRITICAL: Ensure arrays are never undefined
   const addMonthlyCost = (cost: Omit<MonthlyCost, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newCost: MonthlyCost = {
       ...cost,
@@ -315,16 +353,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       updatedAt: new Date().toISOString()
     };
     setMonthlyCosts(prev => {
-      // CRITICAL FIX: Always ensure array
       const currentCosts = Array.isArray(prev) ? prev : [];
+      console.log('🔥 addMonthlyCost - Adding cost:', { currentCosts: currentCosts.length, newCost });
       return [...currentCosts, newCost];
     });
   };
 
   const updateMonthlyCost = (costId: string, updates: Partial<MonthlyCost>) => {
     setMonthlyCosts(prev => {
-      // CRITICAL FIX: Always ensure array
       const currentCosts = Array.isArray(prev) ? prev : [];
+      console.log('🔥 updateMonthlyCost - Updating cost:', { currentCosts: currentCosts.length, costId, updates });
       return currentCosts.map(cost => 
         cost.id === costId 
           ? { ...cost, ...updates, updatedAt: new Date().toISOString() }
@@ -336,13 +374,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // Expense functions
   const refreshExpenses = async () => {
     if (!user) {
-      console.log('No user, setting empty expenses array');
+      console.log('🔥 refreshExpenses - No user, setting empty expenses array');
       setExpenses([]);
       return;
     }
 
     try {
-      console.log('Loading expenses for user:', user.id);
+      console.log('🔥 refreshExpenses - Loading expenses for user:', user.id);
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
@@ -350,17 +388,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Supabase error loading expenses:', error);
+        console.error('🔥 refreshExpenses - Supabase error:', error);
         throw error;
       }
       
-      // CRITICAL FIX: Always ensure array, never allow undefined or null
       const expensesData = Array.isArray(data) ? data : [];
-      console.log('Expenses loaded and verified as array:', expensesData.length);
+      console.log('🔥 refreshExpenses - Expenses loaded successfully:', {
+        dataType: typeof data,
+        dataIsArray: Array.isArray(data),
+        expensesDataLength: expensesData.length
+      });
       setExpenses(expensesData);
     } catch (error) {
-      console.error('Error loading expenses:', error);
-      // CRITICAL FIX: Always set empty array on error to prevent undefined
+      console.error('🔥 refreshExpenses - Error loading expenses:', error);
       setExpenses([]);
     }
   };
@@ -416,14 +456,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Load data when user changes
   useEffect(() => {
-    console.log('User changed, loading data...', user?.id);
+    console.log('🔥 User effect triggered - user changed:', user?.id);
     if (user) {
       refreshJobs();
       loadWorkRoutine();
       refreshExpenses();
     } else {
-      // CRITICAL FIX: Reset all data when user logs out - ensure empty arrays
-      console.log('User logged out, resetting all data to empty arrays');
+      console.log('🔥 User logged out, resetting all data to empty arrays');
       setJobs([]);
       setWorkRoutineState(null);
       setWorkItems([]);
@@ -433,7 +472,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   }, [user]);
 
-  // CRITICAL FIX: Always return arrays, never undefined
+  // ULTRA-CRITICAL: Always return arrays, never undefined - with extra safety
   const value: AppContextType = {
     jobs: Array.isArray(jobs) ? jobs : [],
     workRoutine,
@@ -457,6 +496,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     refreshExpenses,
     createNotification,
   };
+
+  console.log('🔥 AppContext - Providing value:', {
+    jobsLength: value.jobs.length,
+    tasksLength: value.tasks.length,
+    monthlyCostsLength: value.monthlyCosts.length,
+    expensesLength: value.expenses.length,
+    workItemsLength: value.workItems.length,
+    allArrays: {
+      jobs: Array.isArray(value.jobs),
+      tasks: Array.isArray(value.tasks),
+      monthlyCosts: Array.isArray(value.monthlyCosts),
+      expenses: Array.isArray(value.expenses),
+      workItems: Array.isArray(value.workItems)
+    }
+  });
 
   return (
     <AppContext.Provider value={value}>
