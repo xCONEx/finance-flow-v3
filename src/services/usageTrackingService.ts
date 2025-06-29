@@ -1,70 +1,173 @@
+import { supabase } from '@/integrations/supabase/client';
 
-// Mock usage tracking service since user_usage_tracking table doesn't exist
-export interface UsageData {
-  userId: string;
-  action: string;
-  feature: string;
-  timestamp: Date;
-  metadata?: Record<string, any>;
+export interface UsageRecord {
+  id: string;
+  user_id: string;
+  usage_type: 'job' | 'project';
+  count: number;
+  reset_date: string;
+  created_at: string;
+  updated_at: string;
 }
 
-class UsageTrackingService {
-  private usageData: UsageData[] = [];
+export const usageTrackingService = {
+  async getUserUsage(userId: string, usageType: 'job' | 'project'): Promise<number> {
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      const { data, error } = await supabase
+        .from('user_usage_tracking')
+        .select('count')
+        .eq('user_id', userId)
+        .eq('usage_type', usageType)
+        .eq('reset_date', currentMonth)
+        .single();
 
-  async trackUsage(userId: string, action: string, feature: string, metadata?: Record<string, any>): Promise<void> {
-    const usage: UsageData = {
-      userId,
-      action,
-      feature,
-      timestamp: new Date(),
-      metadata
-    };
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
 
-    // Store in memory for now
-    this.usageData.push(usage);
-    
-    // Log for debugging
-    console.log('Usage tracked:', usage);
-  }
-
-  async getUserUsage(userId: string, startDate?: Date, endDate?: Date): Promise<UsageData[]> {
-    let filtered = this.usageData.filter(data => data.userId === userId);
-    
-    if (startDate) {
-      filtered = filtered.filter(data => data.timestamp >= startDate);
+      return data?.count || 0;
+    } catch (error) {
+      console.warn(`Erro ao buscar uso de ${usageType}:`, error);
+      return 0;
     }
-    
-    if (endDate) {
-      filtered = filtered.filter(data => data.timestamp <= endDate);
+  },
+
+  async incrementUsage(userId: string, usageType: 'job' | 'project'): Promise<void> {
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      // Primeiro, tenta buscar o registro existente
+      const { data: existing, error: fetchError } = await supabase
+        .from('user_usage_tracking')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('usage_type', usageType)
+        .eq('reset_date', currentMonth)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existing) {
+        // Atualiza o contador existente
+        const { error: updateError } = await supabase
+          .from('user_usage_tracking')
+          .update({ 
+            count: existing.count + 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Cria um novo registro
+        const { error: insertError } = await supabase
+          .from('user_usage_tracking')
+          .insert({
+            user_id: userId,
+            usage_type: usageType,
+            count: 1,
+            reset_date: currentMonth
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      console.log(`✅ Incrementado uso de ${usageType} para usuário ${userId}`);
+    } catch (error) {
+      console.error(`❌ Erro ao incrementar uso de ${usageType}:`, error);
+      throw error;
     }
-    
-    return filtered;
-  }
+  },
 
-  async getUsageStats(userId: string): Promise<{ totalActions: number; features: string[] }> {
-    const userUsage = await this.getUserUsage(userId);
-    const features = [...new Set(userUsage.map(u => u.feature))];
-    
-    return {
-      totalActions: userUsage.length,
-      features
-    };
-  }
+  async resetUsageForUser(userId: string): Promise<void> {
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      const { error } = await supabase
+        .from('user_usage_tracking')
+        .update({ count: 0, updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('reset_date', currentMonth);
 
-  async checkFeatureLimit(userId: string, feature: string, limit: number): Promise<{ canUse: boolean; usage: number }> {
-    const userUsage = await this.getUserUsage(userId);
-    const featureUsage = userUsage.filter(u => u.feature === feature);
-    
-    return {
-      canUse: featureUsage.length < limit,
-      usage: featureUsage.length
-    };
-  }
+      if (error) throw error;
+      
+      console.log(`✅ Reset de uso para usuário ${userId}`);
+    } catch (error) {
+      console.error('❌ Erro ao resetar uso:', error);
+      throw error;
+    }
+  },
 
-  clearUsageData(): void {
-    this.usageData = [];
-  }
-}
+  async getAllUsageForUser(userId: string): Promise<{ jobs: number; projects: number }> {
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      const { data, error } = await supabase
+        .from('user_usage_tracking')
+        .select('usage_type, count')
+        .eq('user_id', userId)
+        .eq('reset_date', currentMonth);
 
-export const usageTrackingService = new UsageTrackingService();
-export default usageTrackingService;
+      if (error) throw error;
+
+      const usage = { jobs: 0, projects: 0 };
+      
+      if (data) {
+        data.forEach(record => {
+          if (record.usage_type === 'job') {
+            usage.jobs = record.count;
+          } else if (record.usage_type === 'project') {
+            usage.projects = record.count;
+          }
+        });
+      }
+
+      return usage;
+    } catch (error) {
+      console.warn('Erro ao buscar uso total:', error);
+      return { jobs: 0, projects: 0 };
+    }
+  },
+
+  async decrementUsage(userId: string, usageType: 'job' | 'project'): Promise<void> {
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      // Buscar o registro existente
+      const { data: existing, error: fetchError } = await supabase
+        .from('user_usage_tracking')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('usage_type', usageType)
+        .eq('reset_date', currentMonth)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existing && existing.count > 0) {
+        // Decrementa o contador existente
+        const { error: updateError } = await supabase
+          .from('user_usage_tracking')
+          .update({ 
+            count: Math.max(0, existing.count - 1),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+
+        if (updateError) throw updateError;
+        console.log(`✅ Decrementado uso de ${usageType} para usuário ${userId}`);
+      } else {
+        console.log(`⚠️ Nenhum registro de uso encontrado para decrementar ${usageType}`);
+      }
+    } catch (error) {
+      console.error(`❌ Erro ao decrementar uso de ${usageType}:`, error);
+      throw error;
+    }
+  }
+};
