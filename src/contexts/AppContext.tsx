@@ -365,7 +365,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           parentId: (expense as any).parent_id || undefined,
           notificationEnabled: (expense as any).notification_enabled !== false,
           createdAt: expense.created_at,
-          userId: expense.user_id
+          userId: expense.user_id,
+          companyId: (expense as any).agency_id || null
         })));
       }
     } catch (error) {
@@ -400,7 +401,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             value: Number(item.value),
             depreciationYears: item.depreciation_years || 5,
             createdAt: item.created_at,
-            userId: item.user_id
+            userId: item.user_id,
+            companyId: item.agency_id || null
           })));
         }
       } catch (error) {
@@ -602,7 +604,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           profitMargin: job.profit_margin || 30,
           createdAt: job.created_at,
           updatedAt: job.updated_at,
-          userId: job.user_id
+          userId: job.user_id,
+          companyId: job.agency_id || null
         })));
       }
     } catch (error) {
@@ -644,6 +647,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .from('jobs')
       .insert({
         user_id: user.id,
+        agency_id: jobData.companyId || null,
         description: jobData.description,
         client: jobData.client,
         event_date: jobData.eventDate || null,
@@ -684,7 +688,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         profitMargin: data.profit_margin || 30,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
-        userId: data.user_id
+        userId: data.user_id,
+        companyId: data.agency_id || null
       };
       setJobs(prev => [...prev, newJob]);
     }
@@ -694,6 +699,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error } = await supabase
       .from('jobs')
       .update({
+        agency_id: updates.companyId || null,
         description: updates.description,
         client: updates.client,
         event_date: updates.eventDate || null,
@@ -736,6 +742,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .from('equipment')
       .insert({
         user_id: user.id,
+        agency_id: itemData.companyId || null,
         description: itemData.description,
         category: itemData.category,
         value: itemData.value,
@@ -753,7 +760,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         value: Number(data.value),
         depreciationYears: data.depreciation_years || 5,
         createdAt: data.created_at,
-        userId: data.user_id
+        userId: data.user_id,
+        companyId: data.agency_id || null
       };
       setWorkItems(prev => [...prev, newItem]);
     }
@@ -797,6 +805,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const dataToInsert = {
         user_id: user.id,
+        agency_id: costData.companyId || null,
         description: costData.description,
         category: costData.category,
         value: costData.value,
