@@ -114,8 +114,32 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) {
+    console.error('❌ useApp deve ser usado dentro de um AppProvider');
     throw new Error('useApp must be used within an AppProvider');
   }
+  
+  // Verificar se os arrays estão definidos
+  if (!context.jobs) {
+    console.warn('⚠️ context.jobs está undefined, inicializando como array vazio');
+    context.jobs = [];
+  }
+  if (!context.tasks) {
+    console.warn('⚠️ context.tasks está undefined, inicializando como array vazio');
+    context.tasks = [];
+  }
+  if (!context.monthlyCosts) {
+    console.warn('⚠️ context.monthlyCosts está undefined, inicializando como array vazio');
+    context.monthlyCosts = [];
+  }
+  if (!context.expenses) {
+    console.warn('⚠️ context.expenses está undefined, inicializando como array vazio');
+    context.expenses = [];
+  }
+  if (!context.workItems) {
+    console.warn('⚠️ context.workItems está undefined, inicializando como array vazio');
+    context.workItems = [];
+  }
+  
   return context;
 };
 
@@ -458,11 +482,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Load data when user changes
   useEffect(() => {
+    console.log('🔄 AppContext useEffect - User changed:', {
+      userId: user?.id,
+      userExists: !!user,
+      jobsLength: jobs.length
+    });
+
     if (user) {
+      console.log('🔄 Carregando dados para usuário:', user.id);
       refreshJobs();
       loadWorkRoutine();
       refreshExpenses();
     } else {
+      console.log('🔄 Resetando dados - usuário não autenticado');
       // Reset all data when user logs out
       setJobs([]);
       setWorkRoutineState(null);
@@ -472,6 +504,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setExpenses([]);
     }
   }, [user]);
+
+  // Log do valor do contexto para debug
+  useEffect(() => {
+    console.log('🔄 AppContext value updated:', {
+      jobsLength: jobs.length,
+      workRoutineExists: !!workRoutine,
+      tasksLength: tasks.length,
+      monthlyCostsLength: monthlyCosts.length,
+      expensesLength: expenses.length
+    });
+  }, [jobs, workRoutine, tasks, monthlyCosts, expenses]);
 
   const value: AppContextType = {
     jobs,

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { subscriptionService } from '@/services/supabaseSubscriptionService';
@@ -8,34 +9,55 @@ export const useSubscription = () => {
   const { user, profile } = useSupabaseAuth();
 
   useEffect(() => {
+    let mounted = true;
+    
     const loadSubscription = async () => {
       if (!user?.id) {
-        setSubscription('free');
-        setLoading(false);
+        if (mounted) {
+          setSubscription('free');
+          setLoading(false);
+        }
         return;
       }
 
       try {
-        // First try to get from profile if available
+        // Primeiro tentar usar dados do profile se disponível
         if (profile?.subscription) {
-          setSubscription(profile.subscription);
-          setLoading(false);
+          console.log('✅ Usando subscription do profile:', profile.subscription);
+          if (mounted) {
+            setSubscription(profile.subscription);
+            setLoading(false);
+          }
           return;
         }
 
-        // Otherwise fetch from service
+        // Caso contrário, buscar do service (apenas uma vez)
+        console.log('🔄 Buscando subscription do service...');
         const data = await subscriptionService.getUserSubscription(user.id);
-        setSubscription(data?.plan || 'free');
+        
+        if (mounted) {
+          const userSubscription = data?.plan || 'free';
+          console.log('✅ Subscription carregada:', userSubscription);
+          setSubscription(userSubscription);
+        }
       } catch (error) {
-        console.error('Erro ao carregar assinatura:', error);
-        setSubscription('free');
+        console.error('❌ Erro ao carregar assinatura:', error);
+        if (mounted) {
+          setSubscription('free');
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadSubscription();
-  }, [user, profile]);
+    
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id, profile?.subscription]); // Dependência específica no subscription do profile
 
   return { subscription, loading };
 };
