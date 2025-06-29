@@ -10,8 +10,9 @@ const WeeklyOverview = () => {
   const { jobs } = useApp();
   const { formatValue } = usePrivacy();
 
-  // Ensure jobs is always an array
-  const safeJobs = jobs || [];
+  // Ensure jobs is always an array with safety check
+  const safeJobs = Array.isArray(jobs) ? jobs : [];
+  console.log('WeeklyOverview - jobs safety check:', { jobs: safeJobs.length });
 
   // Get last 7 days
   const last7Days = Array.from({ length: 7 }, (_, i) => {
