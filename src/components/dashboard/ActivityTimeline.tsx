@@ -7,9 +7,14 @@ import { useApp } from '@/contexts/AppContext';
 const ActivityTimeline = () => {
   const { jobs, tasks } = useApp();
 
-  // Ensure arrays are always defined
-  const safeJobs = jobs || [];
-  const safeTasks = tasks || [];
+  // Ensure arrays are always defined with safety checks
+  const safeJobs = Array.isArray(jobs) ? jobs : [];
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  
+  console.log('ActivityTimeline - arrays safety check:', { 
+    jobs: safeJobs.length, 
+    tasks: safeTasks.length 
+  });
 
   // Combine and sort recent activities
   const recentActivities = [
