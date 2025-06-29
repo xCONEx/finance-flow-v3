@@ -31,192 +31,67 @@ const Dashboard = () => {
   const [showManualModal, setShowManualModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
 
-  // ULTRA-CRITICAL: Ensure all arrays are safe before any operations
-  const safeJobs = React.useMemo(() => {
-    console.log('🔥 Dashboard - jobs safety check:', { 
-      jobs: jobs ? 'defined' : 'undefined',
-      isArray: Array.isArray(jobs),
-      length: Array.isArray(jobs) ? jobs.length : 'NOT_ARRAY'
-    });
-    return Array.isArray(jobs) ? jobs : [];
-  }, [jobs]);
-
-  const safeMonthlyCosts = React.useMemo(() => {
-    console.log('🔥 Dashboard - monthlyCosts safety check:', { 
-      monthlyCosts: monthlyCosts ? 'defined' : 'undefined',
-      isArray: Array.isArray(monthlyCosts),
-      length: Array.isArray(monthlyCosts) ? monthlyCosts.length : 'NOT_ARRAY'
-    });
-    return Array.isArray(monthlyCosts) ? monthlyCosts : [];
-  }, [monthlyCosts]);
-
-  const safeWorkItems = React.useMemo(() => {
-    console.log('🔥 Dashboard - workItems safety check:', { 
-      workItems: workItems ? 'defined' : 'undefined',
-      isArray: Array.isArray(workItems),
-      length: Array.isArray(workItems) ? workItems.length : 'NOT_ARRAY'
-    });
-    return Array.isArray(workItems) ? workItems : [];
-  }, [workItems]);
-
-  const safeTasks = React.useMemo(() => {
-    console.log('🔥 Dashboard - tasks safety check:', { 
-      tasks: tasks ? 'defined' : 'undefined',
-      isArray: Array.isArray(tasks),
-      length: Array.isArray(tasks) ? tasks.length : 'NOT_ARRAY'
-    });
-    return Array.isArray(tasks) ? tasks : [];
-  }, [tasks]);
-
   // Dashboard sempre usa dados pessoais do usuário
   const isCompanyUser = (user && (profile?.user_type === 'company_owner' || profile?.user_type === 'employee')) && !!agency;
 
-  // Filtrar apenas jobs pessoais (sem companyId) - ULTRA-SAFE
-  const filteredJobs = React.useMemo(() => {
-    try {
-      console.log('🔥 Dashboard - filtering jobs:', { safeJobsLength: safeJobs.length });
-      return safeJobs.filter(job => {
-        if (!job || typeof job !== 'object') {
-          console.log('🔥 Dashboard - Invalid job object:', job);
-          return false;
-        }
-        return !job.companyId;
-      });
-    } catch (error) {
-      console.error('🔥 Dashboard - Error filtering jobs:', error);
-      return [];
-    }
-  }, [safeJobs]);
+  // Filtrar apenas jobs pessoais (sem companyId)
+  const filteredJobs = jobs.filter(job => !job.companyId);
   
-  // Filter only regular monthly costs (exclude financial transactions and reserves) - ULTRA-SAFE
-  const regularMonthlyCosts = React.useMemo(() => {
-    try {
-      console.log('🔥 Dashboard - filtering monthlyCosts:', { safeMonthlyCostsLength: safeMonthlyCosts.length });
-      return safeMonthlyCosts.filter(cost => {
-        if (!cost || typeof cost !== 'object') {
-          console.log('🔥 Dashboard - Invalid cost object:', cost);
-          return false;
-        }
-        
-        const description = cost.description || '';
-        const category = cost.category || '';
-        
-        return !description.includes('FINANCIAL_INCOME:') && 
-          !description.includes('FINANCIAL_EXPENSE:') &&
-          !description.includes('RESERVE_') &&
-          !description.includes('Reserva:') &&
-          !description.includes('SMART_RESERVE') &&
-          category !== 'Reserva' &&
-          category !== 'Smart Reserve' &&
-          category !== 'Reserve' &&
-          !cost.companyId; // Only personal costs
-      });
-    } catch (error) {
-      console.error('🔥 Dashboard - Error filtering monthlyCosts:', error);
-      return [];
-    }
-  }, [safeMonthlyCosts]);
+  // Filter only regular monthly costs (exclude financial transactions and reserves)
+  const regularMonthlyCosts = monthlyCosts.filter(cost => 
+    !cost.description?.includes('FINANCIAL_INCOME:') && 
+    !cost.description?.includes('FINANCIAL_EXPENSE:') &&
+    !cost.description?.includes('RESERVE_') &&
+    !cost.description?.includes('Reserva:') &&
+    !cost.description?.includes('SMART_RESERVE') &&
+    cost.category !== 'Reserva' &&
+    cost.category !== 'Smart Reserve' &&
+    cost.category !== 'Reserve' &&
+    !cost.companyId // Only personal costs
+  );
 
-  const filteredWorkItems = React.useMemo(() => {
-    try {
-      console.log('🔥 Dashboard - filtering workItems:', { safeWorkItemsLength: safeWorkItems.length });
-      return safeWorkItems.filter(item => {
-        if (!item || typeof item !== 'object') {
-          console.log('🔥 Dashboard - Invalid workItem object:', item);
-          return false;
-        }
-        return !item.companyId;
-      });
-    } catch (error) {
-      console.error('🔥 Dashboard - Error filtering workItems:', error);
-      return [];
-    }
-  }, [safeWorkItems]);
+  const filteredWorkItems = workItems.filter(item => !item.companyId);
 
-  // Calcular apenas jobs concluídos pessoais - ULTRA-SAFE
-  const completedJobs = React.useMemo(() => {
-    try {
-      console.log('🔥 Dashboard - filtering completed jobs:', { filteredJobsLength: filteredJobs.length });
-      return filteredJobs.filter(job => {
-        if (!job || typeof job !== 'object') {
-          console.log('🔥 Dashboard - Invalid job in completed filter:', job);
-          return false;
-        }
-        return job.status === 'concluído';
-      });
-    } catch (error) {
-      console.error('🔥 Dashboard - Error filtering completed jobs:', error);
-      return [];
-    }
-  }, [filteredJobs]);
+  // Debug: Log dos jobs para verificar status
+  console.log('🔍 Dashboard - Jobs carregados:', {
+    totalJobs: jobs.length,
+    filteredJobs: filteredJobs.length,
+    jobStatuses: filteredJobs.map(job => ({ id: job.id, status: job.status, value: job.valueWithDiscount || job.serviceValue }))
+  });
 
-  const completedTasksFiltered = React.useMemo(() => {
-    try {
-      console.log('🔥 Dashboard - filtering completed tasks:', { safeTasksLength: safeTasks.length });
-      return safeTasks.filter(task => {
-        if (!task || typeof task !== 'object') {
-          console.log('🔥 Dashboard - Invalid task object:', task);
-          return false;
-        }
-        return task.completed === true;
-      });
-    } catch (error) {
-      console.error('🔥 Dashboard - Error filtering completed tasks:', error);
-      return [];
-    }
-  }, [safeTasks]);
-
-  // Calculate metrics safely
+  // Calcular apenas jobs aprovados (status correto do banco)
+  const completedJobs = filteredJobs.filter(job => job.status === 'aprovado');
   const totalJobs = completedJobs.length;
   const totalJobsValue = completedJobs.reduce((sum, job) => {
     const jobValue = job.valueWithDiscount || job.serviceValue || 0;
-    return sum + (typeof jobValue === 'number' ? jobValue : 0);
+    return sum + jobValue;
   }, 0);
   
   // Use only regular monthly costs for the total
-  const totalMonthlyCosts = regularMonthlyCosts.reduce((sum, cost) => {
-    const costValue = cost.value || 0;
-    return sum + (typeof costValue === 'number' ? costValue : 0);
-  }, 0);
-  
-  const totalEquipmentValue = filteredWorkItems.reduce((sum, item) => {
-    const itemValue = item.value || 0;
-    return sum + (typeof itemValue === 'number' ? itemValue : 0);
-  }, 0);
-  
+  const totalMonthlyCosts = regularMonthlyCosts.reduce((sum, cost) => sum + cost.value, 0);
+  const totalEquipmentValue = filteredWorkItems.reduce((sum, item) => sum + item.value, 0);
   const hourlyRate = workRoutine?.valuePerHour || 0;
 
-  const completedTasks = completedTasksFiltered.length;
-  const totalTasks = safeTasks.length;
+  const completedTasks = tasks.filter(task => task.completed).length;
+  const totalTasks = tasks.length;
 
-  // Calculate additional metrics safely
-  const pendingJobs = React.useMemo(() => {
-    try {
-      return filteredJobs.filter(job => {
-        if (!job || typeof job !== 'object') return false;
-        return job.status === 'pendente';
-      }).length;
-    } catch (error) {
-      console.error('🔥 Dashboard - Error calculating pending jobs:', error);
-      return 0;
-    }
-  }, [filteredJobs]);
-
-  const inProgressJobs = React.useMemo(() => {
-    try {
-      return filteredJobs.filter(job => {
-        if (!job || typeof job !== 'object') return false;
-        return job.status === 'em_andamento';
-      }).length;
-    } catch (error) {
-      console.error('🔥 Dashboard - Error calculating in progress jobs:', error);
-      return 0;
-    }
-  }, [filteredJobs]);
-
+  // Calculate additional metrics
+  const pendingJobs = filteredJobs.filter(job => job.status === 'pendente').length;
+  const inProgressJobs = filteredJobs.filter(job => job.status === 'em_andamento').length;
   const avgJobValue = totalJobs > 0 ? totalJobsValue / totalJobs : 0;
   const monthlyGoal = hourlyRate * (workRoutine?.dailyHours || 8) * (workRoutine?.monthlyDays || 22);
   const goalProgress = monthlyGoal > 0 ? (totalJobsValue / monthlyGoal) * 100 : 0;
+
+  // Debug: Log das métricas calculadas
+  console.log('📊 Dashboard - Métricas calculadas:', {
+    completedJobs: totalJobs,
+    totalJobsValue,
+    pendingJobs,
+    inProgressJobs,
+    avgJobValue,
+    monthlyGoal,
+    goalProgress
+  });
 
   const metrics = [
     {
@@ -434,44 +309,39 @@ const Dashboard = () => {
                   return;
                 }
 
-                // Generate enhanced report safely
-                try {
-                  const report = {
-                    data: new Date().toISOString(),
-                    summary: {
-                      totalJobs,
-                      totalJobsValue,
-                      totalMonthlyCosts,
-                      totalEquipmentValue,
-                      hourlyRate,
-                      avgJobValue,
-                      goalProgress
-                    },
-                    tasks: {
-                      completedTasks,
-                      totalTasks,
-                      completionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
-                    },
-                    jobs: {
-                      pending: pendingJobs,
-                      inProgress: inProgressJobs,
-                      completed: totalJobs
-                    }
-                  };
+                // Generate enhanced report
+                const report = {
+                  data: new Date().toISOString(),
+                  summary: {
+                    totalJobs,
+                    totalJobsValue,
+                    totalMonthlyCosts,
+                    totalEquipmentValue,
+                    hourlyRate,
+                    avgJobValue,
+                    goalProgress
+                  },
+                  tasks: {
+                    completedTasks,
+                    totalTasks,
+                    completionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
+                  },
+                  jobs: {
+                    pending: pendingJobs,
+                    inProgress: inProgressJobs,
+                    completed: totalJobs
+                  }
+                };
 
-                  const dataStr = JSON.stringify(report, null, 2);
-                  const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                  
-                  const exportFileDefaultName = `financeflow-report-pessoal-${new Date().toISOString().slice(0, 10)}.json`;
-                  
-                  const linkElement = document.createElement('a');
-                  linkElement.setAttribute('href', dataUri);
-                  linkElement.setAttribute('download', exportFileDefaultName);
-                  linkElement.click();
-                } catch (error) {
-                  console.error('🔥 Dashboard - Error exporting report:', error);
-                  alert('Erro ao exportar relatório');
-                }
+                const dataStr = JSON.stringify(report, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = `financeflow-report-pessoal-${new Date().toISOString().slice(0, 10)}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
               }}
               disabled={!limits.canUseAdvancedReports}
             >
