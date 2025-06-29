@@ -1,0 +1,876 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useTheme } from '../contexts/ThemeContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { 
+  Video, 
+  Calendar,
+  User, 
+  Plus, 
+  Trash2,
+  ExternalLink,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  Edit,
+  Scissors,
+  Eye,
+  Building
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
+import { supabaseKanbanService, KanbanProject } from '../services/supabaseKanbanService';
+import { useKanbanContext } from '../hooks/useKanbanContext';
+import ContextSelector from './ContextSelector';
+
+interface Column {
+  id: string;
+  title: string;
+  color: string;
+  icon: React.ComponentType<any>;
+  count: number;
+}
+
+const EntregaFlowKanban = () => {
+  const [projects, setProjects] = useState<KanbanProject[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const { currentTheme } = useTheme();
+  const [selectedProject, setSelectedProject] = useState<KanbanProject | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [newProject, setNewProject] = useState<Partial<KanbanProject>>({
+    title: '',
+    client: '',
+    dueDate: '',
+    priority: 'media',
+    status: 'filmado',
+    description: '',
+    links: []
+  });
+  const [newLink, setNewLink] = useState('');
+  const { toast } = useToast();
+  const { user } = useSupabaseAuth();
+  const { isAgencyMode, currentAgencyId, currentUserId, contextLabel } = useKanbanContext();
+
+  // Função para gerar UUID válido
+  const generateUUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
+  const columns: Column[] = [
+    {
+      id: 'filmado',
+      title: 'Filmado',
+      color: 'bg-blue-100 border-blue-300',
+      icon: Video,
+      count: projects.filter(p => p.status === 'filmado').length
+    },
+    {
+      id: 'edicao',
+      title: 'Em Edição',
+      color: 'bg-orange-100 border-orange-300',
+      icon: Scissors,
+      count: projects.filter(p => p.status === 'edicao').length
+    },
+    {
+      id: 'revisao',
+      title: 'Revisão',
+      color: 'bg-yellow-100 border-yellow-300',
+      icon: Eye,
+      count: projects.filter(p => p.status === 'revisao').length
+    },
+    {
+      id: 'entregue',
+      title: 'Entregue',
+      color: 'bg-green-100 border-green-300',
+      icon: CheckCircle,
+      count: projects.filter(p => p.status === 'entregue').length
+    }
+  ];
+
+  const activeProjects = projects.filter(p => p.status !== 'entregue').length;
+  const completedProjects = projects.filter(p => p.status === 'entregue').length;
+  const urgentDeadlines = projects.filter(p => {
+    if (!p.dueDate) return false;
+    const deadline = new Date(p.dueDate);
+    const today = new Date();
+    const diffTime = deadline.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 2 && diffDays >= 0;
+  }).length;
+
+  const overdueProject = projects.find(p => {
+    if (!p.dueDate || p.status === 'entregue') return false;
+    const deadline = new Date(p.dueDate);
+    const today = new Date();
+    return deadline < today;
+  });
+
+  useEffect(() => {
+    console.log('🔄 [KANBAN] useEffect disparado - Contexto alterado:', {
+      isAgencyMode,
+      currentAgencyId,
+      currentUserId,
+      contextLabel,
+      userExists: !!user
+    });
+    
+    if (user && currentUserId) {
+      loadProjects();
+    } else {
+      console.log('❌ [KANBAN] Não carregando projetos - usuário ou currentUserId ausente');
+      setProjects([]);
+      setLoading(false);
+    }
+  }, [isAgencyMode, currentAgencyId, currentUserId, user]);
+
+  const loadProjects = async () => {
+    if (!currentUserId) {
+      console.log('❌ [KANBAN] loadProjects: Nenhum usuário logado');
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log('🔄 [KANBAN] loadProjects iniciado para contexto:', {
+        isAgencyMode,
+        currentAgencyId,
+        currentUserId,
+        contextLabel
+      });
+
+      let loadedProjects: KanbanProject[] = [];
+
+      if (isAgencyMode && currentAgencyId) {
+        console.log('🏢 [KANBAN] Carregando projetos da agência:', currentAgencyId);
+        loadedProjects = await supabaseKanbanService.loadAgencyBoard(currentAgencyId);
+        console.log('✅ [KANBAN] Projetos da empresa carregados:', loadedProjects.length, 'projetos');
+      } else {
+        console.log('👤 [KANBAN] Carregando projetos individuais para usuário:', currentUserId);
+        loadedProjects = await supabaseKanbanService.loadBoard(currentUserId);
+        console.log('✅ [KANBAN] Projetos individuais carregados:', loadedProjects.length, 'projetos');
+      }
+
+      setProjects(loadedProjects);
+      console.log('📊 [KANBAN] Estado final dos projetos atualizados:', {
+        totalProjects: loadedProjects.length,
+        agencyProjects: loadedProjects.filter(p => p.agency_id).length,
+        individualProjects: loadedProjects.filter(p => !p.agency_id).length
+      });
+    } catch (error) {
+      console.error('❌ [KANBAN] Erro ao carregar projetos:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar projetos",
+        variant: "destructive"
+      });
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDragEnd = async (result: any) => {
+    if (!result.destination) return;
+
+    const { source, destination } = result;
+    
+    if (source.droppableId !== destination.droppableId) {
+      const updatedProjects = projects.map(project => 
+        project.id === result.draggableId 
+          ? { ...project, status: destination.droppableId as KanbanProject['status'], updatedAt: new Date().toISOString() }
+          : project
+      );
+      
+      setProjects(updatedProjects);
+      
+      const updatedProject = updatedProjects.find(p => p.id === result.draggableId);
+      if (updatedProject) {
+        try {
+          console.log('💾 [KANBAN] Movendo projeto:', {
+            projectId: updatedProject.id,
+            newStatus: destination.droppableId,
+            agencyId: updatedProject.agency_id,
+            mode: updatedProject.agency_id ? 'AGENCY' : 'INDIVIDUAL'
+          });
+          await supabaseKanbanService.saveProject(updatedProject);
+        } catch (error) {
+          console.error('❌ [KANBAN] Erro ao salvar status do projeto:', error);
+          toast({
+            title: "Erro",
+            description: "Erro ao salvar alteração",
+            variant: "destructive"
+          });
+        }
+      }
+
+      const movedProject = projects.find(p => p.id === result.draggableId);
+      const destColumn = columns.find(c => c.id === destination.droppableId);
+      
+      toast({
+        title: "Projeto Movido",
+        description: `"${movedProject?.title}" movido para ${destColumn?.title}`
+      });
+    }
+  };
+
+  const handleAddProject = async () => {
+    if (!newProject.title || !newProject.client) {
+      toast({
+        title: "Erro",
+        description: "Preencha pelo menos o título e cliente",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const finalAgencyId = isAgencyMode && currentAgencyId ? currentAgencyId : null;
+      
+      const project: KanbanProject = {
+        id: generateUUID(),
+        title: newProject.title!,
+        client: newProject.client!,
+        dueDate: newProject.dueDate || '',
+        priority: newProject.priority || 'media',
+        status: newProject.status || 'filmado',
+        description: newProject.description || '',
+        links: newProject.links || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        user_id: currentUserId || '',
+        agency_id: finalAgencyId
+      };
+
+      console.log('💾 [KANBAN] Criando novo projeto:', {
+        title: project.title,
+        agencyId: project.agency_id,
+        isAgencyMode,
+        currentAgencyId,
+        finalAgencyId,
+        mode: project.agency_id ? 'AGENCY' : 'INDIVIDUAL'
+      });
+
+      await supabaseKanbanService.saveProject(project);
+      
+      const updatedProjects = [...projects, project];
+      setProjects(updatedProjects);
+
+      setNewProject({
+        title: '',
+        client: '',
+        dueDate: '',
+        priority: 'media',
+        status: 'filmado',
+        description: '',
+        links: []
+      });
+      setShowAddModal(false);
+
+      toast({
+        title: "Projeto Criado",
+        description: `"${project.title}" foi adicionado com sucesso`
+      });
+    } catch (error) {
+      console.error('❌ [KANBAN] Erro ao criar projeto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar projeto",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      const projectToDelete = projects.find(p => p.id === projectId);
+      
+      console.log('🗑️ [KANBAN] Deletando projeto:', {
+        projectId,
+        title: projectToDelete?.title,
+        agencyId: projectToDelete?.agency_id,
+        mode: projectToDelete?.agency_id ? 'AGENCY' : 'INDIVIDUAL'
+      });
+
+      await supabaseKanbanService.deleteProject(projectId);
+      
+      const updatedProjects = projects.filter(p => p.id !== projectId);
+      setProjects(updatedProjects);
+      setSelectedProject(null);
+      setShowEditModal(false);
+
+      toast({
+        title: "Projeto Excluído",
+        description: `"${projectToDelete?.title}" foi excluído com sucesso`
+      });
+    } catch (error) {
+      console.error('❌ [KANBAN] Erro ao deletar projeto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir projeto",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAddLink = async () => {
+    if (!selectedProject || !newLink) return;
+
+    try {
+      const updatedProject = {
+        ...selectedProject,
+        links: [...selectedProject.links, newLink],
+        updatedAt: new Date().toISOString()
+      };
+
+      console.log('🔗 [KANBAN] Adicionando link ao projeto:', {
+        projectId: updatedProject.id,
+        agencyId: updatedProject.agency_id,
+        newLink,
+        mode: updatedProject.agency_id ? 'AGENCY' : 'INDIVIDUAL'
+      });
+
+      await supabaseKanbanService.saveProject(updatedProject);
+      
+      const updatedProjects = projects.map(p => 
+        p.id === selectedProject.id ? updatedProject : p
+      );
+      setProjects(updatedProjects);
+      setSelectedProject(updatedProject);
+      setNewLink('');
+
+      toast({
+        title: "Link Adicionado",
+        description: "Link de entrega adicionado com sucesso"
+      });
+    } catch (error) {
+      console.error('❌ [KANBAN] Erro ao adicionar link:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar link",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'alta': return 'bg-red-100 text-red-800';
+      case 'media': return 'bg-yellow-100 text-yellow-800';
+      case 'baixa': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const isOverdue = (dueDate: string) => {
+    if (!dueDate) return false;
+    return new Date(dueDate) < new Date();
+  };
+
+  const getDaysOverdue = (dueDate: string) => {
+    if (!dueDate) return 0;
+    const deadline = new Date(dueDate);
+    const today = new Date();
+    const diffTime = today.getTime() - deadline.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 pb-20 md:pb-6">
+        <div className="text-center">
+          <p>Carregando projetos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 pb-20 md:pb-6">
+      {/* Header com ContextSelector integrado */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <div className={`w-10 h-10 bg-gradient-to-r ${currentTheme.primary} rounded-lg flex items-center justify-center`}>
+              <Video className="text-white font-bold text-2xl"/>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-2xl font-bold">Projetos Audiovisuais</h1>
+                {/* ContextSelector integrado aqui */}
+                <ContextSelector />
+              </div>
+              <p className="text-sm text-gray-600">
+                {isAgencyMode && currentAgencyId ? 
+                  `Gerenciando projetos da empresa ${contextLabel}` : 
+                  'Seus projetos pessoais'
+                }
+              </p>
+              <p className="text-xs text-gray-500">
+                {projects.length} projeto{projects.length !== 1 ? 's' : ''} carregado{projects.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+          <h2 className="text-xl font-semibold">Bem-vindo ao EntregaFlow! 🎬</h2>
+          <p className="text-gray-600">Gerencie seus projetos audiovisuais de forma simples e eficiente</p>
+        </div>
+
+        <Button 
+          onClick={() => setShowAddModal(true)}
+          className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Projeto
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Clock className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{activeProjects}</p>
+                <p className="text-sm text-gray-600">Projetos Ativos</p>
+                <p className="text-xs text-gray-500">Em andamento</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{completedProjects}</p>
+                <p className="text-sm text-gray-600">Entregas este mês</p>
+                <p className="text-xs text-gray-500">Projetos finalizados</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{urgentDeadlines}</p>
+                <p className="text-sm text-gray-600">Prazos Urgentes</p>
+                <p className="text-xs text-gray-500">Vencendo em 2 dias</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                <Calendar className="h-4 w-4 text-red-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{overdueProject ? 'Atrasado' : '0'}</p>
+                <p className="text-sm text-gray-600">Próxima Entrega</p>
+                <p className="text-xs text-gray-500">
+                  {overdueProject ? overdueProject.client : 'Sem atrasos'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Pipeline Section */}
+      <div>
+        <h3 className="text-xl font-semibold mb-2">Pipeline de Projetos</h3>
+        <p className="text-gray-600 mb-4">Arraste e solte os cards para atualizar o status dos projetos</p>
+
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="grid lg:grid-cols-4 gap-6">
+            {columns.map((column) => {
+              const columnProjects = projects.filter(p => p.status === column.id);
+              const IconComponent = column.icon;
+              
+              return (
+                <div key={column.id}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className={`w-3 h-3 rounded-full ${column.id === 'filmado' ? 'bg-blue-500' : column.id === 'edicao' ? 'bg-orange-500' : column.id === 'revisao' ? 'bg-yellow-500' : 'bg-green-500'}`} />
+                    <h4 className="font-semibold">{column.title}</h4>
+                    <Badge variant="secondary">{column.count}</Badge>
+                  </div>
+
+                  <Droppable droppableId={column.id}>
+                    {(provided, snapshot) => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className={`space-y-4 min-h-[400px] ${
+                          snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg p-2' : ''
+                        }`}
+                      >
+                        {columnProjects.map((project, index) => (
+                          <Draggable key={project.id} draggableId={project.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                              >
+                                <Card 
+                                  className={`cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 ${
+                                    column.id === 'filmado' ? 'border-l-blue-500' : 
+                                    column.id === 'edicao' ? 'border-l-orange-500' : 
+                                    column.id === 'revisao' ? 'border-l-yellow-500' : 'border-l-green-500'
+                                  } ${snapshot.isDragging ? 'rotate-2 shadow-xl' : ''}`}
+                                  onClick={() => {
+                                    setSelectedProject(project);
+                                    setShowEditModal(true);
+                                  }}
+                                >
+                                  <CardContent className="p-4">
+                                    <div className="space-y-3">
+                                      {project.priority === 'alta' && (
+                                        <Badge className="bg-red-500 text-white text-xs">
+                                          {project.priority.charAt(0).toUpperCase() + project.priority.slice(1)}
+                                        </Badge>
+                                      )}
+
+                                      <h4 className="font-semibold text-sm line-clamp-2">
+                                        {project.title}
+                                      </h4>
+
+                                      <div className="flex items-center gap-2">
+                                        <User className="h-3 w-3 text-gray-500" />
+                                        <span className="text-xs text-gray-600">{project.client}</span>
+                                      </div>
+
+                                      {project.dueDate && (
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="h-3 w-3 text-gray-500" />
+                                          <span className={`text-xs ${
+                                            isOverdue(project.dueDate) ? 'text-red-600 font-medium' : 'text-gray-600'
+                                          }`}>
+                                            {new Date(project.dueDate).toLocaleDateString('pt-BR')}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {isOverdue(project.dueDate) && project.status !== 'entregue' && (
+                                        <Badge className="bg-red-500 text-white text-xs">
+                                          {getDaysOverdue(project.dueDate)} dias atrasado
+                                        </Badge>
+                                      )}
+
+                                      {project.links.length > 0 && (
+                                        <div className="flex items-center gap-2">
+                                          <ExternalLink className="h-3 w-3 text-blue-500" />
+                                          <span className="text-xs text-blue-600">
+                                            Link {project.links.length > 1 ? `${project.links.length}` : '1'}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {project.agency_id && (
+                                        <div className="flex items-center gap-1">
+                                          <Building className="h-3 w-3 text-purple-500" />
+                                          <span className="text-xs text-purple-600">Empresa</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+
+                        {columnProjects.length === 0 && (
+                          <Card className="border-dashed border-2 border-gray-300">
+                            <CardContent className="p-6 text-center">
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  setNewProject({ ...newProject, status: column.id as KanbanProject['status'] });
+                                  setShowAddModal(true);
+                                }}
+                                className="text-gray-500"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adicionar Projeto
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
+              );
+            })}
+          </div>
+        </DragDropContext>
+      </div>
+
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Novo Projeto
+              {isAgencyMode && currentAgencyId && (
+                <Badge variant="outline" className="ml-2">
+                  <Building className="h-3 w-3 mr-1" />
+                  {contextLabel}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Título do Projeto</label>
+              <Input
+                placeholder="Ex: Comercial - Café Premium"
+                value={newProject.title || ''}
+                onChange={(e) => setNewProject({...newProject, title: e.target.value})}
+                className="border-orange-200 focus:border-orange-500"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Cliente</label>
+              <Input
+                placeholder="Nome do cliente"
+                value={newProject.client || ''}
+                onChange={(e) => setNewProject({...newProject, client: e.target.value})}
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">Data de Entrega</label>
+              <Input
+                type="date"
+                value={newProject.dueDate || ''}
+                onChange={(e) => setNewProject({...newProject, dueDate: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Prioridade</label>
+              <Select 
+                value={newProject.priority || 'media'} 
+                onValueChange={(value: 'alta' | 'media' | 'baixa') => setNewProject({...newProject, priority: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alta">Alta</SelectItem>
+                  <SelectItem value="media">Média</SelectItem>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Descrição</label>
+              <Textarea
+                placeholder="Detalhes sobre o projeto..."
+                value={newProject.description || ''}
+                onChange={(e) => setNewProject({...newProject, description: e.target.value})}
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Links de Entrega</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Cole o link aqui"
+                  value={newLink}
+                  onChange={(e) => setNewLink(e.target.value)}
+                />
+                <Button 
+                  onClick={() => {
+                    if (newLink) {
+                      setNewProject({
+                        ...newProject,
+                        links: [...(newProject.links || []), newLink]
+                      });
+                      setNewLink('');
+                    }
+                  }}
+                  variant="outline"
+                >
+                  Adicionar
+                </Button>
+              </div>
+              {newProject.links && newProject.links.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {newProject.links.map((link, index) => (
+                    <div key={index} className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                      {link}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-sm text-gray-600">
+                {isAgencyMode && currentAgencyId ? (
+                  <>
+                    <Building className="h-4 w-4 inline mr-1" />
+                    Este projeto será criado para a empresa: <strong>{contextLabel}</strong>
+                  </>
+                ) : (
+                  <>
+                    <User className="h-4 w-4 inline mr-1" />
+                    Este projeto será criado como <strong>projeto pessoal</strong>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button 
+              onClick={() => setShowAddModal(false)} 
+              variant="outline"
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleAddProject} 
+              className="flex-1 bg-black text-white hover:bg-gray-800"
+            >
+              Salvar Projeto
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                Editar Projeto
+                {selectedProject?.priority === 'alta' && (
+                  <Badge className="bg-red-500 text-white">Alta</Badge>
+                )}
+                <Badge variant="outline">{selectedProject?.status}</Badge>
+                {selectedProject?.agency_id && (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Building className="h-3 w-3" />
+                    Empresa
+                  </Badge>
+                )}
+              </DialogTitle>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => selectedProject && handleDeleteProject(selectedProject.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          
+          {selectedProject && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Cliente</label>
+                  <p className="text-sm text-gray-900">{selectedProject.client}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Data de Entrega</label>
+                  <p className={`text-sm ${
+                    selectedProject.dueDate && isOverdue(selectedProject.dueDate) && selectedProject.status !== 'entregue' ? 
+                    'text-red-600 font-medium' : 'text-gray-900'
+                  }`}>
+                    {selectedProject.dueDate ? new Date(selectedProject.dueDate).toLocaleDateString('pt-BR') : 'Não definido'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Descrição</label>
+                <p className="text-sm text-gray-900 mt-1">{selectedProject.description || 'Sem descrição'}</p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-gray-700">Links de Entrega</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Cole o link aqui"
+                      value={newLink}
+                      onChange={(e) => setNewLink(e.target.value)}
+                      className="w-64"
+                    />
+                    <Button onClick={handleAddLink} className="bg-black text-white">
+                      Adicionar
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {(!selectedProject.links || selectedProject.links.length === 0) ? (
+                    <p className="text-sm text-gray-500 italic">Nenhum link adicionado</p>
+                  ) : (
+                    selectedProject.links.map((link, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                        <ExternalLink className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm text-gray-700 flex-1">{link}</span>
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={link} target="_blank" rel="noopener noreferrer">
+                            Abrir
+                          </a>
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  onClick={() => setShowEditModal(false)} 
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default EntregaFlowKanban;
