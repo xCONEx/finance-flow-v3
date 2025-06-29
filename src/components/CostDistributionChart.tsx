@@ -8,8 +8,9 @@ const CostDistributionChart = () => {
   const { monthlyCosts } = useApp();
   const { formatValue } = usePrivacy();
 
-  // Ensure monthlyCosts is always an array
-  const safeMonthlyCosts = monthlyCosts || [];
+  // Ensure monthlyCosts is always an array with safety check
+  const safeMonthlyCosts = Array.isArray(monthlyCosts) ? monthlyCosts : [];
+  console.log('CostDistributionChart - monthlyCosts safety check:', { costs: safeMonthlyCosts.length });
 
   // Filter out financial transactions and reserve items - only show regular monthly costs
   const regularMonthlyCosts = safeMonthlyCosts.filter(cost => 
