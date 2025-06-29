@@ -112,12 +112,6 @@ const Header: React.FC<HeaderProps> = ({
             </nav>
           </div>
 
-          {/* Mobile: Mostrar apenas o título da aba ativa */}
-          <div className="md:hidden">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {getActiveTabTitle()}
-            </h2>
-          </div>
 
           {/* Ações do usuário */}
           <div className="flex items-center space-x-4">
