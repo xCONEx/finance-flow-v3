@@ -9,15 +9,18 @@ const PerformanceWidget = () => {
   const { jobs, workRoutine } = useApp();
   const { formatValue } = usePrivacy();
 
+  // Ensure jobs is always an array
+  const safeJobs = jobs || [];
+
   // Calculate performance metrics
   const currentMonth = new Date().toISOString().slice(0, 7);
   const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7);
 
-  const currentMonthJobs = jobs.filter(job => 
-    job.eventDate.startsWith(currentMonth) && job.status === 'concluído'
+  const currentMonthJobs = safeJobs.filter(job => 
+    job.eventDate && job.eventDate.startsWith(currentMonth) && job.status === 'concluído'
   );
-  const lastMonthJobs = jobs.filter(job => 
-    job.eventDate.startsWith(lastMonth) && job.status === 'concluído'
+  const lastMonthJobs = safeJobs.filter(job => 
+    job.eventDate && job.eventDate.startsWith(lastMonth) && job.status === 'concluído'
   );
 
   const currentMonthRevenue = currentMonthJobs.reduce((sum, job) => sum + (job.valueWithDiscount || 0), 0);

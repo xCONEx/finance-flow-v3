@@ -7,9 +7,13 @@ import { useApp } from '@/contexts/AppContext';
 const ActivityTimeline = () => {
   const { jobs, tasks } = useApp();
 
+  // Ensure arrays are always defined
+  const safeJobs = jobs || [];
+  const safeTasks = tasks || [];
+
   // Combine and sort recent activities
   const recentActivities = [
-    ...jobs.slice(0, 3).map(job => ({
+    ...safeJobs.slice(0, 3).map(job => ({
       id: job.id,
       type: 'job' as const,
       title: job.description,
@@ -17,7 +21,7 @@ const ActivityTimeline = () => {
       date: job.eventDate,
       icon: job.status === 'concluído' ? CheckCircle : job.status === 'em_andamento' ? Clock : Calendar
     })),
-    ...tasks.slice(0, 3).map(task => ({
+    ...safeTasks.slice(0, 3).map(task => ({
       id: task.id,
       type: 'task' as const,
       title: task.title,

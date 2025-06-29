@@ -10,6 +10,9 @@ const WeeklyOverview = () => {
   const { jobs } = useApp();
   const { formatValue } = usePrivacy();
 
+  // Ensure jobs is always an array
+  const safeJobs = jobs || [];
+
   // Get last 7 days
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
@@ -18,7 +21,7 @@ const WeeklyOverview = () => {
   }).reverse();
 
   const weeklyData = last7Days.map(date => {
-    const dayJobs = jobs.filter(job => job.eventDate.startsWith(date));
+    const dayJobs = safeJobs.filter(job => job.eventDate && job.eventDate.startsWith(date));
     const revenue = dayJobs.reduce((sum, job) => sum + (job.valueWithDiscount || 0), 0);
     const completedJobs = dayJobs.filter(job => job.status === 'concluído').length;
     
