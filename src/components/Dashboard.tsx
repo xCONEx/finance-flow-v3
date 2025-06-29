@@ -59,8 +59,8 @@ const Dashboard = () => {
     jobStatuses: filteredJobs.map(job => ({ id: job.id, status: job.status, value: job.valueWithDiscount || job.serviceValue }))
   });
 
-  // Calcular apenas jobs aprovados (status correto do banco)
-  const completedJobs = filteredJobs.filter(job => job.status === 'aprovado');
+  // Calcular apenas jobs concluídos (status correto do banco)
+  const completedJobs = filteredJobs.filter(job => job.status === 'concluído');
   const totalJobs = completedJobs.length;
   const totalJobsValue = completedJobs.reduce((sum, job) => {
     const jobValue = job.valueWithDiscount || job.serviceValue || 0;
@@ -251,7 +251,6 @@ const Dashboard = () => {
               Tarefas ({completedTasks}/{totalTasks})
             </CardTitle>
             <Button 
-              size="sm" 
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg"
               onClick={() => setShowTaskModal(true)}
             >
@@ -292,7 +291,6 @@ const Dashboard = () => {
             </Button>
 
             <Button
-              variant="outline"
               className="w-full transition-all duration-300 hover:scale-105 border-2 hover:border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
               onClick={() => setShowExpenseModal(true)}
             >
@@ -301,7 +299,6 @@ const Dashboard = () => {
             </Button>
 
             <Button
-              variant="outline"
               className="w-full transition-all duration-300 hover:scale-105 border-2 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
               onClick={() => {
                 if (!limits.canUseAdvancedReports) {
