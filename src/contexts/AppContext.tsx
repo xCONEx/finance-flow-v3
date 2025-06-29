@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from './SupabaseAuthContext';
@@ -125,6 +124,7 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
+  // Initialize all arrays as empty arrays to prevent undefined errors
   const [jobs, setJobs] = useState<Job[]>([]);
   const [workRoutine, setWorkRoutineState] = useState<WorkRoutine | null>(null);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -145,9 +145,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      // Ensure we always set an array, even if data is null
       setJobs(data || []);
     } catch (error) {
       console.error('Error loading jobs:', error);
+      // Keep empty array on error
+      setJobs([]);
     }
   };
 
@@ -245,11 +248,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    setTasks(prev => [...prev, newTask]);
+    setTasks(prev => [...(prev || []), newTask]);
   };
 
   const updateTask = (taskId: string, updates: Partial<Task>) => {
-    setTasks(prev => prev.map(task => 
+    setTasks(prev => (prev || []).map(task => 
       task.id === taskId 
         ? { ...task, ...updates, updatedAt: new Date().toISOString() }
         : task
@@ -257,7 +260,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteTask = (taskId: string) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
+    setTasks(prev => (prev || []).filter(task => task.id !== taskId));
   };
 
   // Monthly costs functions
@@ -269,11 +272,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    setMonthlyCosts(prev => [...prev, newCost]);
+    setMonthlyCosts(prev => [...(prev || []), newCost]);
   };
 
   const updateMonthlyCost = (costId: string, updates: Partial<MonthlyCost>) => {
-    setMonthlyCosts(prev => prev.map(cost => 
+    setMonthlyCosts(prev => (prev || []).map(cost => 
       cost.id === costId 
         ? { ...cost, ...updates, updatedAt: new Date().toISOString() }
         : cost
@@ -292,9 +295,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      // Ensure we always set an array, even if data is null
       setExpenses(data || []);
     } catch (error) {
       console.error('Error loading expenses:', error);
+      // Keep empty array on error
+      setExpenses([]);
     }
   };
 
@@ -353,6 +359,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       refreshJobs();
       loadWorkRoutine();
       refreshExpenses();
+    } else {
+      // Reset all data when user logs out
+      setJobs([]);
+      setWorkRoutineState(null);
+      setWorkItems([]);
+      setTasks([]);
+      setMonthlyCosts([]);
+      setExpenses([]);
     }
   }, [user]);
 
