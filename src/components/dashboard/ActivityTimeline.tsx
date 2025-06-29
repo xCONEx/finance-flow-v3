@@ -7,13 +7,24 @@ import { useApp } from '@/contexts/AppContext';
 const ActivityTimeline = () => {
   const { jobs, tasks } = useApp();
 
-  // Ensure arrays are always defined with safety checks
-  const safeJobs = Array.isArray(jobs) ? jobs : [];
-  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  // Force safe array initialization with multiple fallbacks
+  const safeJobs = React.useMemo(() => {
+    if (!jobs) return [];
+    return Array.isArray(jobs) ? jobs : [];
+  }, [jobs]);
+
+  const safeTasks = React.useMemo(() => {
+    if (!tasks) return [];
+    return Array.isArray(tasks) ? tasks : [];
+  }, [tasks]);
   
   console.log('ActivityTimeline - arrays safety check:', { 
-    jobs: safeJobs.length, 
-    tasks: safeTasks.length 
+    jobs: jobs ? 'defined' : 'undefined',
+    tasks: tasks ? 'defined' : 'undefined',
+    jobsIsArray: Array.isArray(jobs),
+    tasksIsArray: Array.isArray(tasks),
+    safeJobsLength: safeJobs.length, 
+    safeTasksLength: safeTasks.length 
   });
 
   // Combine and sort recent activities
