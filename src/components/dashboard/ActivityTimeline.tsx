@@ -18,7 +18,7 @@ const ActivityTimeline = () => {
       title: job.description,
       status: job.status,
       date: job.eventDate,
-      icon: job.status === 'aprovado' ? CheckCircle : job.status === 'em_andamento' ? Clock : Calendar
+      icon: job.status === 'concluído' ? CheckCircle : job.status === 'em_andamento' ? Clock : Calendar
     })),
     ...safeTasks.slice(0, 3).map(task => ({
       id: task.id,
@@ -35,7 +35,7 @@ const ActivityTimeline = () => {
       return status === 'concluído' ? 'text-green-600' : 'text-orange-600';
     }
     switch (status) {
-      case 'aprovado': return 'text-green-600';
+      case 'concluído': return 'text-green-600';
       case 'em_andamento': return 'text-blue-600';
       case 'pendente': return 'text-gray-600';
       default: return 'text-gray-600';
@@ -47,7 +47,7 @@ const ActivityTimeline = () => {
       return status === 'concluído' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-orange-50 dark:bg-orange-900/20';
     }
     switch (status) {
-      case 'aprovado': return 'bg-green-50 dark:bg-green-900/20';
+      case 'concluído': return 'bg-green-50 dark:bg-green-900/20';
       case 'em_andamento': return 'bg-blue-50 dark:bg-blue-900/20';
       case 'pendente': return 'bg-gray-50 dark:bg-gray-900/20';
       default: return 'bg-gray-50 dark:bg-gray-900/20';
