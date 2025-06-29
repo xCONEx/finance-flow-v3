@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,7 +47,29 @@ const ClientsManagement = () => {
         return;
       }
 
-      setClients(data || []);
+      // Atualizar user_email para clientes existentes que não possuem
+      const clientsToUpdate = (data || []).filter(client => !client.user_email);
+      if (clientsToUpdate.length > 0 && user.email) {
+        const updatePromises = clientsToUpdate.map(client =>
+          supabase
+            .from('clients')
+            .update({ user_email: user.email })
+            .eq('id', client.id)
+        );
+        
+        await Promise.all(updatePromises);
+        
+        // Recarregar dados após atualização
+        const { data: updatedData } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        setClients(updatedData || []);
+      } else {
+        setClients(data || []);
+      }
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
       toast({
