@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -29,7 +28,7 @@ export interface Job {
   logistics: number;
   equipment: number;
   assistance: number;
-  status: 'pendente' | 'aprovado';
+  status: 'pendente' | 'aprovado' | 'em_andamento' | 'concluído' | 'cancelado';
   category: string;
   discountValue: number;
   totalCosts: number;
