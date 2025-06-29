@@ -117,17 +117,24 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Ações do usuário */}
           <div className="flex items-center space-x-4">
-            <NotificationBell />
-
+            {/* Privacy Toggle */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={toggleTheme}
-              className="text-gray-600 dark:text-gray-300"
+              onClick={toggleValuesVisibility}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
             >
-              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {valuesHidden ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
             </Button>
+            
+            <NotificationBell />
 
+          
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 p-2">
