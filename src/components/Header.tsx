@@ -11,8 +11,6 @@ import {
   Moon, 
   Building,
   ChevronDown,
-  Eye,
-  EyeOff,
   Home
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,7 +25,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { usePrivacy } from '../contexts/PrivacyContext';
 import NotificationBell from './NotificationBell';
 
 interface HeaderProps {
@@ -43,8 +40,7 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const { user, profile, signOut, agency } = useSupabaseAuth();
   const { currentTheme, toggleTheme, isDarkMode } = useTheme();
-  const { valuesHidden, toggleValuesVisibility } = usePrivacy();
-  
+
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
   const isAdmin = profile?.user_type === 'admin';
@@ -112,27 +108,26 @@ const Header: React.FC<HeaderProps> = ({
             </nav>
           </div>
 
+          {/* Mobile: Mostrar apenas o título da aba ativa */}
+          <div className="md:hidden">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {getActiveTabTitle()}
+            </h2>
+          </div>
 
           {/* Ações do usuário */}
           <div className="flex items-center space-x-4">
-            {/* Privacy Toggle */}
+            <NotificationBell />
+
             <Button
               variant="ghost"
               size="sm"
-              onClick={toggleValuesVisibility}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-              title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
+              onClick={toggleTheme}
+              className="text-gray-600 dark:text-gray-300"
             >
-              {valuesHidden ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
+              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
-            
-            <NotificationBell />
 
-          
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 p-2">

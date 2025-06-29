@@ -49,7 +49,7 @@ export const ClientJobHistory: React.FC<ClientJobHistoryProps> = ({ client }) =>
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'aprovado':
+      case 'concluído':
         return 'bg-green-100 text-green-800';
       case 'em_andamento':
         return 'bg-blue-100 text-blue-800';
@@ -62,8 +62,8 @@ export const ClientJobHistory: React.FC<ClientJobHistoryProps> = ({ client }) =>
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'aprovado':
-        return 'Aprovado';
+      case 'concluído':
+        return 'Concluído';
       case 'em_andamento':
         return 'Em Andamento';
       case 'pendente':

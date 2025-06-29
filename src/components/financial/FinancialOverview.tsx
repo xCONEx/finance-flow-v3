@@ -75,74 +75,41 @@ const FinancialOverview: React.FC = () => {
 
       if (error) throw error;
 
-      // ULTRA-CRITICAL: Ensure data is always an array
-      const transactionData = Array.isArray(data) ? data : [];
-      console.log('🔥 FinancialOverview - Transactions loaded:', {
-        dataType: typeof data,
-        isArray: Array.isArray(data),
-        length: transactionData.length
-      });
-      
+      const transactionData = data || [];
       setTransactions(transactionData);
       applyFilters(transactionData);
 
-      // Schedule notifications for transactions with due dates - ULTRA-SAFE
-      if (Array.isArray(transactionData)) {
-        transactionData.forEach(async (transaction: FinancialTransaction) => {
-          if (transaction && transaction.due_date && transaction.notification_enabled) {
-            try {
-              const transactionDetails = parseTransactionData(transaction.description);
-              if (!transactionDetails.isPaid) {
-                await scheduleNotification(transaction);
-              }
-            } catch (error) {
-              console.error('🔥 FinancialOverview - Error scheduling notification:', error);
-            }
+      // Schedule notifications for transactions with due dates
+      transactionData.forEach(async (transaction: FinancialTransaction) => {
+        if (transaction.due_date && transaction.notification_enabled) {
+          const transactionDetails = parseTransactionData(transaction.description);
+          if (!transactionDetails.isPaid) {
+            await scheduleNotification(transaction);
           }
-        });
-      }
-
-      // Calculate summary from financial transactions - ULTRA-SAFE
-      const incomeTransactions = transactionData.filter((t: FinancialTransaction) => {
-        if (!t || typeof t !== 'object') return false;
-        return t.description && t.description.includes('FINANCIAL_INCOME:') && t.value < 0;
-      });
-      
-      const expenseTransactions = transactionData.filter((t: FinancialTransaction) => {
-        if (!t || typeof t !== 'object') return false;
-        return t.description && t.description.includes('FINANCIAL_EXPENSE:') && t.value > 0;
+        }
       });
 
-      const totalIncome = Math.abs(incomeTransactions.reduce((sum, t) => {
-        const value = typeof t.value === 'number' ? t.value : 0;
-        return sum + value;
-      }, 0));
-      
-      const totalExpenses = expenseTransactions.reduce((sum, t) => {
-        const value = typeof t.value === 'number' ? t.value : 0;
-        return sum + value;
-      }, 0);
+      // Calculate summary from financial transactions
+      const incomeTransactions = transactionData.filter((t: FinancialTransaction) => 
+        t.description.includes('FINANCIAL_INCOME:') && t.value < 0
+      );
+      const expenseTransactions = transactionData.filter((t: FinancialTransaction) => 
+        t.description.includes('FINANCIAL_EXPENSE:') && t.value > 0
+      );
 
-      // Calculate pending amounts - ULTRA-SAFE
-      const pendingIncomeTransactions = incomeTransactions.filter(t => {
-        if (!t || !t.description) return false;
-        return !t.description.includes('Paid: true');
-      });
-      
-      const pendingExpenseTransactions = expenseTransactions.filter(t => {
-        if (!t || !t.description) return false;
-        return !t.description.includes('Paid: true');
-      });
+      const totalIncome = Math.abs(incomeTransactions.reduce((sum, t) => sum + t.value, 0));
+      const totalExpenses = expenseTransactions.reduce((sum, t) => sum + t.value, 0);
 
-      const pendingIncome = Math.abs(pendingIncomeTransactions.reduce((sum, t) => {
-        const value = typeof t.value === 'number' ? t.value : 0;
-        return sum + value;
-      }, 0));
-      
-      const pendingExpenses = pendingExpenseTransactions.reduce((sum, t) => {
-        const value = typeof t.value === 'number' ? t.value : 0;
-        return sum + value;
-      }, 0);
+      // Calculate pending amounts
+      const pendingIncomeTransactions = incomeTransactions.filter(t => 
+        !t.description.includes('Paid: true')
+      );
+      const pendingExpenseTransactions = expenseTransactions.filter(t => 
+        !t.description.includes('Paid: true')
+      );
+
+      const pendingIncome = Math.abs(pendingIncomeTransactions.reduce((sum, t) => sum + t.value, 0));
+      const pendingExpenses = pendingExpenseTransactions.reduce((sum, t) => sum + t.value, 0);
 
       setSummary({
         totalIncome,
@@ -152,93 +119,55 @@ const FinancialOverview: React.FC = () => {
         pendingExpenses
       });
     } catch (error) {
-      console.error('🔥 FinancialOverview - Error loading transactions:', error);
+      console.error('Erro ao carregar transações:', error);
       setTransactions([]);
-      setFilteredTransactions([]);
     } finally {
       setLoading(false);
     }
   };
 
   const applyFilters = (transactionData: FinancialTransaction[] = transactions) => {
-    try {
-      // ULTRA-CRITICAL: Ensure transactionData is always an array
-      const safeTransactionData = Array.isArray(transactionData) ? transactionData : [];
-      console.log('🔥 FinancialOverview - Applying filters to:', { length: safeTransactionData.length });
-      
-      let filtered = [...safeTransactionData];
+    let filtered = [...transactionData];
 
-      // Filter by type (income/expense) - ULTRA-SAFE
-      if (filterType === 'income') {
-        filtered = filtered.filter(t => {
-          if (!t || !t.description) return false;
-          return t.description.includes('FINANCIAL_INCOME:');
-        });
-      } else if (filterType === 'expense') {
-        filtered = filtered.filter(t => {
-          if (!t || !t.description) return false;
-          return t.description.includes('FINANCIAL_EXPENSE:');
-        });
-      }
-
-      // Filter by category - ULTRA-SAFE
-      if (filterCategory) {
-        filtered = filtered.filter(t => {
-          if (!t || !t.category) return false;
-          return t.category.toLowerCase().includes(filterCategory.toLowerCase());
-        });
-      }
-
-      // Filter by date range - ULTRA-SAFE
-      if (filterDateFrom) {
-        filtered = filtered.filter(t => {
-          if (!t || !t.description) return false;
-          try {
-            const transactionData = parseTransactionData(t.description);
-            const transactionDate = transactionData.date || t.created_at.split('T')[0];
-            return transactionDate >= filterDateFrom;
-          } catch (error) {
-            console.error('🔥 FinancialOverview - Error parsing date from:', error);
-            return false;
-          }
-        });
-      }
-
-      if (filterDateTo) {
-        filtered = filtered.filter(t => {
-          if (!t || !t.description) return false;
-          try {
-            const transactionData = parseTransactionData(t.description);
-            const transactionDate = transactionData.date || t.created_at.split('T')[0];
-            return transactionDate <= filterDateTo;
-          } catch (error) {
-            console.error('🔥 FinancialOverview - Error parsing date to:', error);
-            return false;
-          }
-        });
-      }
-
-      // Filter by payment status - ULTRA-SAFE
-      if (filterPaid !== 'all') {
-        filtered = filtered.filter(t => {
-          if (!t || !t.description) return false;
-          try {
-            const transactionData = parseTransactionData(t.description);
-            const isPaid = transactionData.isPaid;
-            return filterPaid === 'paid' ? isPaid : !isPaid;
-          } catch (error) {
-            console.error('🔥 FinancialOverview - Error parsing payment status:', error);
-            return false;
-          }
-        });
-      }
-
-      console.log('🔥 FinancialOverview - Filtered transactions:', { filteredLength: filtered.length });
-      setFilteredTransactions(filtered);
-    } catch (error) {
-      console.error('🔥 FinancialOverview - Error applying filters:', error);
-      setFilteredTransactions([]);
+    // Filter by type (income/expense)
+    if (filterType === 'income') {
+      filtered = filtered.filter(t => t.description.includes('FINANCIAL_INCOME:'));
+    } else if (filterType === 'expense') {
+      filtered = filtered.filter(t => t.description.includes('FINANCIAL_EXPENSE:'));
     }
+
+    // Filter by category
+    if (filterCategory) {
+      filtered = filtered.filter(t => t.category.toLowerCase().includes(filterCategory.toLowerCase()));
+    }
+
+    // Filter by date range
+    if (filterDateFrom) {
+      filtered = filtered.filter(t => {
+        const transactionData = parseTransactionData(t.description);
+        const transactionDate = transactionData.date || t.created_at.split('T')[0];
+        return transactionDate >= filterDateFrom;
+      });
+    }
+
+    if (filterDateTo) {
+      filtered = filtered.filter(t => {
+        const transactionData = parseTransactionData(t.description);
+        const transactionDate = transactionData.date || t.created_at.split('T')[0];
+        return transactionDate <= filterDateTo;
+      });
+    }
+
+    // Filter by payment status
+    if (filterPaid !== 'all') {
+      filtered = filtered.filter(t => {
+        const transactionData = parseTransactionData(t.description);
+        const isPaid = transactionData.isPaid;
+        return filterPaid === 'paid' ? isPaid : !isPaid;
+      });
+    }
+
+    setFilteredTransactions(filtered);
   };
 
   useEffect(() => {
@@ -285,53 +214,36 @@ const FinancialOverview: React.FC = () => {
   };
 
   const exportToPDF = () => {
-    try {
-      // Create PDF content - ULTRA-SAFE
-      const safeFilteredTransactions = Array.isArray(filteredTransactions) ? filteredTransactions : [];
-      const content = safeFilteredTransactions.map(transaction => {
-        if (!transaction || !transaction.description) return null;
-        
-        try {
-          const transactionData = parseTransactionData(transaction.description);
-          return {
-            date: transactionData.date || formatDate(transaction.created_at),
-            type: transactionData.isIncome ? 'Entrada' : 'Saída',
-            description: transactionData.description,
-            category: transaction.category,
-            amount: formatValue(Math.abs(transaction.value)),
-            paymentMethod: transactionData.paymentMethod,
-            clientSupplier: transactionData.clientOrSupplier,
-            status: transactionData.isPaid ? 'Pago' : 'Pendente'
-          };
-        } catch (error) {
-          console.error('🔥 FinancialOverview - Error processing transaction for export:', error);
-          return null;
-        }
-      }).filter(Boolean); // Remove null entries
+    // Create PDF content
+    const content = filteredTransactions.map(transaction => {
+      const transactionData = parseTransactionData(transaction.description);
+      return {
+        date: transactionData.date || formatDate(transaction.created_at),
+        type: transactionData.isIncome ? 'Entrada' : 'Saída',
+        description: transactionData.description,
+        category: transaction.category,
+        amount: formatValue(Math.abs(transaction.value)),
+        paymentMethod: transactionData.paymentMethod,
+        clientSupplier: transactionData.clientOrSupplier,
+        status: transactionData.isPaid ? 'Pago' : 'Pendente'
+      };
+    });
 
-      // Simple implementation - in a real app, you'd use a PDF library like jsPDF
-      const dataStr = JSON.stringify(content, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      
-      const exportFileDefaultName = `transacoes_financeiras_${new Date().toISOString().split('T')[0]}.json`;
-      
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
+    // Simple implementation - in a real app, you'd use a PDF library like jsPDF
+    const dataStr = JSON.stringify(content, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `transacoes_financeiras_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
 
-      toast({
-        title: "Exportação",
-        description: "Dados exportados com sucesso! (Em formato JSON para demonstração)",
-      });
-    } catch (error) {
-      console.error('🔥 FinancialOverview - Error exporting:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao exportar dados",
-        variant: "destructive"
-      });
-    }
+    toast({
+      title: "Exportação",
+      description: "Dados exportados com sucesso! (Em formato JSON para demonstração)",
+    });
   };
 
   const clearFilters = () => {
@@ -349,10 +261,6 @@ const FinancialOverview: React.FC = () => {
       </div>
     );
   }
-
-  // Ensure arrays are safe for rendering
-  const safeFilteredTransactions = Array.isArray(filteredTransactions) ? filteredTransactions : [];
-  const safeTransactions = Array.isArray(transactions) ? transactions : [];
 
   return (
     <div className="space-y-6">
@@ -520,108 +428,101 @@ const FinancialOverview: React.FC = () => {
       </div>
 
       {/* Lista de Transações */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Transações Recentes ({safeFilteredTransactions.length} de {safeTransactions.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {safeFilteredTransactions.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                Nenhuma transação encontrada com os filtros aplicados.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {safeFilteredTransactions.map((transaction) => {
-                if (!transaction || !transaction.description) {
-                  console.warn('🔥 FinancialOverview - Invalid transaction in render:', transaction);
-                  return null;
-                }
+<Card>
+  <CardHeader>
+    <CardTitle>
+      Transações Recentes ({filteredTransactions.length} de {transactions.length})
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    {filteredTransactions.length === 0 ? (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">
+          Nenhuma transação encontrada com os filtros aplicados.
+        </p>
+      </div>
+    ) : (
+      <div className="space-y-4">
+        {filteredTransactions.map((transaction) => {
+          const transactionData = parseTransactionData(transaction.description);
+          const hasDueDate = transaction.due_date && !transactionData.isPaid;
+          const isOverdue = hasDueDate && new Date(transaction.due_date!) < new Date();
 
-                try {
-                  const transactionData = parseTransactionData(transaction.description);
-                  const hasDueDate = transaction.due_date && !transactionData.isPaid;
-                  const isOverdue = hasDueDate && new Date(transaction.due_date!) < new Date();
+          return (
+            <div
+  key={transaction.id}
+  className="flex items-center justify-between p-4 border rounded-lg gap-4 flex-nowrap"
+>
+  {/* Coluna esquerda: flex-grow para ocupar espaço */}
+  <div className="flex-1 min-w-0">
+    <h4 className="font-medium truncate">{transactionData.description}</h4>
 
-                  return (
-                    <div
-                      key={transaction.id}
-                      className="flex items-center justify-between p-4 border rounded-lg gap-4 flex-nowrap"
-                    >
-                      {/* Coluna esquerda: flex-grow para ocupar espaço */}
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium truncate">{transactionData.description}</h4>
+    {/* Badges abaixo do nome */}
+    <div className="flex flex-wrap gap-2 mt-1 mb-2">
+      <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
+        {transactionData.isIncome ? 'Entrada' : 'Saída'}
+      </Badge>
+      {!transactionData.isPaid && <Badge variant="outline">Pendente</Badge>}
+      {hasDueDate && (
+        <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
+          {isOverdue ? 'Vencido' : 'A vencer'}
+        </Badge>
+      )}
+      {transaction.notification_enabled && hasDueDate && (
+        <>
+          <span className="sm:hidden text-blue-600 text-lg">🔔</span>
+          <Badge variant="outline" className="hidden sm:inline-flex text-blue-600">
+            🔔 Notificações
+          </Badge>
+        </>
+      )}
+    </div>
 
-                        {/* Badges abaixo do nome */}
-                        <div className="flex flex-wrap gap-2 mt-1 mb-2">
-                          <Badge variant={transactionData.isIncome ? 'default' : 'destructive'}>
-                            {transactionData.isIncome ? 'Entrada' : 'Saída'}
-                          </Badge>
-                          {!transactionData.isPaid && <Badge variant="outline">Pendente</Badge>}
-                          {hasDueDate && (
-                            <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
-                              {isOverdue ? 'Vencido' : 'A vencer'}
-                            </Badge>
-                          )}
-                          {transaction.notification_enabled && hasDueDate && (
-                            <>
-                              <span className="sm:hidden text-blue-600 text-lg">🔔</span>
-                              <Badge variant="outline" className="hidden sm:inline-flex text-blue-600">
-                                🔔 Notificações
-                              </Badge>
-                            </>
-                          )}
-                        </div>
+    {/* Categoria e Data */}
+    <p className="text-sm text-muted-foreground truncate">
+      {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
+    </p>
 
-                        {/* Categoria e Data */}
-                        <p className="text-sm text-muted-foreground truncate">
-                          {transaction.category} • {formatDate(transactionData.date || transaction.created_at)}
-                        </p>
+    {/* Cliente/Fornecedor */}
+    {transactionData.clientOrSupplier && (
+      <p className="text-sm text-muted-foreground truncate">
+        {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
+      </p>
+    )}
 
-                        {/* Cliente/Fornecedor */}
-                        {transactionData.clientOrSupplier && (
-                          <p className="text-sm text-muted-foreground truncate">
-                            {transactionData.isIncome ? 'Cliente' : 'Fornecedor'}: {transactionData.clientOrSupplier}
-                          </p>
-                        )}
+    {/* Vencimento */}
+    {transaction.due_date && (
+      <p className="text-sm text-blue-600 truncate">
+        Vencimento: {formatDate(transaction.due_date)}
+      </p>
+    )}
+  </div>
 
-                        {/* Vencimento */}
-                        {transaction.due_date && (
-                          <p className="text-sm text-blue-600 truncate">
-                            Vencimento: {formatDate(transaction.due_date)}
-                          </p>
-                        )}
-                      </div>
+  {/* Coluna direita: largura fixa, não encolhe */}
+  <div className="flex flex-col items-end flex-shrink-0 w-[140px] gap-1">
+    <p
+      className={`font-bold ${
+        transactionData.isIncome ? 'text-green-600' : 'text-red-600'
+      } truncate`}
+    >
+      {transactionData.isIncome ? '+' : '-'}
+      {formatValue(Math.abs(transaction.value))}
+    </p>
+    <p className="text-sm text-muted-foreground truncate">{transactionData.paymentMethod}</p>
+    <Button variant="ghost" size="sm" onClick={() => handleEditTransaction(transaction)}>
+      <Edit className="h-4 w-4" />
+    </Button>
+  </div>
+</div>
 
-                      {/* Coluna direita: largura fixa, não encolhe */}
-                      <div className="flex flex-col items-end flex-shrink-0 w-[140px] gap-1">
-                        <p
-                          className={`font-bold ${
-                            transactionData.isIncome ? 'text-green-600' : 'text-red-600'
-                          } truncate`}
-                        >
-                          {transactionData.isIncome ? '+' : '-'}
-                          {formatValue(Math.abs(transaction.value))}
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate">{transactionData.paymentMethod}</p>
-                        <Button variant="ghost" size="sm" onClick={() => handleEditTransaction(transaction)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                } catch (error) {
-                  console.error('🔥 FinancialOverview - Error rendering transaction:', error);
-                  return null;
-                }
-              }).filter(Boolean)}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          );
+        })}
+      </div>
+    )}
+  </CardContent>
+</Card>
+
+
 
       {/* Modais */}
       <AddIncomeModal

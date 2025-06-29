@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Edit, Trash2, FileText, Calendar, DollarSign, Eye, Filter, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,14 +30,17 @@ const RecentJobs = () => {
   const [sortOrder, setSortOrder] = useState<string>('recentes');
   const { currentTheme } = useTheme();
 
+  // Garantir que jobs é sempre um array
+  const safeJobs = jobs || [];
+
   console.log('🔍 RecentJobs - Debug inicial:', {
-    jobsCount: jobs.length,
+    jobsCount: safeJobs.length,
     userId: user?.id,
     userData: profile ? 'presente' : 'ausente'
   });
 
   // Ordenar jobs por data de criação (mais recentes primeiro)
-  const sortedJobs = [...jobs].sort((a, b) => {
+  const sortedJobs = [...safeJobs].sort((a, b) => {
     const dateA = new Date(a.createdAt || a.updatedAt);
     const dateB = new Date(b.createdAt || b.updatedAt);
     return dateB.getTime() - dateA.getTime();
@@ -48,7 +50,7 @@ const RecentJobs = () => {
 
   // Filtrar e ordenar jobs para o histórico
   const getFilteredAndSortedJobs = () => {
-    let filtered = [...jobs];
+    let filtered = [...safeJobs];
     
     // Filtrar por status
     if (statusFilter !== 'todos') {
@@ -111,7 +113,7 @@ const RecentJobs = () => {
 
   const handlePrintPDF = async (jobId: string) => {
     try {
-      const job = jobs.find(j => j.id === jobId);
+      const job = safeJobs.find(j => j.id === jobId);
       if (!job) {
         toast({
           title: "Erro",
@@ -121,7 +123,22 @@ const RecentJobs = () => {
         return;
       }
 
-      await generateJobPDF(job, profile);
+      // Adaptar o job para o formato esperado pelo generateJobPDF
+      const jobData = {
+        id: job.id,
+        description: job.description,
+        client: job.client,
+        eventDate: job.eventDate,
+        estimatedHours: job.estimatedHours,
+        difficultyLevel: job.difficultyLevel,
+        logistics: job.logistics,
+        equipment: job.equipment,
+        assistance: job.assistance,
+        totalPrice: job.valueWithDiscount || job.serviceValue || 0,
+        clientId: job.clientId
+      };
+
+      await generateJobPDF(jobData, profile);
       toast({
         title: "PDF Gerado",
         description: "O PDF do orçamento foi gerado com sucesso.",
@@ -153,7 +170,7 @@ const RecentJobs = () => {
           <h3 className="text-2xl font-bold text-gray-900">Últimos Jobs Calculados</h3>
           <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
             <DialogTrigger asChild>
-              <Button  size="sm" 
+              <Button 
               className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`} >
                 <Eye className="h-4 w-4 mr-2" />
                 Ver Histórico
@@ -187,7 +204,7 @@ const RecentJobs = () => {
         <CardTitle>Últimos Jobs Calculados</CardTitle>
         <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" 
+            <Button 
               className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}>
               <Eye className="h-4 w-4 mr-2" />
               Ver Histórico
@@ -239,7 +256,7 @@ const RecentJobs = () => {
                     <h4 className="font-medium flex-1">{job.description}</h4>
                     <div className="flex items-center gap-2">
                       {(job as any).isManual && (
-                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                        <Badge className="text-xs bg-blue-50 text-blue-700">
                           Manual
                         </Badge>
                       )}
@@ -264,28 +281,22 @@ const RecentJobs = () => {
                   
                   <div className="flex flex-wrap items-center gap-2 pt-2">
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(job.id)}
                       className="text-blue-600 hover:text-blue-700 text-xs"
+                      onClick={() => handleEdit(job.id)}
                     >
                       <Edit className="h-3 w-3 mr-1" />
                       Editar
                     </Button>
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePrintPDF(job.id)}
                       className="text-green-600 hover:text-green-700 text-xs"
+                      onClick={() => handlePrintPDF(job.id)}
                     >
                       <FileText className="h-3 w-3 mr-1" />
                       PDF
                     </Button>
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(job.id)}
                       className="text-red-600 hover:text-red-700 text-xs"
+                      onClick={() => handleDelete(job.id)}
                     >
                       <Trash2 className="h-3 w-3 mr-1" />
                       Excluir
@@ -327,28 +338,22 @@ const RecentJobs = () => {
           
           <div className="flex gap-2">
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleEdit(job.id)}
               className="text-blue-600 hover:text-blue-700 text-xs"
+              onClick={() => handleEdit(job.id)}
             >
               <Edit className="h-3 w-3 mr-1" />
               Editar
             </Button>
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePrintPDF(job.id)}
               className="text-green-600 hover:text-green-700 text-xs"
+              onClick={() => handlePrintPDF(job.id)}
             >
               <FileText className="h-3 w-3 mr-1" />
               PDF
             </Button>
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDelete(job.id)}
               className="text-red-600 hover:text-red-700 text-xs"
+              onClick={() => handleDelete(job.id)}
             >
               <Trash2 className="h-3 w-3 mr-1" />
               Excluir

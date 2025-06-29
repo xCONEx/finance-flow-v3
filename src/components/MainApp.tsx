@@ -9,7 +9,7 @@ import Settings from './Settings';
 import UserProfile from './UserProfile';
 import AdminPanel from './AdminPanel';
 import TeamManagement from './TeamManagement';
-import EntregaFlowKanban from './EntregaFlowKanban';
+import ImprovedKanban from './ImprovedKanban';
 import SubscriptionPlans from './SubscriptionPlans';
 import FinancialManagement from './financial/FinancialManagement';
 import ClientsManagement from './clients/ClientsManagement';
@@ -32,7 +32,7 @@ const MainApp = () => {
       case 'calculator':
         return <PricingCalculator />;
       case 'kanban':
-        return <EntregaFlowKanban />;
+        return <ImprovedKanban />;
       case 'financial':
         return <FinancialManagement />;
       case 'clients':
