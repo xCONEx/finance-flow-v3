@@ -12,7 +12,7 @@ export interface Job {
   logistics: number;
   equipment: number;
   assistance: number;
-  status: 'pendente' | 'aprovado' | 'em_andamento' | 'concluído';
+  status: 'pendente' | 'aprovado' | 'em_andamento' | 'concluído' | 'cancelado';
   category: string;
   discountValue: number;
   totalCosts: number;
