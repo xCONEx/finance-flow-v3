@@ -162,19 +162,33 @@ const UserProfile = () => {
     try {
       setLoading(true);
       
-      const { error } = await supabase
+      console.log('🔍 Dados do formulário a serem salvos:', formData);
+      console.log('🔍 User ID:', user?.id);
+      
+      const updateData = {
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        company: formData.company.trim(),
+        address: formData.address.trim(),
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log('🔍 Dados para atualização:', updateData);
+      
+      const { data, error } = await supabase
         .from('profiles')
-        .update({
-          name: formData.name.trim(),
-          phone: formData.phone.trim(),
-          company: formData.company.trim(),
-          address: formData.address.trim(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user?.id);
+        .update(updateData)
+        .eq('id', user?.id)
+        .select();
 
-      if (error) throw error;
+      console.log('📊 Resultado da atualização:', { data, error });
 
+      if (error) {
+        console.error('❌ Erro na atualização:', error);
+        throw error;
+      }
+
+      console.log('✅ Perfil atualizado com sucesso:', data);
       await updateProfile(profile);
       
       toast({
@@ -182,6 +196,7 @@ const UserProfile = () => {
         description: "Perfil atualizado com sucesso!"
       });
     } catch (error: any) {
+      console.error('🚨 Erro ao atualizar perfil:', error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar perfil",
