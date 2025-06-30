@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Mail } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
