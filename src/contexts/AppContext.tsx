@@ -161,7 +161,6 @@ interface AppContextType {
   // Notification functions
   getUpcomingNotifications: () => CostNotification[];
   markNotificationAsRead: (id: string) => Promise<void>;
-  checkDueNotifications: () => void;
   markAllNotificationsAsRead: () => Promise<void>;
 }
 
@@ -203,9 +202,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (isAuthenticated && user) {
       loadAllData();
-      // Check for due notifications every minute
-      const interval = setInterval(checkDueNotifications, 60000);
-      return () => clearInterval(interval);
     }
   }, [isAuthenticated, user]);
 
@@ -423,9 +419,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setNotifications([]);
       }
 
-      // Check for due notifications
-      checkDueNotifications();
-
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -461,31 +454,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Erro ao carregar notificações:', error);
     }
   };
-
-  // const checkDueNotifications = () => {
-  //   const today = new Date();
-  //   const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
-    
-  //   monthlyCosts.forEach(cost => {
-  //     if (cost.dueDate && cost.notificationEnabled) {
-  //       const dueDate = new Date(cost.dueDate);
-  //       const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        
-  //       if (daysDiff === 3) {
-  //         toast({
-  //           title: "Vencimento em 3 dias",
-  //           description: `${cost.description} vence em ${cost.dueDate}`,
-  //         });
-  //       } else if (daysDiff === 0) {
-  //         toast({
-  //           title: "Vencimento hoje",
-  //           description: `${cost.description} vence hoje!`,
-  //           variant: "destructive"
-  //         });
-  //       }
-  //     }
-  //   });
-  // };
 
   const createRecurringCosts = async (baseCost: MonthlyCost) => {
     if (!baseCost.isRecurring) return;
@@ -1072,7 +1040,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deleteProject,
     getUpcomingNotifications,
     markNotificationAsRead,
-    checkDueNotifications,
     markAllNotificationsAsRead,
   };
 
