@@ -18,7 +18,8 @@ import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import JobEditor from './JobEditor';
 import { toast } from '@/hooks/use-toast';
-import { generateJobPDF } from '../utils/pdfGenerator';
+import { generateJobPDF, prepareCompanyData, prepareJobData } from '../utils/pdfGenerator';
+import { supabase } from '../integrations/supabase/client';
 
 const RecentJobs = () => {
   const { jobs, deleteJob } = useApp();
@@ -120,7 +121,38 @@ const RecentJobs = () => {
         return;
       }
 
-      await generateJobPDF(job, profile);
+      // Buscar dados do cliente se houver client_id no banco
+      let clientData = null;
+      try {
+        const { data: client } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('name', job.client)
+          .eq('user_id', user?.id)
+          .single();
+        clientData = client;
+      } catch (error) {
+        console.log('Cliente não encontrado ou erro ao buscar:', error);
+      }
+
+      // Buscar work items relacionados ao job (opcional)
+      let workItems = [];
+      try {
+        const { data: items } = await supabase
+          .from('equipment')
+          .select('*')
+          .eq('user_id', user?.id)
+          .limit(10); // Limitar a 10 itens para o exemplo
+        workItems = items || [];
+      } catch (error) {
+        console.log('Erro ao buscar work items:', error);
+      }
+
+      // Usar funções auxiliares para preparar os dados
+      const companyData = prepareCompanyData(profile, user);
+      const jobData = prepareJobData(job, workItems);
+
+      await generateJobPDF(jobData, companyData, clientData);
       toast({
         title: "PDF Gerado",
         description: "O PDF do orçamento foi gerado com sucesso.",
@@ -241,11 +273,7 @@ const RecentJobs = () => {
                   <div className="flex flex-col md:flex-row md:items-center gap-2">
                     <h4 className="font-medium flex-1 text-foreground">{job.description}</h4>
                     <div className="flex items-center gap-2">
-                      {(job as any).isManual && (
-                        <Badge className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-800">
-                          Manual
-                        </Badge>
-                      )}
+                      {/* Removido: badge "Manual" pois campo isManual não existe na tabela jobs */}
                       <Badge className={getStatusColor(job.status) + ' border'}>
                         {job.status}
                       </Badge>
