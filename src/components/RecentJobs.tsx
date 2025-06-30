@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Edit, Trash2, FileText, Calendar, DollarSign, Eye, Filter, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -153,8 +152,10 @@ const RecentJobs = () => {
           <h3 className="text-2xl font-bold text-gray-900">Últimos Jobs Calculados</h3>
           <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
             <DialogTrigger asChild>
-              <Button  size="sm" 
-              className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`} >
+              <Button 
+                onClick={() => setHistoryOpen(true)}
+                className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105 px-3 py-1 rounded shadow-sm text-white`}
+              >
                 <Eye className="h-4 w-4 mr-2" />
                 Ver Histórico
               </Button>
@@ -187,8 +188,10 @@ const RecentJobs = () => {
         <CardTitle>Últimos Jobs Calculados</CardTitle>
         <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" 
-              className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}>
+            <Button 
+              onClick={() => setHistoryOpen(true)}
+              className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105 px-3 py-1 rounded shadow-sm text-white`}
+            >
               <Eye className="h-4 w-4 mr-2" />
               Ver Histórico
             </Button>
@@ -202,9 +205,9 @@ const RecentJobs = () => {
             </DialogHeader>
             
             {/* Filtros */}
-            <div className="flex flex-col sm:flex-row gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="flex flex-col sm:flex-row gap-4 p-4 bg-muted rounded-lg">
               <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Status</label>
+                <label className="text-sm font-medium mb-2 block text-foreground">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filtrar por status" />
@@ -219,7 +222,7 @@ const RecentJobs = () => {
               </div>
               
               <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Ordenação</label>
+                <label className="text-sm font-medium mb-2 block text-foreground">Ordenação</label>
                 <Select value={sortOrder} onValueChange={setSortOrder}>
                   <SelectTrigger>
                     <SelectValue placeholder="Ordenar por" />
@@ -234,24 +237,24 @@ const RecentJobs = () => {
 
             <div className="space-y-4 p-2">
               {filteredJobs.map((job) => (
-                <div key={`history-${job.id}`} className="p-3 md:p-4 border rounded-lg space-y-3">
+                <div key={`history-${job.id}`} className="p-3 md:p-4 border rounded-lg space-y-3 bg-card text-foreground">
                   <div className="flex flex-col md:flex-row md:items-center gap-2">
-                    <h4 className="font-medium flex-1">{job.description}</h4>
+                    <h4 className="font-medium flex-1 text-foreground">{job.description}</h4>
                     <div className="flex items-center gap-2">
                       {(job as any).isManual && (
-                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                        <Badge className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-800">
                           Manual
                         </Badge>
                       )}
-                      <Badge className={getStatusColor(job.status)}>
+                      <Badge className={getStatusColor(job.status) + ' border'}>
                         {job.status}
                       </Badge>
                     </div>
                   </div>
                   
-                  <p className="text-sm text-gray-600">{job.client || 'Cliente não informado'}</p>
+                  <p className="text-sm text-muted-foreground">{job.client || 'Cliente não informado'}</p>
                   
-                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-sm text-gray-600">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       {new Date(job.eventDate).toLocaleDateString('pt-BR')}
@@ -264,28 +267,25 @@ const RecentJobs = () => {
                   
                   <div className="flex flex-wrap items-center gap-2 pt-2">
                     <Button
-                      variant="outline"
-                      size="sm"
                       onClick={() => handleEdit(job.id)}
-                      className="text-blue-600 hover:text-blue-700 text-xs"
+                      className="text-blue-600 hover:text-blue-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
+                      textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
                     >
                       <Edit className="h-3 w-3 mr-1" />
                       Editar
                     </Button>
                     <Button
-                      variant="outline"
-                      size="sm"
                       onClick={() => handlePrintPDF(job.id)}
-                      className="text-green-600 hover:text-green-700 text-xs"
+                      className="text-green-600 hover:text-green-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
+                      textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
                     >
                       <FileText className="h-3 w-3 mr-1" />
                       PDF
                     </Button>
                     <Button
-                      variant="outline"
-                      size="sm"
                       onClick={() => handleDelete(job.id)}
-                      className="text-red-600 hover:text-red-700 text-xs"
+                      className="text-red-600 hover:text-red-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
+                      textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
                     >
                       <Trash2 className="h-3 w-3 mr-1" />
                       Excluir
@@ -294,7 +294,7 @@ const RecentJobs = () => {
                 </div>
               ))}
               {filteredJobs.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <p>Nenhum job encontrado com os filtros selecionados</p>
                 </div>
               )}
@@ -320,35 +320,32 @@ const RecentJobs = () => {
                 </span>
               </div>
             </div>
-            <Badge className={getStatusColor(job.status)}>
+            <Badge className={getStatusColor(job.status) + ' border'}>
               {job.status}
             </Badge>
           </div>
           
           <div className="flex gap-2">
             <Button
-              variant="outline"
-              size="sm"
               onClick={() => handleEdit(job.id)}
-              className="text-blue-600 hover:text-blue-700 text-xs"
+              className="text-blue-600 hover:text-blue-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
+              textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
             >
               <Edit className="h-3 w-3 mr-1" />
               Editar
             </Button>
             <Button
-              variant="outline"
-              size="sm"
               onClick={() => handlePrintPDF(job.id)}
-              className="text-green-600 hover:text-green-700 text-xs"
+              className="text-green-600 hover:text-green-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
+              textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
             >
               <FileText className="h-3 w-3 mr-1" />
               PDF
             </Button>
             <Button
-              variant="outline"
-              size="sm"
               onClick={() => handleDelete(job.id)}
-              className="text-red-600 hover:text-red-700 text-xs"
+              className="text-red-600 hover:text-red-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
+              textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
             >
               <Trash2 className="h-3 w-3 mr-1" />
               Excluir
