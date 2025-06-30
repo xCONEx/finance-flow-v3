@@ -1,91 +1,192 @@
-
-export interface NotificationData {
-  title: string;
-  body: string;
-  icon?: string;
-  badge?: string;
-  tag?: string;
-  data?: any;
-}
-
-export interface PushNotificationPayload {
-  title: string;
-  body: string;
-  data?: Record<string, any>;
-}
+import { 
+  NotificationData, 
+  PushNotificationPayload, 
+  InAppNotification, 
+  NotificationType, 
+  NotificationPriority,
+  NotificationSettings,
+  NotificationTemplate
+} from '../types/notification';
 
 class NotificationService {
   private isInitialized = false;
   private isSupported = false;
-  private scheduledNotifications = new Set<string>(); // Prevenir duplicatas
-  private notificationQueue = new Map<string, NodeJS.Timeout>(); // Controlar timers
+  private swRegistration: ServiceWorkerRegistration | null = null;
+  private scheduledNotifications = new Set<string>();
+  private notificationQueue = new Map<string, NodeJS.Timeout>();
+  private inAppNotifications: InAppNotification[] = [];
+  private settings: NotificationSettings;
+  private isDarkMode = false;
 
   constructor() {
     this.checkSupport();
+    this.loadSettings();
+    this.checkThemeMode();
   }
 
   private checkSupport() {
     this.isSupported = 'Notification' in window && 'serviceWorker' in navigator;
   }
 
+  private loadSettings() {
+    const savedSettings = localStorage.getItem('financeflow_notification_settings');
+    this.settings = savedSettings ? JSON.parse(savedSettings) : this.getDefaultSettings();
+  }
+
+  private getDefaultSettings(): NotificationSettings {
+    return {
+      enabled: true,
+      pushEnabled: true,
+      inAppEnabled: true,
+      soundEnabled: true,
+      vibrationEnabled: true,
+      categories: {
+        expense_reminder: true,
+        expense_due: true,
+        income_received: true,
+        reserve_goal: true,
+        system_alert: true,
+        task_reminder: true,
+        job_update: true,
+        general: true
+      },
+      reminderTiming: {
+        threeDays: true,
+        oneDay: true,
+        sameDay: true
+      }
+    };
+  }
+
+  private checkThemeMode() {
+    this.isDarkMode = document.documentElement.classList.contains('dark');
+    // Observar mudanças no tema
+    const observer = new MutationObserver(() => {
+      this.isDarkMode = document.documentElement.classList.contains('dark');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  }
+
   async initialize(): Promise<boolean> {
     if (!this.isSupported) {
-      console.warn('Notifications not supported in this browser');
+      console.warn('🔔 Notificações não suportadas neste navegador');
       return false;
     }
 
     try {
+      // Registrar service worker
+      this.swRegistration = await navigator.serviceWorker.register('/sw.js');
+      console.log('🔔 Service Worker registrado:', this.swRegistration);
+
+      // Solicitar permissão
       const permission = await Notification.requestPermission();
       this.isInitialized = permission === 'granted';
-      console.log('🔔 Notification service initialized:', this.isInitialized);
+      
+      if (this.isInitialized) {
+        // Carregar notificações in-app
+        this.loadInAppNotifications();
+        // Configurar listeners
+        this.setupNotificationListeners();
+      }
+
+      console.log('🔔 Serviço de notificações inicializado:', this.isInitialized);
       return this.isInitialized;
     } catch (error) {
-      console.error('Error initializing notifications:', error);
+      console.error('❌ Erro ao inicializar notificações:', error);
       return false;
+    }
+  }
+
+  private setupNotificationListeners() {
+    // Listener para notificações push
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'NOTIFICATION_CLICKED') {
+        this.handleNotificationClick(event.data);
+      }
+    });
+  }
+
+  private handleNotificationClick(data: any) {
+    // Implementar lógica de navegação baseada no tipo de notificação
+    switch (data.notificationType) {
+      case 'expense_reminder':
+      case 'expense_due':
+        window.location.href = '/?view=monthly-costs';
+        break;
+      case 'income_received':
+        window.location.href = '/?view=financial';
+        break;
+      default:
+        window.focus();
     }
   }
 
   async showNotification(data: NotificationData): Promise<void> {
     if (!this.isInitialized) {
-      console.warn('Notifications not initialized');
+      console.warn('🔔 Notificações não inicializadas');
       return;
     }
 
-    // Usar tag para prevenir duplicatas
     const notificationTag = data.tag || `notification-${Date.now()}`;
     
     if (this.scheduledNotifications.has(notificationTag)) {
-      console.log('🔔 Notification already scheduled:', notificationTag);
+      console.log('🔔 Notificação já agendada:', notificationTag);
       return;
     }
 
     try {
       this.scheduledNotifications.add(notificationTag);
       
-      const notification = new Notification(data.title, {
-        body: data.body,
-        icon: data.icon || '/favicon.ico',
-        badge: data.badge,
-        tag: notificationTag,
-        data: data.data,
-      });
+      // Verificar se deve mostrar baseado nas configurações
+      if (!this.shouldShowNotification(data.type)) {
+        return;
+      }
 
-      // Auto close after 5 seconds e limpar da lista
+      // Criar notificação com tema apropriado
+      const notificationOptions = this.createNotificationOptions(data);
+      
+      const notification = new Notification(data.title, notificationOptions);
+
+      // Auto close após 5 segundos
       setTimeout(() => {
         notification.close();
         this.scheduledNotifications.delete(notificationTag);
       }, 5000);
 
-      // Limpar da lista quando clicada
+      // Listener para clique
       notification.onclick = () => {
         this.scheduledNotifications.delete(notificationTag);
         notification.close();
+        this.handleNotificationClick(data);
       };
 
+      // Adicionar à lista de notificações in-app se habilitado
+      if (this.settings.inAppEnabled) {
+        this.addInAppNotification(data);
+      }
+
     } catch (error) {
-      console.error('Error showing notification:', error);
+      console.error('❌ Erro ao mostrar notificação:', error);
       this.scheduledNotifications.delete(notificationTag);
     }
+  }
+
+  private createNotificationOptions(data: NotificationData): NotificationOptions {
+    const isDark = this.isDarkMode;
+    
+    return {
+      body: data.body,
+      icon: data.icon || (isDark ? '/icons/web-app-manifest-512x512.png' : '/icons/web-app-manifest-192x192.png'),
+      badge: data.badge || '/icons/favicon-96x96.png',
+      tag: data.tag,
+      data: data.data,
+      requireInteraction: data.priority === 'urgent',
+      silent: !this.settings.soundEnabled
+    };
+  }
+
+  private shouldShowNotification(type: NotificationType): boolean {
+    return this.settings.categories[type] || false;
   }
 
   async scheduleNotification(data: NotificationData, delay: number): Promise<void> {
@@ -116,13 +217,11 @@ class NotificationService {
     // Cancelar notificações anteriores desta despesa
     this.cancelExpenseNotifications(expenseTag);
 
-    // Formatar descrição da notificação baseado nos dados disponíveis
     const formatExpenseNotification = (expense: any) => {
       let description = expense.description || 'Despesa';
-      let amount = expense.amount ? `R$ ${expense.amount}` : '';
+      let amount = expense.value ? `R$ ${expense.value.toFixed(2)}` : '';
       let client = expense.client || '';
       
-      // Montar mensagem: Descrição, Valor Total e cliente se tiver
       let message = description;
       if (amount) {
         message += `, ${amount}`;
@@ -135,54 +234,97 @@ class NotificationService {
     };
 
     // Notificação 3 dias antes
-    const threeDaysBefore = new Date(dueDate.getTime() - (3 * 24 * 60 * 60 * 1000));
-    if (threeDaysBefore > now) {
-      const delay3Days = threeDaysBefore.getTime() - now.getTime();
-      await this.scheduleNotification({
-        title: 'Despesa vence em 3 dias',
-        body: formatExpenseNotification(expense),
-        tag: `${expenseTag}-3days`,
-        data: { type: 'expense_reminder', expenseId: expense.id, dueDate: expense.dueDate }
-      }, delay3Days);
+    if (this.settings.reminderTiming.threeDays) {
+      const threeDaysBefore = new Date(dueDate.getTime() - (3 * 24 * 60 * 60 * 1000));
+      if (threeDaysBefore > now) {
+        const delay3Days = threeDaysBefore.getTime() - now.getTime();
+        await this.scheduleNotification({
+          id: `${expenseTag}-3days`,
+          title: '💰 Despesa vence em 3 dias',
+          body: formatExpenseNotification(expense),
+          tag: `${expenseTag}-3days`,
+          type: 'expense_reminder',
+          priority: 'medium',
+          timestamp: Date.now(),
+          isRead: false,
+          userId: expense.userId || 'system',
+          createdAt: new Date().toISOString(),
+          data: { 
+            type: 'expense_reminder', 
+            expenseId: expense.id, 
+            dueDate: expense.dueDate,
+            amount: expense.value
+          }
+        }, delay3Days);
+      }
+    }
+
+    // Notificação 1 dia antes
+    if (this.settings.reminderTiming.oneDay) {
+      const oneDayBefore = new Date(dueDate.getTime() - (24 * 60 * 60 * 1000));
+      if (oneDayBefore > now) {
+        const delay1Day = oneDayBefore.getTime() - now.getTime();
+        await this.scheduleNotification({
+          id: `${expenseTag}-1day`,
+          title: '⚠️ Despesa vence amanhã!',
+          body: formatExpenseNotification(expense),
+          tag: `${expenseTag}-1day`,
+          type: 'expense_reminder',
+          priority: 'high',
+          timestamp: Date.now(),
+          isRead: false,
+          userId: expense.userId || 'system',
+          createdAt: new Date().toISOString(),
+          data: { 
+            type: 'expense_reminder', 
+            expenseId: expense.id, 
+            dueDate: expense.dueDate,
+            amount: expense.value
+          }
+        }, delay1Day);
+      }
     }
 
     // Notificação no dia do vencimento
-    if (dueDate > now) {
+    if (this.settings.reminderTiming.sameDay && dueDate > now) {
       const delayDueDate = dueDate.getTime() - now.getTime();
       await this.scheduleNotification({
-        title: 'Despesa vence hoje!',
+        id: `${expenseTag}-today`,
+        title: '🚨 Despesa vence hoje!',
         body: formatExpenseNotification(expense),
         tag: `${expenseTag}-today`,
-        data: { type: 'expense_due', expenseId: expense.id, dueDate: expense.dueDate }
+        type: 'expense_due',
+        priority: 'urgent',
+        timestamp: Date.now(),
+        isRead: false,
+        userId: expense.userId || 'system',
+        createdAt: new Date().toISOString(),
+        data: { 
+          type: 'expense_due', 
+          expenseId: expense.id, 
+          dueDate: expense.dueDate,
+          amount: expense.value
+        }
       }, delayDueDate);
     }
 
-    console.log(`📅 Scheduled notifications for expense: ${expense.description}`);
+    console.log(`📅 Notificações agendadas para despesa: ${expense.description}`);
   }
 
-  async cancelExpenseNotifications(expenseId: string): Promise<void> {
-    // Cancelar timers agendados
-    const keysToRemove: string[] = [];
-    
-    this.notificationQueue.forEach((timer, key) => {
-      if (key.includes(expenseId)) {
-        clearTimeout(timer);
-        keysToRemove.push(key);
+  private cancelExpenseNotifications(expenseTag: string): void {
+    const tagsToCancel = [
+      `${expenseTag}-3days`,
+      `${expenseTag}-1day`,
+      `${expenseTag}-today`
+    ];
+
+    tagsToCancel.forEach(tag => {
+      if (this.notificationQueue.has(tag)) {
+        clearTimeout(this.notificationQueue.get(tag)!);
+        this.notificationQueue.delete(tag);
       }
+      this.scheduledNotifications.delete(tag);
     });
-
-    keysToRemove.forEach(key => {
-      this.notificationQueue.delete(key);
-    });
-
-    // Remover das notificações agendadas
-    this.scheduledNotifications.forEach(tag => {
-      if (tag.includes(expenseId)) {
-        this.scheduledNotifications.delete(tag);
-      }
-    });
-
-    console.log(`🗑️ Cancelled notifications for expense: ${expenseId}`);
   }
 
   async cancelAllNotifications(): Promise<void> {
@@ -193,71 +335,144 @@ class NotificationService {
     // Limpar lista de notificações agendadas
     this.scheduledNotifications.clear();
     
-    console.log('🗑️ All notifications cancelled');
+    console.log('🗑️ Todas as notificações canceladas');
   }
 
   async scheduleLocalNotification(payload: PushNotificationPayload): Promise<void> {
-    const { Capacitor } = await import('@capacitor/core');
-    
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const { LocalNotifications } = await import('@capacitor/local-notifications');
-        
-        await LocalNotifications.schedule({
-          notifications: [{
+    try {
+      const { Capacitor } = await import('@capacitor/core');
+      
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { LocalNotifications } = await import('@capacitor/local-notifications');
+          
+          await LocalNotifications.schedule({
+            notifications: [{
+              title: payload.title,
+              body: payload.body,
+              id: Date.now(),
+              schedule: { at: new Date(Date.now() + 1000) },
+              extra: payload.data
+            }]
+          });
+        } catch (error) {
+          console.error('❌ Erro ao agendar notificação local:', error);
+          // Fallback para notificação web
+          await this.showNotification({
+            id: `local-${Date.now()}`,
             title: payload.title,
             body: payload.body,
-            id: Date.now(),
-            schedule: { at: new Date(Date.now() + 1000) }, // 1 segundo de delay
-            extra: payload.data
-          }]
-        });
-      } catch (error) {
-        console.error('❌ Error scheduling local notification:', error);
-        // Fallback para web notification
+            type: 'general',
+            priority: 'medium',
+            timestamp: Date.now(),
+            isRead: false,
+            userId: 'system',
+            createdAt: new Date().toISOString(),
+            data: payload.data
+          });
+        }
+      } else {
+        // Notificação web
         await this.showNotification({
+          id: `web-${Date.now()}`,
           title: payload.title,
           body: payload.body,
+          type: 'general',
+          priority: 'medium',
+          timestamp: Date.now(),
+          isRead: false,
+          userId: 'system',
+          createdAt: new Date().toISOString(),
           data: payload.data
         });
       }
-    } else {
-      // Web notification
+    } catch (error) {
+      console.error('❌ Erro ao importar Capacitor:', error);
+      // Fallback para notificação web
       await this.showNotification({
+        id: `web-${Date.now()}`,
         title: payload.title,
         body: payload.body,
+        type: 'general',
+        priority: 'medium',
+        timestamp: Date.now(),
+        isRead: false,
+        userId: 'system',
+        createdAt: new Date().toISOString(),
         data: payload.data
       });
     }
   }
 
-  // Mock function for creating notifications in database
-  async createNotification(userId: string, title: string, message: string, type: string = 'info'): Promise<void> {
-    // Since notifications table doesn't exist, we'll just log it
-    console.log('Creating notification:', { userId, title, message, type });
+  // Métodos para notificações in-app
+  private loadInAppNotifications() {
+    const saved = localStorage.getItem('financeflow_inapp_notifications');
+    this.inAppNotifications = saved ? JSON.parse(saved) : [];
+  }
+
+  private saveInAppNotifications() {
+    localStorage.setItem('financeflow_inapp_notifications', JSON.stringify(this.inAppNotifications));
+  }
+
+  private addInAppNotification(data: NotificationData) {
+    const inAppNotification: InAppNotification = {
+      id: data.id,
+      title: data.title,
+      message: data.body,
+      type: data.type,
+      priority: data.priority,
+      category: data.category,
+      dueDate: data.data?.dueDate,
+      isRead: false,
+      createdAt: data.createdAt,
+      expiresAt: data.expiresAt,
+      userId: data.userId,
+      data: data.data
+    };
+
+    this.inAppNotifications.unshift(inAppNotification);
     
-    // Show browser notification instead
-    if (this.isInitialized) {
-      await this.showNotification({
-        title,
-        body: message,
-        tag: `db-notification-${userId}-${Date.now()}`,
-        data: { type, userId }
-      });
+    // Manter apenas as últimas 50 notificações
+    if (this.inAppNotifications.length > 50) {
+      this.inAppNotifications = this.inAppNotifications.slice(0, 50);
+    }
+
+    this.saveInAppNotifications();
+  }
+
+  getInAppNotifications(): InAppNotification[] {
+    return this.inAppNotifications;
+  }
+
+  async markInAppNotificationAsRead(id: string): Promise<void> {
+    const notification = this.inAppNotifications.find(n => n.id === id);
+    if (notification) {
+      notification.isRead = true;
+      this.saveInAppNotifications();
     }
   }
 
-  // Mock function for marking notifications as read
-  async markAsRead(notificationId: string): Promise<void> {
-    console.log('Marking notification as read:', notificationId);
+  async markAllInAppNotificationsAsRead(): Promise<void> {
+    this.inAppNotifications.forEach(n => n.isRead = true);
+    this.saveInAppNotifications();
   }
 
-  // Mock function for getting user notifications
-  async getUserNotifications(userId: string): Promise<any[]> {
-    console.log('Getting notifications for user:', userId);
-    return [];
+  async deleteInAppNotification(id: string): Promise<void> {
+    this.inAppNotifications = this.inAppNotifications.filter(n => n.id !== id);
+    this.saveInAppNotifications();
   }
 
+  // Métodos para configurações
+  updateSettings(newSettings: Partial<NotificationSettings>): void {
+    this.settings = { ...this.settings, ...newSettings };
+    localStorage.setItem('financeflow_notification_settings', JSON.stringify(this.settings));
+  }
+
+  getSettings(): NotificationSettings {
+    return this.settings;
+  }
+
+  // Métodos utilitários
   isNotificationSupported(): boolean {
     return this.isSupported;
   }
@@ -265,7 +480,45 @@ class NotificationService {
   getPermissionStatus(): NotificationPermission {
     return Notification.permission;
   }
+
+  getUnreadCount(): number {
+    return this.inAppNotifications.filter(n => !n.isRead).length;
+  }
+
+  // Métodos para templates de notificação
+  getNotificationTemplates(): NotificationTemplate[] {
+    return [
+      {
+        id: 'expense-reminder-3days',
+        name: 'Lembrete de Despesa (3 dias)',
+        title: '💰 Despesa vence em 3 dias',
+        body: '{description}, {amount}, Cliente: {client}',
+        type: 'expense_reminder',
+        variables: ['description', 'amount', 'client'],
+        isDefault: true
+      },
+      {
+        id: 'expense-due-today',
+        name: 'Despesa Vence Hoje',
+        title: '🚨 Despesa vence hoje!',
+        body: '{description}, {amount}, Cliente: {client}',
+        type: 'expense_due',
+        variables: ['description', 'amount', 'client'],
+        isDefault: true
+      },
+      {
+        id: 'income-received',
+        name: 'Receita Recebida',
+        title: '✅ Receita recebida',
+        body: '{description}, {amount}, Cliente: {client}',
+        type: 'income_received',
+        variables: ['description', 'amount', 'client'],
+        isDefault: true
+      }
+    ];
+  }
 }
 
 export const notificationService = new NotificationService();
 export default notificationService;
+
