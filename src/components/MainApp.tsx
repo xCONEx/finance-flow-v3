@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from './Header';
 import Navigation from './Navigation';
@@ -56,7 +55,7 @@ const MainApp = () => {
 
   return (
     <AgencyProvider>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#111]">
         <Header 
           activeTab={activeTab} 
           onTabChange={setActiveTab}
