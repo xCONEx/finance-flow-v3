@@ -612,7 +612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) return;
 
     // Chamar Supabase Function para criar job com validação de limite
-    const response = await fetch('/functions/v1/create-job-with-limit', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-job-with-limit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -620,6 +620,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
       body: JSON.stringify({ user_id: user.id, jobData })
     });
+
+    // Verificar se a resposta é JSON antes de fazer parse
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Resposta inesperada do servidor');
+    }
 
     const result = await response.json();
     if (!response.ok) {
