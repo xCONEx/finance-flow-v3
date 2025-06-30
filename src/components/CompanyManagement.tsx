@@ -169,11 +169,12 @@ const CompanyManagement = () => {
   ) => {
     const owner = users.find(u => u.email === ownerEmail);
     if (!owner) {
-      return toast({
+      toast({
         title: "Erro",
         description: "Usuário não encontrado.",
         variant: "destructive"
       });
+      return;
     }
     try {
       const { error } = await supabase
@@ -204,6 +205,7 @@ const CompanyManagement = () => {
   const handleDeleteCompany = async (companyId: string) => {
     const confirmDelete = confirm('Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.');
     if (!confirmDelete) return;
+    
     try {
       const { error } = await supabase
         .from('agencies')
@@ -224,7 +226,7 @@ const CompanyManagement = () => {
     }
   };
 
-  // 📩 Invite Collaborator
+  // 👥 Invite Collaborator
   const handleInviteCollaborator = async (email: string) => {
     if (!selectedCompany) return;
     try {
@@ -285,18 +287,16 @@ const CompanyManagement = () => {
   // 🔒 Not admin
   if (!isAdmin) {
     return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Acesso Restrito
-              </h3>
-              <p className="text-gray-500">
-                Apenas administradores podem gerenciar empresas.
-              </p>
-            </div>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="text-center p-8">
+            <Building2 className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Acesso Restrito
+            </h3>
+            <p className="text-gray-600">
+              Apenas administradores podem gerenciar empresas.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -305,21 +305,22 @@ const CompanyManagement = () => {
 
   // ✅ Render
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6">
+      {/* Header - Mobile First */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Building2 className="text-blue-600" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 text-gray-900">
+            <Building2 className="text-blue-600 h-6 w-6 sm:h-8 sm:w-8" />
             Gerenciamento de Empresas
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-sm sm:text-base text-gray-600 mt-2">
             Gerencie empresas e colaboradores do sistema
           </p>
         </div>
 
         <Button
           onClick={() => setShowCreateDialog(true)}
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
           Nova Empresa
@@ -327,8 +328,8 @@ const CompanyManagement = () => {
       </div>
 
       {loading ? (
-        <Card>
-          <CardContent className="flex items-center justify-center h-64">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="flex items-center justify-center py-16">
             <div className="text-center">
               <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600 mb-4" />
               <p className="text-gray-600">Carregando empresas...</p>
@@ -337,15 +338,16 @@ const CompanyManagement = () => {
         </Card>
       ) : (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          {/* Resumo - Mobile First Grid */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
                 Resumo
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">
                     {companies.length}
