@@ -13,6 +13,23 @@ export interface KanbanProject {
   updatedAt: string;
   user_id: string;
   agency_id?: string | null;
+  responsaveis?: string[]; // Array de UUIDs dos responsáveis
+  notificar_responsaveis?: boolean; // Se deve notificar os responsáveis
+}
+
+export interface ProjectResponsible {
+  user_id: string;
+  name: string;
+  email: string;
+  avatar_url?: string;
+}
+
+export interface AgencyCollaborator {
+  user_id: string;
+  name: string;
+  email: string;
+  avatar_url?: string;
+  role: string;
 }
 
 class SupabaseKanbanService {
@@ -44,7 +61,9 @@ class SupabaseKanbanService {
         createdAt: item.created_at,
         updatedAt: item.updated_at,
         user_id: item.user_id,
-        agency_id: null // Forçar null para projetos individuais
+        agency_id: null, // Forçar null para projetos individuais
+        responsaveis: item.responsaveis || [],
+        notificar_responsaveis: item.notificar_responsaveis ?? true
       }));
 
       console.log('✅ [INDIVIDUAL] Board carregado:', projects.length, 'projetos individuais');
@@ -82,7 +101,9 @@ class SupabaseKanbanService {
         createdAt: item.created_at,
         updatedAt: item.updated_at,
         user_id: item.user_id || '',
-        agency_id: agencyId // Garantir que o agency_id seja sempre a string correta
+        agency_id: agencyId, // Garantir que o agency_id seja sempre a string correta
+        responsaveis: item.responsaveis || [],
+        notificar_responsaveis: item.notificar_responsaveis ?? true
       }));
 
       console.log('✅ [AGENCY] Board da agência carregado:', projects.length, 'projetos para agência', agencyId);
@@ -103,6 +124,7 @@ class SupabaseKanbanService {
         title: project.title,
         agency_id: normalizedAgencyId,
         user_id: project.user_id,
+        responsaveis: project.responsaveis?.length || 0,
         mode: normalizedAgencyId ? 'AGENCY' : 'INDIVIDUAL'
       });
       
@@ -117,6 +139,8 @@ class SupabaseKanbanService {
         status: project.status,
         description: project.description || '',
         links: project.links || [],
+        responsaveis: project.responsaveis || [],
+        notificar_responsaveis: project.notificar_responsaveis ?? true,
         updated_at: new Date().toISOString()
       };
 
@@ -131,6 +155,15 @@ class SupabaseKanbanService {
       if (error) {
         console.error('❌ [SAVE] Erro ao salvar projeto:', error);
         throw error;
+      }
+
+      // Notificar responsáveis se for projeto de agência e notificação estiver ativada
+      if (normalizedAgencyId && project.notificar_responsaveis && project.responsaveis?.length > 0) {
+        try {
+          await this.notifyProjectResponsibles(project.id, 'update');
+        } catch (notificationError) {
+          console.warn('⚠️ [SAVE] Erro ao notificar responsáveis:', notificationError);
+        }
       }
 
       console.log('✅ [SAVE] Projeto salvo com sucesso:', project.title, 'Mode:', normalizedAgencyId ? 'AGENCY' : 'INDIVIDUAL');
@@ -158,6 +191,84 @@ class SupabaseKanbanService {
     } catch (error) {
       console.error('❌ [DELETE] Erro ao deletar projeto:', error);
       throw error;
+    }
+  }
+
+  async getProjectResponsibles(projectId: string): Promise<ProjectResponsible[]> {
+    try {
+      console.log('👥 [RESPONSIBLES] Buscando responsáveis do projeto:', projectId);
+      
+      const { data, error } = await supabase
+        .rpc('get_project_responsibles', { project_id: projectId });
+
+      if (error) {
+        console.error('❌ [RESPONSIBLES] Erro ao buscar responsáveis:', error);
+        throw error;
+      }
+
+      const responsaveis = (data || []).map((item: any) => ({
+        user_id: item.user_id,
+        name: item.name,
+        email: item.email,
+        avatar_url: item.avatar_url
+      }));
+
+      console.log('✅ [RESPONSIBLES] Responsáveis encontrados:', responsaveis.length);
+      return responsaveis;
+    } catch (error) {
+      console.error('❌ [RESPONSIBLES] Erro ao buscar responsáveis:', error);
+      return [];
+    }
+  }
+
+  async getAgencyCollaborators(agencyId: string): Promise<AgencyCollaborator[]> {
+    try {
+      console.log('👥 [COLLABORATORS] Buscando colaboradores da agência:', agencyId);
+      
+      const { data, error } = await supabase
+        .rpc('get_agency_collaborators_for_selection', { agency_id: agencyId });
+
+      if (error) {
+        console.error('❌ [COLLABORATORS] Erro ao buscar colaboradores:', error);
+        throw error;
+      }
+
+      const collaborators = (data || []).map((item: any) => ({
+        user_id: item.user_id,
+        name: item.name,
+        email: item.email,
+        avatar_url: item.avatar_url,
+        role: item.role
+      }));
+
+      console.log('✅ [COLLABORATORS] Colaboradores encontrados:', collaborators.length);
+      return collaborators;
+    } catch (error) {
+      console.error('❌ [COLLABORATORS] Erro ao buscar colaboradores:', error);
+      return [];
+    }
+  }
+
+  async notifyProjectResponsibles(projectId: string, notificationType: string = 'update'): Promise<boolean> {
+    try {
+      console.log('🔔 [NOTIFY] Notificando responsáveis do projeto:', projectId, 'Tipo:', notificationType);
+      
+      const { data, error } = await supabase
+        .rpc('notify_project_responsibles', { 
+          project_id: projectId, 
+          notification_type: notificationType 
+        });
+
+      if (error) {
+        console.error('❌ [NOTIFY] Erro ao notificar responsáveis:', error);
+        throw error;
+      }
+
+      console.log('✅ [NOTIFY] Notificação enviada com sucesso');
+      return true;
+    } catch (error) {
+      console.error('❌ [NOTIFY] Erro ao notificar responsáveis:', error);
+      return false;
     }
   }
 
