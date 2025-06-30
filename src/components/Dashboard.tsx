@@ -16,6 +16,7 @@ import ExpenseModal from '@/components/ExpenseModal';
 import { UsageLimitWarning } from './UsageLimitWarning';
 import { SubscriptionStatus } from './SubscriptionStatus';
 import PremiumFeatureBlock from './PremiumFeatureBlock';
+import { UsageStatus } from './UsageStatus';
 
 const Dashboard = () => {
   const { user, profile, agency } = useSupabaseAuth();
@@ -257,8 +258,11 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Status da Assinatura */}
-      <SubscriptionStatus />
+      {/* Status da Assinatura e Uso */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <SubscriptionStatus />
+        <UsageStatus />
+      </div>
 
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
