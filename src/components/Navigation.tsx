@@ -40,8 +40,8 @@ const Navigation: React.FC<NavigationProps> = ({
 
   return (
     <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 
-        bg-white/80 dark:bg-gray-900/80 backdrop-blur-md 
-        border border-gray-200 dark:border-gray-700 
+        bg-white/80 dark:bg-[#141414]/80 backdrop-blur-md 
+        border border-gray-200 dark:border-[#262626] 
         rounded-2xl shadow-xl px-4 py-2 flex justify-between items-center">
       {navigationItems.map((item) => {
         const Icon = item.icon;
