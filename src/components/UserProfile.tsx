@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,18 +24,29 @@ const UserProfile = () => {
   });
   const [loading, setLoading] = useState(false);
   const [userAgency, setUserAgency] = useState<any>(null);
+  const [isAgencyCollaborator, setIsAgencyCollaborator] = useState(false);
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
+  const hasPremiumPlan = profile?.subscription === 'premium' || hasEnterprisePlan;
 
-  // Buscar a agência do usuário baseado no agency_id do perfil
+  // Buscar a agência do usuário e verificar se é colaborador
   useEffect(() => {
-    const fetchUserAgency = async () => {
-      console.log('🔍 Buscando agência do usuário...', { 
+    const fetchUserAgencyInfo = async () => {
+      console.log('🔍 Buscando informações da agência do usuário...', { 
         agencyId: profile?.agency_id, 
-        userId: user?.id 
+        userId: user?.id,
+        agencies: agencies
       });
 
-      if (profile?.agency_id) {
+      // Verificar se o usuário é colaborador ou owner de alguma agência
+      // Se agencies tem dados, significa que o usuário faz parte de pelo menos uma agência
+      if (agencies && agencies.length > 0) {
+        const userAgencyData = agencies[0]; // Pegar a primeira agência (ou a ativa)
+        console.log('✅ Usuário faz parte da agência:', userAgencyData.name);
+        setUserAgency(userAgencyData);
+        setIsAgencyCollaborator(true);
+      } else if (profile?.agency_id) {
+        // Buscar agência pelo agency_id do perfil (fallback)
         try {
           const { data, error } = await supabase
             .from('agencies')
@@ -44,38 +54,43 @@ const UserProfile = () => {
             .eq('id', profile.agency_id)
             .single();
 
-          console.log('📊 Resultado da busca de agência:', { data, error });
+          console.log('📊 Resultado da busca de agência por agency_id:', { data, error });
 
           if (!error && data) {
             setUserAgency(data);
-            console.log('✅ Agência encontrada:', data.name);
+            setIsAgencyCollaborator(true);
+            console.log('✅ Agência encontrada por agency_id:', data.name);
           } else {
-            console.log('❌ Erro ou agência não encontrada:', error);
+            console.log('❌ Erro ou agência não encontrada por agency_id:', error);
             setUserAgency(null);
+            setIsAgencyCollaborator(false);
           }
         } catch (error) {
-          console.error('🚨 Erro ao buscar agência do usuário:', error);
+          console.error('🚨 Erro ao buscar agência por agency_id:', error);
           setUserAgency(null);
+          setIsAgencyCollaborator(false);
         }
       } else {
-        console.log('ℹ️ Usuário não possui agency_id');
+        console.log('ℹ️ Usuário não possui agência');
         setUserAgency(null);
+        setIsAgencyCollaborator(false);
       }
     };
 
-    fetchUserAgency();
-  }, [profile?.agency_id]);
+    fetchUserAgencyInfo();
+  }, [profile?.agency_id, user?.id, agencies]);
 
   // Verificar se é dono da agência
-  const isAgencyOwner = userAgency && userAgency.owner_id === user?.id;
-  const isPartOfAgency = !!profile?.agency_id && !!userAgency;
+  const isAgencyOwner = userAgency && (userAgency.is_owner || userAgency.owner_id === user?.id);
 
   console.log('🏢 Estado da agência:', {
     userAgency,
     isAgencyOwner,
-    isPartOfAgency,
+    isAgencyCollaborator,
     profileAgencyId: profile?.agency_id,
-    userId: user?.id
+    userId: user?.id,
+    hasPremiumPlan,
+    agenciesCount: agencies?.length || 0
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -291,7 +306,7 @@ const UserProfile = () => {
                     <Building2 className="h-4 w-4" />
                     Empresa
                   </Label>
-                  {isPartOfAgency && userAgency ? (
+                  {isAgencyCollaborator && userAgency ? (
                     <div className="mt-1">
                       <Input
                         value={userAgency.name}
@@ -302,7 +317,7 @@ const UserProfile = () => {
                         {isAgencyOwner ? 'Você é proprietário desta agência' : 'Você faz parte desta agência'}
                       </p>
                     </div>
-                  ) : hasEnterprisePlan ? (
+                  ) : hasPremiumPlan ? (
                     <Input
                       id="company"
                       name="company"
@@ -315,12 +330,12 @@ const UserProfile = () => {
                   ) : (
                     <div className="mt-1">
                       <Input
-                        value="Upgrade para Enterprise necessário"
+                        value="Upgrade para Premium necessário"
                         disabled
                         className="bg-gray-50 dark:bg-gray-800"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Disponível apenas no plano Enterprise
+                        Disponível apenas no plano Premium ou Enterprise
                       </p>
                     </div>
                   )}
