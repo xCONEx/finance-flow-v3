@@ -114,10 +114,11 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-4">
             {/* Privacy Toggle */}
             <Button
-              onClick={toggleValuesVisibility}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-              title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
-            >
+  onClick={toggleValuesVisibility}
+  variant="ghost"
+  className="p-2 hover:bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+  title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
+>
               {valuesHidden ? (
                 <EyeOff className="h-4 w-4" />
               ) : (
@@ -130,7 +131,7 @@ const Header: React.FC<HeaderProps> = ({
           
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="flex items-center space-x-2 p-2">
+                <Button variant="ghost" className="flex items-center space-x-2 p-2 hover:bg-transparent">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={user?.user_metadata?.avatar_url} />
                     <AvatarFallback>
