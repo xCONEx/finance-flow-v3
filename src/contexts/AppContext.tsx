@@ -612,8 +612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) return;
 
     // Chamar Supabase Function para criar job com validação de limite
-    const response = await   etch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-job-with-limit`, {
-      
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-job-with-limit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
