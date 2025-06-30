@@ -48,10 +48,10 @@ const CompanyTable: React.FC<CompanyTableProps> = ({
 }) => {
   if (companies.length === 0) {
     return (
-      <Card className="border-0 shadow-sm">
+      <Card>
         <CardContent className="text-center py-12">
-          <Building2 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-500">Nenhuma empresa encontrada</p>
+          <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Nenhuma empresa encontrada</p>
         </CardContent>
       </Card>
     );
@@ -60,24 +60,24 @@ const CompanyTable: React.FC<CompanyTableProps> = ({
   return (
     <div className="space-y-3">
       {companies.map((company) => (
-        <Card key={company.id} className="border-0 shadow-sm">
+        <Card key={company.id}>
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               {/* Company Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
                       <Building2 className="w-5 h-5 text-blue-600" />
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{company.name}</p>
-                    <p className="text-sm text-gray-600 truncate">{company.owner_email}</p>
+                    <p className="font-medium text-foreground truncate">{company.name}</p>
+                    <p className="text-sm text-muted-foreground truncate">{company.owner_email}</p>
                     {company.owner_name && company.owner_name !== 'N/A' && (
-                      <p className="text-xs text-gray-500 truncate">{company.owner_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{company.owner_name}</p>
                     )}
-                    <p className="text-xs text-gray-400">ID: {company.id.slice(0, 8)}...</p>
+                    <p className="text-xs text-muted-foreground">ID: {company.id.slice(0, 8)}...</p>
                   </div>
                 </div>
               </div>
@@ -89,7 +89,7 @@ const CompanyTable: React.FC<CompanyTableProps> = ({
                     <Users className="w-3 h-3 mr-1" />
                     {company.collaborators_count}
                   </Badge>
-                  <span className="text-xs text-gray-500 hidden sm:inline">
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
                     {new Date(company.created_at).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
