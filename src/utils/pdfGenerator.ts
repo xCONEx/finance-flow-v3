@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 
 interface JobData {
@@ -13,6 +12,7 @@ interface JobData {
   assistance: number;
   totalPrice: number;
   clientId?: string;
+  workItems?: WorkItemData[];
 }
 
 interface CompanyData {
@@ -21,6 +21,9 @@ interface CompanyData {
   cnpj?: string;
   phone?: string;
   address?: string;
+  subscription?: string;
+  userType?: string;
+  agencyId?: string;
 }
 
 interface ClientData {
@@ -84,6 +87,40 @@ const formatCurrency = (value: any): string => {
   return safeValue.toFixed(2);
 };
 
+// Função para determinar se deve mostrar dados da empresa
+const shouldShowCompanyData = (companyData?: CompanyData): boolean => {
+  if (!companyData) return false;
+  
+  const subscription = companyData.subscription;
+  const userType = companyData.userType;
+  const hasAgency = companyData.agencyId;
+  
+  // Se for premium ou enterprise e tiver company ou agencies, mostrar
+  if ((subscription === 'premium' || subscription === 'enterprise' || subscription === 'enterprise-annual') && 
+      (companyData.name || hasAgency)) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Função para obter o nome da empresa a ser exibido
+const getCompanyDisplayName = (companyData?: CompanyData): string => {
+  if (!companyData) return '';
+  
+  // Se for free, usar apenas o nome
+  if (companyData.subscription === 'free') {
+    return companyData.name || '';
+  }
+  
+  // Se for premium ou enterprise e tiver company ou agencies, mostrar
+  if (shouldShowCompanyData(companyData)) {
+    return companyData.name || '';
+  }
+  
+  return '';
+};
+
 export const generateJobPDF = async (
   job: JobData, 
   companyData?: CompanyData,
@@ -108,8 +145,8 @@ export const generateJobPDF = async (
     yPosition = 45;
     doc.setTextColor(0, 0, 0);
     
-    // TABELA - DADOS DA EMPRESA
-    if (companyData) {
+    // DADOS DA EMPRESA
+    if (shouldShowCompanyData(companyData)) {
       doc.setFillColor(...lightGray);
       doc.rect(15, yPosition, 180, 8, 'F');
       doc.setTextColor(...secondaryColor);
@@ -121,12 +158,16 @@ export const generateJobPDF = async (
       doc.setTextColor(0, 0, 0);
       
       const companyFields = [
-        { label: 'Razão Social:', value: companyData.name || 'Não informado' },
-        { label: 'E-mail:', value: companyData.email || 'Não informado' },
-        { label: 'CNPJ:', value: companyData.cnpj || 'Não informado' },
-        { label: 'Telefone:', value: companyData.phone || 'Não informado' },
-        { label: 'Endereço:', value: companyData.address || 'Não informado' }
+        { label: 'Empresa:', value: getCompanyDisplayName(companyData) || 'Não informado' },
+        { label: 'E-mail:', value: companyData?.email || 'Não informado' },
+        { label: 'Telefone:', value: companyData?.phone || 'Não informado' },
+        { label: 'Endereço:', value: companyData?.address || 'Não informado' }
       ];
+      
+      // Adicionar CNPJ apenas se tiver empresa cadastrada e CNPJ
+      if (companyData?.cnpj && companyData?.name) {
+        companyFields.splice(2, 0, { label: 'CNPJ:', value: companyData.cnpj });
+      }
       
       companyFields.forEach(field => {
         doc.text(field.label, 20, yPosition);
@@ -137,36 +178,42 @@ export const generateJobPDF = async (
       yPosition += 10;
     }
     
-    // TABELA - DADOS DO CLIENTE
-    if (clientData) {
-      doc.setFillColor(...lightGray);
-      doc.rect(15, yPosition, 180, 8, 'F');
-      doc.setTextColor(...secondaryColor);
-      doc.setFontSize(12);
-      doc.text('DADOS DO CLIENTE', 20, yPosition + 6);
-      yPosition += 15;
-      
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      
-      const clientFields = [
-        { label: 'Nome/Razão Social:', value: clientData.name || 'Não informado' },
-        { label: 'E-mail:', value: clientData.email || 'Não informado' },
-        { label: 'Telefone:', value: clientData.phone || 'Não informado' },
-        { label: 'CNPJ/CPF:', value: clientData.cnpj || 'Não informado' },
-        { label: 'Endereço:', value: clientData.address || 'Não informado' }
-      ];
-      
-      clientFields.forEach(field => {
-        doc.text(field.label, 20, yPosition);
-        doc.text(field.value, 70, yPosition);
-        yPosition += 6;
-      });
-      
-      yPosition += 10;
-    }
+    // DADOS DO CLIENTE
+    doc.setFillColor(...lightGray);
+    doc.rect(15, yPosition, 180, 8, 'F');
+    doc.setTextColor(...secondaryColor);
+    doc.setFontSize(12);
+    doc.text('DADOS DO CLIENTE', 20, yPosition + 6);
+    yPosition += 15;
     
-    // TABELA - DETALHES DO SERVIÇO
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    
+    // Se tiver cliente cadastrado, usar os dados do cliente
+    // Se não tiver, usar apenas os dados colocados no job
+    const clientName = clientData?.name || job.client || 'Não informado';
+    const clientEmail = clientData?.email || 'Não informado';
+    const clientCnpj = clientData?.cnpj || 'Não informado';
+    const clientPhone = clientData?.phone || 'Não informado';
+    const clientAddress = clientData?.address || 'Não informado';
+    
+    const clientFields = [
+      { label: 'Nome do Cliente:', value: clientName },
+      { label: 'E-mail do Cliente:', value: clientEmail },
+      { label: 'CNPJ do Cliente:', value: clientCnpj },
+      { label: 'Telefone do Cliente:', value: clientPhone },
+      { label: 'Endereço do Cliente:', value: clientAddress }
+    ];
+    
+    clientFields.forEach(field => {
+      doc.text(field.label, 20, yPosition);
+      doc.text(field.value, 70, yPosition);
+      yPosition += 6;
+    });
+    
+    yPosition += 10;
+    
+    // DETALHES DO SERVIÇO
     doc.setFillColor(...lightGray);
     doc.rect(15, yPosition, 180, 8, 'F');
     doc.setTextColor(...secondaryColor);
@@ -180,8 +227,7 @@ export const generateJobPDF = async (
     const serviceFields = [
       { label: 'Descrição:', value: job.description || 'Não informado' },
       { label: 'Data do Evento:', value: job.eventDate ? new Date(job.eventDate).toLocaleDateString('pt-BR') : 'Não informado' },
-      { label: 'Horas Estimadas:', value: `${safeNumber(job.estimatedHours)}h` },
-      { label: 'Nível de Dificuldade:', value: job.difficultyLevel || 'Não informado' }
+      { label: 'Horas Estimadas:', value: `${safeNumber(job.estimatedHours)}h` }
     ];
     
     serviceFields.forEach(field => {
@@ -192,30 +238,78 @@ export const generateJobPDF = async (
     
     yPosition += 10;
     
-    // TABELA - COMPOSIÇÃO DE CUSTOS
-    doc.setFillColor(...lightGray);
-    doc.rect(15, yPosition, 180, 8, 'F');
-    doc.setTextColor(...secondaryColor);
-    doc.setFontSize(12);
-    doc.text('COMPOSIÇÃO DE CUSTOS', 20, yPosition + 6);
-    yPosition += 15;
+    // ITENS DO ORÇAMENTO
+    if (job.workItems && job.workItems.length > 0) {
+      doc.setFillColor(...lightGray);
+      doc.rect(15, yPosition, 180, 8, 'F');
+      doc.setTextColor(...secondaryColor);
+      doc.setFontSize(12);
+      doc.text('ITENS DO ORÇAMENTO', 20, yPosition + 6);
+      yPosition += 15;
+      
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      
+      let totalItemsValue = 0;
+      
+      job.workItems.forEach((item, index) => {
+        // Verificar se precisa de nova página
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        const itemValue = safeNumber(item.value);
+        totalItemsValue += itemValue;
+        
+        doc.setFont(undefined, 'bold');
+        doc.text(`${index + 1}. ${item.description || 'Sem descrição'}`, 20, yPosition);
+        yPosition += 6;
+        
+        doc.setFont(undefined, 'normal');
+        doc.text(`   Valor: R$ ${formatCurrency(itemValue)}`, 20, yPosition);
+        yPosition += 5;
+        doc.text(`   Categoria: ${item.category || 'Sem categoria'}`, 20, yPosition);
+        yPosition += 5;
+        
+        yPosition += 5; // Espaçamento entre itens
+      });
+      
+      // Total dos itens
+      yPosition += 5;
+      doc.setFont(undefined, 'bold');
+      doc.text(`Total dos Itens: R$ ${formatCurrency(totalItemsValue)}`, 20, yPosition);
+      yPosition += 10;
+    }
     
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
+    // COMPOSIÇÃO DE CUSTOS (se houver)
+    const hasCosts = safeNumber(job.logistics) > 0 || safeNumber(job.equipment) > 0 || safeNumber(job.assistance) > 0;
     
-    const costFields = [
-      { label: 'Logística:', value: `R$ ${formatCurrency(job.logistics)}` },
-      { label: 'Equipamentos:', value: `R$ ${formatCurrency(job.equipment)}` },
-      { label: 'Assistência:', value: `R$ ${formatCurrency(job.assistance)}` }
-    ];
-    
-    costFields.forEach(field => {
-      doc.text(field.label, 20, yPosition);
-      doc.text(field.value, 70, yPosition);
-      yPosition += 6;
-    });
-    
-    yPosition += 15;
+    if (hasCosts) {
+      doc.setFillColor(...lightGray);
+      doc.rect(15, yPosition, 180, 8, 'F');
+      doc.setTextColor(...secondaryColor);
+      doc.setFontSize(12);
+      doc.text('COMPOSIÇÃO DE CUSTOS', 20, yPosition + 6);
+      yPosition += 15;
+      
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      
+      const costFields = [
+        { label: 'Logística:', value: `R$ ${formatCurrency(job.logistics)}` },
+        { label: 'Equipamentos:', value: `R$ ${formatCurrency(job.equipment)}` },
+        { label: 'Assistência:', value: `R$ ${formatCurrency(job.assistance)}` }
+      ];
+      
+      costFields.forEach(field => {
+        doc.text(field.label, 20, yPosition);
+        doc.text(field.value, 70, yPosition);
+        yPosition += 6;
+      });
+      
+      yPosition += 15;
+    }
     
     // VALOR TOTAL - Destacado
     doc.setFillColor(...primaryColor);
@@ -465,6 +559,43 @@ export const generateWorkItemsPDF = async (workItems: WorkItemData[], companyDat
   }
 };
 
+// Função auxiliar para preparar dados da empresa
+export const prepareCompanyData = (profile: any, user: any) => {
+  return {
+    name: profile?.company || profile?.name,
+    email: profile?.email || user?.email,
+    cnpj: profile?.cnpj,
+    phone: profile?.phone,
+    address: profile?.address,
+    subscription: profile?.subscription,
+    userType: profile?.user_type,
+    agencyId: profile?.agency_id
+  };
+};
+
+// Função auxiliar para converter Job para JobData
+export const prepareJobData = (job: any, workItems: any[] = []) => {
+  return {
+    id: job.id,
+    description: job.description,
+    client: job.client,
+    eventDate: job.eventDate,
+    estimatedHours: job.estimatedHours,
+    difficultyLevel: job.difficultyLevel,
+    logistics: job.logistics,
+    equipment: job.equipment,
+    assistance: job.assistance,
+    totalPrice: job.valueWithDiscount || job.serviceValue || 0,
+    workItems: workItems.map(item => ({
+      id: item.id,
+      description: item.description,
+      category: item.category,
+      value: item.value,
+      depreciationYears: item.depreciationYears
+    }))
+  };
+};
+
 // Funções auxiliares para manter compatibilidade
 export const downloadJobPDF = (job: JobData, companyData?: CompanyData, clientData?: ClientData) => {
   generateJobPDF(job, companyData, clientData).then(() => {
@@ -488,4 +619,61 @@ export const downloadWorkItemsPDF = (workItems: WorkItemData[], companyData?: Co
   }).catch(error => {
     console.error('Erro ao gerar PDF de itens de trabalho:', error);
   });
+};
+
+// Função de exemplo para demonstrar o uso completo
+export const generateExamplePDF = async (profile: any, user: any) => {
+  // Dados de exemplo
+  const exampleJob = {
+    id: 'example-1',
+    description: 'Filmagem de evento corporativo',
+    client: 'Empresa ABC Ltda',
+    eventDate: '2024-02-15',
+    estimatedHours: 8,
+    difficultyLevel: 'médio',
+    logistics: 500,
+    equipment: 1200,
+    assistance: 800,
+    valueWithDiscount: 3500,
+    serviceValue: 3000
+  };
+
+  const exampleWorkItems = [
+    {
+      id: 'item-1',
+      description: 'Câmera Canon EOS R5',
+      category: 'Câmeras',
+      value: 15000,
+      depreciationYears: 5
+    },
+    {
+      id: 'item-2',
+      description: 'Lente 24-70mm f/2.8',
+      category: 'Lentes',
+      value: 8000,
+      depreciationYears: 5
+    },
+    {
+      id: 'item-3',
+      description: 'Tripé Manfrotto',
+      category: 'Tripés e Suportes',
+      value: 1200,
+      depreciationYears: 3
+    }
+  ];
+
+  const exampleClient = {
+    name: 'Empresa ABC Ltda',
+    email: 'contato@empresaabc.com.br',
+    cnpj: '12.345.678/0001-90',
+    phone: '(11) 99999-9999',
+    address: 'Rua das Flores, 123 - São Paulo/SP'
+  };
+
+  // Preparar dados
+  const companyData = prepareCompanyData(profile, user);
+  const jobData = prepareJobData(exampleJob, exampleWorkItems);
+
+  // Gerar PDF
+  await generateJobPDF(jobData, companyData, exampleClient);
 };
