@@ -20,7 +20,8 @@ const UserProfile = () => {
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     phone: profile?.phone || '',
-    company: profile?.company || ''
+    company: profile?.company || '',
+    address: profile?.address || ''
   });
   const [loading, setLoading] = useState(false);
   const [userAgency, setUserAgency] = useState<any>(null);
@@ -167,13 +168,14 @@ const UserProfile = () => {
           name: formData.name.trim(),
           phone: formData.phone.trim(),
           company: formData.company.trim(),
+          address: formData.address.trim(),
           updated_at: new Date().toISOString()
         })
         .eq('id', user?.id);
 
       if (error) throw error;
 
-      await updateProfile();
+      await updateProfile(profile);
       
       toast({
         title: "Sucesso",
@@ -299,6 +301,18 @@ const UserProfile = () => {
                       placeholder="(11) 99999-9999"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="address">Endereço</Label>
+                  <Input
+                    id="address"
+                    name="address"
+                    type="text"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="Rua, número, bairro, cidade, UF"
+                  />
                 </div>
 
                 <div>
