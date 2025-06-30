@@ -95,11 +95,14 @@ const Header: React.FC<HeaderProps> = ({
                   <Button
                     key={item.id}
                     onClick={() => onTabChange(item.id)}
-                    className={`flex items-center space-x-2 ${
-                      isActive 
-                        ? `bg-gradient-to-r ${currentTheme.primary} text-white shadow-sm` 
-                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                    }`}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-150
+                      ${isActive
+                        ? `bg-gradient-to-r ${currentTheme.primary} text-white shadow-sm`
+                        : `bg-transparent text-[color:var(--primary)] dark:text-[color:var(--primary)] shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)]`}
+                      font-medium`}
+                    style={{
+                      textShadow: isActive ? 'none' : '0 1px 4px rgba(0,0,0,0.10)',
+                    }}
                   >
                     <Icon className="w-4 h-4" />
                     <span className="hidden lg:inline">{item.label}</span>
