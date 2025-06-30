@@ -689,12 +689,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteJob = async (id: string) => {
-    const { error } = await supabase
-      .from('jobs')
-      .delete()
-      .eq('id', id);
+    if (!user) return;
 
-    if (error) throw error;
+    // Chamar Supabase Function para deletar job (sem decrementar contagem)
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-job`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ job_id: id, user_id: user.id })
+    });
+
+    // Verificar se a resposta é JSON antes de fazer parse
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Resposta inesperada do servidor');
+    }
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Erro ao deletar job');
+    }
+
+    // Atualizar estado local
     setJobs(prev => prev.filter(job => job.id !== id));
   };
 
