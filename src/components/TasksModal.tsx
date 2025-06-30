@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { CheckCircle, Circle, Calendar, AlertCircle, Edit } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
