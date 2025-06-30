@@ -100,9 +100,7 @@ const Header: React.FC<HeaderProps> = ({
                         ? `bg-gradient-to-r ${currentTheme.primary} text-white shadow-sm`
                         : `bg-transparent text-[color:var(--primary)] dark:text-[color:var(--primary)] shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)]`}
                       font-medium`}
-                    style={{
-                      textShadow: isActive ? 'none' : '0 1px 4px rgba(0,0,0,0.10)',
-                    }}
+                    textShadow={isActive ? undefined : '0 1px 4px rgba(0,0,0,0.10)'}
                   >
                     <Icon className="w-4 h-4" />
                     <span className="hidden lg:inline">{item.label}</span>
