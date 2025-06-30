@@ -22,10 +22,32 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@financeflow" />
     <meta name="twitter:image" content="/icons/PSD-LOGO-01LOGO-2.png" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="msapplication-TileColor" content="#6366f1" />
+    <meta name="msapplication-config" content="/icons/browserconfig.xml" />
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('🔔 Service Worker registrado com sucesso:', registration.scope);
+            })
+            .catch(function(error) {
+              console.log('❌ Falha ao registrar Service Worker:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
