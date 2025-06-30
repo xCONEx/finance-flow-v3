@@ -245,7 +245,7 @@ export const generateJobPDF = async (
                         safeNumber(job.totalPrice) > 0;
     
     if (hasAnyValues) {
-      doc.setFillColor(...lightGray);
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.rect(15, yPosition, 180, 8, 'F');
       doc.setTextColor(...secondaryColor);
       doc.setFontSize(12);
@@ -285,78 +285,59 @@ export const generateJobPDF = async (
         budgetItems.push({ label: 'Valor com Desconto', value: discountValue });
       }
       
-      // Desenhar tabela
+      // Desenhar tabela com quebra de página se necessário
       const tableStartY = yPosition;
       const tableWidth = 180;
       const rowHeight = 8;
-      const labelWidth = 120;
-      const valueWidth = 60;
+      const maxY = 270; // Limite inferior da página
+      let currentY = tableStartY;
       
-             // Cabeçalho da tabela
-       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-       doc.rect(15, tableStartY, tableWidth, rowHeight, 'F');
+      // Cabeçalho da tabela
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(15, currentY, tableWidth, rowHeight, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
       doc.setFont(undefined, 'bold');
-      doc.text('Item', 20, tableStartY + 6);
-      doc.text('Valor', 140, tableStartY + 6);
+      doc.text('Item', 20, currentY + 6);
+      doc.text('Valor', 140, currentY + 6);
+      currentY += rowHeight;
       
       // Linhas da tabela
       doc.setTextColor(0, 0, 0);
       doc.setFont(undefined, 'normal');
       
       budgetItems.forEach((item, index) => {
-        const rowY = tableStartY + rowHeight + (index * rowHeight);
-        
+        // Se passar do limite da página, cria nova página e redesenha cabeçalho
+        if (currentY + rowHeight > maxY) {
+          doc.addPage();
+          currentY = 20;
+          doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          doc.rect(15, currentY, tableWidth, rowHeight, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'bold');
+          doc.text('Item', 20, currentY + 6);
+          doc.text('Valor', 140, currentY + 6);
+          currentY += rowHeight;
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+        }
         // Linha de fundo alternada
         if (index % 2 === 0) {
           doc.setFillColor(248, 249, 250);
-          doc.rect(15, rowY, tableWidth, rowHeight, 'F');
+          doc.rect(15, currentY, tableWidth, rowHeight, 'F');
         }
-        
         // Borda da linha
         doc.setDrawColor(200, 200, 200);
-        doc.line(15, rowY, 195, rowY);
-        
+        doc.line(15, currentY, 195, currentY);
         // Conteúdo
-        doc.text(item.label, 20, rowY + 6);
-        doc.text(`R$ ${formatCurrency(item.value)}`, 140, rowY + 6);
+        doc.text(item.label, 20, currentY + 6);
+        doc.text(`R$ ${formatCurrency(item.value)}`, 140, currentY + 6);
+        currentY += rowHeight;
       });
-      
       // Linha final da tabela
-      const finalRowY = tableStartY + rowHeight + (budgetItems.length * rowHeight);
-      doc.line(15, finalRowY, 195, finalRowY);
-      
-      yPosition = finalRowY + 10;
-    }
-    
-    // COMPOSIÇÃO DE CUSTOS (se houver)
-    const hasCosts = safeNumber(job.logistics) > 0 || safeNumber(job.equipment) > 0 || safeNumber(job.assistance) > 0;
-    
-    if (hasCosts) {
-      doc.setFillColor(...lightGray);
-      doc.rect(15, yPosition, 180, 8, 'F');
-      doc.setTextColor(...secondaryColor);
-      doc.setFontSize(12);
-      doc.text('COMPOSIÇÃO DE CUSTOS', 20, yPosition + 6);
-      yPosition += 15;
-      
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      
-      const costFields = [
-        { label: 'Logística:', value: `R$ ${formatCurrency(job.logistics)}` },
-        { label: 'Equipamentos:', value: `R$ ${formatCurrency(job.equipment)}` },
-        { label: 'Assistência:', value: `R$ ${formatCurrency(job.assistance)}` }
-      ];
-      
-      costFields.forEach(field => {
-        doc.text(field.label, 20, yPosition);
-        doc.text(field.value, 70, yPosition);
-        yPosition += 6;
-      });
-      
-      yPosition += 15;
+      doc.line(15, currentY, 195, currentY);
+      yPosition = currentY + 10;
     }
     
     // VALOR TOTAL - Destacado
