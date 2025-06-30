@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import { notificationService } from '../services/notificationService';
 
@@ -45,7 +44,7 @@ export const useNotifications = (monthlyCosts?: any[]) => {
         }
 
         if (cost.dueDate && cost.notificationEnabled) {
-          console.log('📅 Scheduling notification for:', cost.description, 'Due:', cost.dueDate);
+          console.log('📅 Agendando notificação para:', cost.description, 'Vence:', cost.dueDate);
           notificationService.scheduleExpenseReminder(cost);
           processedCosts.current.add(costKey);
         }
@@ -77,23 +76,33 @@ export const useNotifications = (monthlyCosts?: any[]) => {
     });
   };
 
-  const cancelExpenseNotifications = async (expenseId: string) => {
-    await notificationService.cancelExpenseNotifications(expenseId);
-    
-    // Remover do cache também
-    const keysToRemove: string[] = [];
-    processedCosts.current.forEach(key => {
-      if (key.includes(expenseId)) {
-        keysToRemove.push(key);
-      }
-    });
-    keysToRemove.forEach(key => processedCosts.current.delete(key));
+  const getUnreadCount = () => {
+    return notificationService.getUnreadCount();
+  };
+
+  const getInAppNotifications = () => {
+    return notificationService.getInAppNotifications();
+  };
+
+  const markAsRead = async (id: string) => {
+    await notificationService.markInAppNotificationAsRead(id);
+  };
+
+  const markAllAsRead = async () => {
+    await notificationService.markAllInAppNotificationsAsRead();
+  };
+
+  const deleteNotification = async (id: string) => {
+    await notificationService.deleteInAppNotification(id);
   };
 
   return {
     scheduleNotification,
     sendImmediateNotification,
-    cancelExpenseNotifications,
-    notificationService
+    getUnreadCount,
+    getInAppNotifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification
   };
 };
