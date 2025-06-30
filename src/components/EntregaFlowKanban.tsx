@@ -21,13 +21,19 @@ import {
   Edit,
   Scissors,
   Eye,
-  Building
+  Building,
+  Bell,
+  BellOff
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { supabaseKanbanService, KanbanProject } from '../services/supabaseKanbanService';
 import { useKanbanContext } from '../hooks/useKanbanContext';
+import { useAgency } from '../contexts/AgencyContext';
 import ContextSelector from './ContextSelector';
+import ResponsibleSelector from './ResponsibleSelector';
+import ProjectResponsibles from './ProjectResponsibles';
+import KanbanAnalytics from './KanbanAnalytics';
 
 interface Column {
   id: string;
@@ -51,12 +57,19 @@ const EntregaFlowKanban = () => {
     priority: 'media',
     status: 'filmado',
     description: '',
-    links: []
+    links: [],
+    responsaveis: [],
+    notificar_responsaveis: true
   });
   const [newLink, setNewLink] = useState('');
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
   const { isAgencyMode, currentAgencyId, currentUserId, contextLabel } = useKanbanContext();
+  const { currentContext, agencies } = useAgency();
+
+  // Verificar se é owner da agência atual
+  const isOwner = isAgencyMode && currentAgencyId && 
+    agencies.find(a => a.id === currentAgencyId)?.is_owner;
 
   // Função para gerar UUID válido
   const generateUUID = (): string => {
@@ -206,6 +219,15 @@ const EntregaFlowKanban = () => {
             mode: updatedProject.agency_id ? 'AGENCY' : 'INDIVIDUAL'
           });
           await supabaseKanbanService.saveProject(updatedProject);
+          
+          // Notificar responsáveis se for projeto de agência
+          if (updatedProject.agency_id && updatedProject.notificar_responsaveis && updatedProject.responsaveis?.length > 0) {
+            try {
+              await supabaseKanbanService.notifyProjectResponsibles(updatedProject.id, 'move');
+            } catch (notificationError) {
+              console.warn('⚠️ [KANBAN] Erro ao notificar responsáveis:', notificationError);
+            }
+          }
         } catch (error) {
           console.error('❌ [KANBAN] Erro ao salvar status do projeto:', error);
           toast({
@@ -248,6 +270,8 @@ const EntregaFlowKanban = () => {
         status: newProject.status || 'filmado',
         description: newProject.description || '',
         links: newProject.links || [],
+        responsaveis: newProject.responsaveis || [],
+        notificar_responsaveis: newProject.notificar_responsaveis ?? true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         user_id: currentUserId || '',
@@ -257,6 +281,7 @@ const EntregaFlowKanban = () => {
       console.log('💾 [KANBAN] Criando novo projeto:', {
         title: project.title,
         agencyId: project.agency_id,
+        responsaveis: project.responsaveis?.length || 0,
         isAgencyMode,
         currentAgencyId,
         finalAgencyId,
@@ -275,7 +300,9 @@ const EntregaFlowKanban = () => {
         priority: 'media',
         status: 'filmado',
         description: '',
-        links: []
+        links: [],
+        responsaveis: [],
+        notificar_responsaveis: true
       });
       setShowAddModal(false);
 
@@ -436,70 +463,12 @@ const EntregaFlowKanban = () => {
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Clock className="h-4 w-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{activeProjects}</p>
-                <p className="text-sm text-gray-600">Projetos Ativos</p>
-                <p className="text-xs text-gray-500">Em andamento</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{completedProjects}</p>
-                <p className="text-sm text-gray-600">Entregas este mês</p>
-                <p className="text-xs text-gray-500">Projetos finalizados</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="h-4 w-4 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{urgentDeadlines}</p>
-                <p className="text-sm text-gray-600">Prazos Urgentes</p>
-                <p className="text-xs text-gray-500">Vencendo em 2 dias</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-red-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{overdueProject ? 'Atrasado' : '0'}</p>
-                <p className="text-sm text-gray-600">Próxima Entrega</p>
-                <p className="text-xs text-gray-500">
-                  {overdueProject ? overdueProject.client : 'Sem atrasos'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Analytics */}
+      <KanbanAnalytics 
+        projects={projects}
+        isAgencyMode={isAgencyMode}
+        isOwner={isOwner || false}
+      />
 
       {/* Pipeline Section */}
       <div>
@@ -517,7 +486,7 @@ const EntregaFlowKanban = () => {
                   <div className="flex items-center gap-2 mb-4">
                     <div className={`w-3 h-3 rounded-full ${column.id === 'filmado' ? 'bg-blue-500' : column.id === 'edicao' ? 'bg-orange-500' : column.id === 'revisao' ? 'bg-yellow-500' : 'bg-green-500'}`} />
                     <h4 className="font-semibold">{column.title}</h4>
-                    <Badge variant="secondary">{column.count}</Badge>
+                    <Badge className="bg-gray-100 text-gray-800">{column.count}</Badge>
                   </div>
 
                   <Droppable droppableId={column.id}>
@@ -591,10 +560,27 @@ const EntregaFlowKanban = () => {
                                         </div>
                                       )}
 
-                                      {project.agency_id && (
+                                      {/* Responsáveis do projeto */}
+                                      {isAgencyMode && project.responsaveis && project.responsaveis.length > 0 && (
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-1">
+                                            <Building className="h-3 w-3 text-purple-500" />
+                                            <span className="text-xs text-purple-600">Empresa</span>
+                                          </div>
+                                          <ProjectResponsibles 
+                                            projectId={project.id}
+                                            responsaveis={project.responsaveis}
+                                            maxVisible={2}
+                                            size="sm"
+                                          />
+                                        </div>
+                                      )}
+
+                                      {/* Indicador de notificação */}
+                                      {isAgencyMode && project.notificar_responsaveis && project.responsaveis && project.responsaveis.length > 0 && (
                                         <div className="flex items-center gap-1">
-                                          <Building className="h-3 w-3 text-purple-500" />
-                                          <span className="text-xs text-purple-600">Empresa</span>
+                                          <Bell className="h-3 w-3 text-green-500" />
+                                          <span className="text-xs text-green-600">Notificações ativas</span>
                                         </div>
                                       )}
                                     </div>
@@ -610,12 +596,11 @@ const EntregaFlowKanban = () => {
                           <Card className="border-dashed border-2 border-gray-300">
                             <CardContent className="p-6 text-center">
                               <Button
-                                variant="ghost"
+                                className="text-gray-500 bg-transparent hover:bg-gray-50"
                                 onClick={() => {
                                   setNewProject({ ...newProject, status: column.id as KanbanProject['status'] });
                                   setShowAddModal(true);
                                 }}
-                                className="text-gray-500"
                               >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Adicionar Projeto
@@ -633,13 +618,14 @@ const EntregaFlowKanban = () => {
         </DragDropContext>
       </div>
 
+      {/* Modal de Novo Projeto */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
               Novo Projeto
               {isAgencyMode && currentAgencyId && (
-                <Badge variant="outline" className="ml-2">
+                <Badge className="ml-2 bg-blue-100 text-blue-800 border border-blue-200">
                   <Building className="h-3 w-3 mr-1" />
                   {contextLabel}
                 </Badge>
@@ -702,6 +688,35 @@ const EntregaFlowKanban = () => {
               />
             </div>
 
+            {/* Seleção de Responsáveis (apenas para agências) */}
+            {isAgencyMode && currentAgencyId && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">Responsáveis</label>
+                <ResponsibleSelector
+                  agencyId={currentAgencyId}
+                  selectedResponsibles={newProject.responsaveis || []}
+                  onResponsiblesChange={(responsaveis) => setNewProject({...newProject, responsaveis})}
+                  placeholder="Selecionar responsáveis..."
+                />
+              </div>
+            )}
+
+            {/* Opção de Notificação (apenas para agências) */}
+            {isAgencyMode && currentAgencyId && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="notificar_responsaveis"
+                  checked={newProject.notificar_responsaveis}
+                  onChange={(e) => setNewProject({...newProject, notificar_responsaveis: e.target.checked})}
+                  className="rounded border-gray-300"
+                />
+                <label htmlFor="notificar_responsaveis" className="text-sm text-gray-700">
+                  Notificar responsáveis sobre mudanças
+                </label>
+              </div>
+            )}
+
             <div>
               <label className="text-sm font-medium mb-2 block">Links de Entrega</label>
               <div className="flex gap-2">
@@ -720,7 +735,7 @@ const EntregaFlowKanban = () => {
                       setNewLink('');
                     }
                   }}
-                  variant="outline"
+                  className="bg-gray-100 text-gray-800 hover:bg-gray-200"
                 >
                   Adicionar
                 </Button>
@@ -756,8 +771,7 @@ const EntregaFlowKanban = () => {
           <div className="flex gap-2 pt-4">
             <Button 
               onClick={() => setShowAddModal(false)} 
-              variant="outline"
-              className="flex-1"
+              className="flex-1 bg-gray-100 text-gray-800 hover:bg-gray-200"
             >
               Cancelar
             </Button>
@@ -771,6 +785,7 @@ const EntregaFlowKanban = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Edição */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -780,17 +795,16 @@ const EntregaFlowKanban = () => {
                 {selectedProject?.priority === 'alta' && (
                   <Badge className="bg-red-500 text-white">Alta</Badge>
                 )}
-                <Badge variant="outline">{selectedProject?.status}</Badge>
+                <Badge className="bg-gray-100 text-gray-800">{selectedProject?.status}</Badge>
                 {selectedProject?.agency_id && (
-                  <Badge variant="outline" className="flex items-center gap-1">
+                  <Badge className="bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1">
                     <Building className="h-3 w-3" />
                     Empresa
                   </Badge>
                 )}
               </DialogTitle>
               <Button
-                size="sm"
-                variant="destructive"
+                className="bg-red-500 text-white hover:bg-red-600"
                 onClick={() => selectedProject && handleDeleteProject(selectedProject.id)}
               >
                 <Trash2 className="h-4 w-4" />
@@ -821,6 +835,31 @@ const EntregaFlowKanban = () => {
                 <p className="text-sm text-gray-900 mt-1">{selectedProject.description || 'Sem descrição'}</p>
               </div>
 
+              {/* Responsáveis (apenas para agências) */}
+              {isAgencyMode && currentAgencyId && selectedProject.agency_id && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Responsáveis</label>
+                  <ResponsibleSelector
+                    agencyId={currentAgencyId}
+                    selectedResponsibles={selectedProject.responsaveis || []}
+                    onResponsiblesChange={async (responsaveis) => {
+                      const updatedProject = {
+                        ...selectedProject,
+                        responsaveis,
+                        updatedAt: new Date().toISOString()
+                      };
+                      await supabaseKanbanService.saveProject(updatedProject);
+                      setSelectedProject(updatedProject);
+                      const updatedProjects = projects.map(p => 
+                        p.id === selectedProject.id ? updatedProject : p
+                      );
+                      setProjects(updatedProjects);
+                    }}
+                    placeholder="Selecionar responsáveis..."
+                  />
+                </div>
+              )}
+
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-medium text-gray-700">Links de Entrega</label>
@@ -845,7 +884,7 @@ const EntregaFlowKanban = () => {
                       <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                         <ExternalLink className="h-4 w-4 text-blue-500" />
                         <span className="text-sm text-gray-700 flex-1">{link}</span>
-                        <Button size="sm" variant="outline" asChild>
+                        <Button className="bg-gray-100 text-gray-800 hover:bg-gray-200">
                           <a href={link} target="_blank" rel="noopener noreferrer">
                             Abrir
                           </a>
@@ -859,8 +898,7 @@ const EntregaFlowKanban = () => {
               <div className="flex gap-2 pt-4">
                 <Button 
                   onClick={() => setShowEditModal(false)} 
-                  variant="outline"
-                  className="flex-1"
+                  className="flex-1 bg-gray-100 text-gray-800 hover:bg-gray-200"
                 >
                   Fechar
                 </Button>
