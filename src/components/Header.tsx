@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Calculator, 
@@ -42,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({
   showTeamOption 
 }) => {
   const { user, profile, signOut, agency } = useSupabaseAuth();
-  const { currentTheme, toggleTheme, isDarkMode } = useTheme();
+  const { currentTheme, toggleDarkMode, isDark } = useTheme();
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
@@ -72,7 +71,7 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+    <header className="bg-white dark:bg-[#141414] border-b border-gray-200 dark:border-[#262626] sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo e Navegação Desktop */}
@@ -95,8 +94,6 @@ const Header: React.FC<HeaderProps> = ({
                 return (
                   <Button
                     key={item.id}
-                    variant={isActive ? "default" : "ghost"}
-                    size="sm"
                     onClick={() => onTabChange(item.id)}
                     className={`flex items-center space-x-2 ${
                       isActive 
@@ -117,8 +114,6 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-4">
             {/* Privacy Toggle */}
             <Button
-              variant="ghost"
-              size="sm"
               onClick={toggleValuesVisibility}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
               title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
@@ -135,7 +130,7 @@ const Header: React.FC<HeaderProps> = ({
           
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-2 p-2">
+                <Button className="flex items-center space-x-2 p-2">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={user?.user_metadata?.avatar_url} />
                     <AvatarFallback>
@@ -146,8 +141,8 @@ const Header: React.FC<HeaderProps> = ({
                   <ChevronDown className="w-4 h-4 text-gray-500" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-800 z-50">
-                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+              <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#141414] z-50">
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-[#262626]">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {profile?.name || user?.email?.split('@')[0]}
                   </p>
@@ -155,7 +150,7 @@ const Header: React.FC<HeaderProps> = ({
                     {user?.email}
                   </p>
                   <div className="mt-2">
-                    <Badge variant="outline" className="text-xs">
+                    <Badge className="text-xs">
                       {profile?.subscription === 'enterprise-annual' ? 'Enterprise Anual' : 
                        profile?.subscription === 'enterprise' ? 'Enterprise' :
                        profile?.subscription === 'premium' ? 'Premium' : 'Free'}
