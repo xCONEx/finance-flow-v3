@@ -169,5 +169,27 @@ export const usageTrackingService = {
       console.error(`❌ Erro ao decrementar uso de ${usageType}:`, error);
       throw error;
     }
+  },
+
+  async getCurrentUsage(userId: string): Promise<{ jobs: number; projects: number }> {
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      const { data: usage, error } = await supabase
+        .from('user_usage_tracking')
+        .select('usage_type, count')
+        .eq('user_id', userId)
+        .eq('reset_date', currentMonth);
+
+      if (error) throw error;
+
+      const jobsCount = usage?.find(u => u.usage_type === 'job')?.count || 0;
+      const projectsCount = usage?.find(u => u.usage_type === 'project')?.count || 0;
+
+      return { jobs: jobsCount, projects: projectsCount };
+    } catch (error) {
+      console.error('❌ Erro ao buscar uso atual:', error);
+      return { jobs: 0, projects: 0 };
+    }
   }
 };
