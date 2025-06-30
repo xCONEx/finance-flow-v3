@@ -1049,6 +1049,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     markAllNotificationsAsRead,
   };
 
+  console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+
   return (
     <AppContext.Provider value={value}>
       {children}
