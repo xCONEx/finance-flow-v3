@@ -67,7 +67,7 @@ const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
     const newJob = {
       description: formData.description,
       client: formData.client,
-      eventDate: formData.eventDate || new Date().toISOString(),
+      eventDate: formData.eventDate ? new Date(formData.eventDate + 'T00:00:00').toISOString() : new Date().toISOString(),
       estimatedHours: 0,
       difficultyLevel: 'médio' as const,
       logistics: 0,
@@ -84,7 +84,8 @@ const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       userId: user.id,
-      isManual: true
+      clientId: null
+      // Removido: isManual (não existe na tabela jobs)
     };
 
     try {
