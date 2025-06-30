@@ -612,11 +612,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) return;
 
     // Chamar Supabase Function para criar job com validação de limite
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-job-with-limit`, {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-job-with-limit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
       },
       body: JSON.stringify({ user_id: user.id, jobData })
     });
@@ -1049,7 +1049,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     markAllNotificationsAsRead,
   };
 
-  console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log('SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
 
   return (
     <AppContext.Provider value={value}>
