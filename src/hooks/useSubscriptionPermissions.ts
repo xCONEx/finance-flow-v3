@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { useSubscription } from './useSubscription';
 import { useApp } from '@/contexts/AppContext';
+import { useUsageTracking } from './useUsageTracking';
 
 export interface SubscriptionLimits {
   maxJobs: number;
@@ -22,6 +23,7 @@ export interface SubscriptionLimits {
 export const useSubscriptionPermissions = () => {
   const { subscription, loading } = useSubscription();
   const { jobs, monthlyCosts } = useApp();
+  const { currentUsage: usageFromDB } = useUsageTracking();
 
   const limits = useMemo<SubscriptionLimits>(() => {
     switch (subscription) {
@@ -94,13 +96,12 @@ export const useSubscriptionPermissions = () => {
   }, [subscription]);
 
   const currentUsage = useMemo(() => {
-    const approvedJobs = jobs.filter(job => job.status === 'aprovado');
     return {
-      jobsCount: approvedJobs.length,
-      projectsCount: jobs.length,
+      jobsCount: usageFromDB.jobs, // Usar contagem real do banco
+      projectsCount: usageFromDB.projects, // Usar contagem real do banco
       teamMembersCount: 1, // Por enquanto sempre 1, pode ser expandido
     };
-  }, [jobs]);
+  }, [usageFromDB]);
 
   const canCreateJob = useMemo(() => {
     if (limits.maxJobs === -1) return true;
