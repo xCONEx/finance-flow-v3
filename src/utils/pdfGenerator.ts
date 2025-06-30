@@ -238,8 +238,13 @@ export const generateJobPDF = async (
     
     yPosition += 10;
     
-    // ITENS DO ORÇAMENTO
-    if (job.workItems && job.workItems.length > 0) {
+    // ITENS DO ORÇAMENTO - Tabela de valores
+    const hasAnyValues = safeNumber(job.logistics) > 0 || 
+                        safeNumber(job.equipment) > 0 || 
+                        safeNumber(job.assistance) > 0 || 
+                        safeNumber(job.totalPrice) > 0;
+    
+    if (hasAnyValues) {
       doc.setFillColor(...lightGray);
       doc.rect(15, yPosition, 180, 8, 'F');
       doc.setTextColor(...secondaryColor);
@@ -247,39 +252,82 @@ export const generateJobPDF = async (
       doc.text('ITENS DO ORÇAMENTO', 20, yPosition + 6);
       yPosition += 15;
       
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
       
-      let totalItemsValue = 0;
+      // Calcular valores
+      const logisticsValue = safeNumber(job.logistics);
+      const equipmentValue = safeNumber(job.equipment);
+      const assistanceValue = safeNumber(job.assistance);
+      const serviceValue = safeNumber(job.totalPrice) - logisticsValue - equipmentValue - assistanceValue;
+      const discountValue = safeNumber(job.totalPrice) - serviceValue;
       
-      job.workItems.forEach((item, index) => {
-        // Verificar se precisa de nova página
-        if (yPosition > 250) {
-          doc.addPage();
-          yPosition = 20;
+      // Criar tabela de valores
+      const budgetItems = [];
+      
+      if (logisticsValue > 0) {
+        budgetItems.push({ label: 'Logística', value: logisticsValue });
+      }
+      
+      if (equipmentValue > 0) {
+        budgetItems.push({ label: 'Equipamentos', value: equipmentValue });
+      }
+      
+      if (assistanceValue > 0) {
+        budgetItems.push({ label: 'Assistência', value: assistanceValue });
+      }
+      
+      if (serviceValue > 0) {
+        budgetItems.push({ label: 'Valor do Serviço', value: serviceValue });
+      }
+      
+      if (discountValue > 0) {
+        budgetItems.push({ label: 'Valor com Desconto', value: discountValue });
+      }
+      
+      // Desenhar tabela
+      const tableStartY = yPosition;
+      const tableWidth = 180;
+      const rowHeight = 8;
+      const labelWidth = 120;
+      const valueWidth = 60;
+      
+             // Cabeçalho da tabela
+       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+       doc.rect(15, tableStartY, tableWidth, rowHeight, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text('Item', 20, tableStartY + 6);
+      doc.text('Valor', 140, tableStartY + 6);
+      
+      // Linhas da tabela
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'normal');
+      
+      budgetItems.forEach((item, index) => {
+        const rowY = tableStartY + rowHeight + (index * rowHeight);
+        
+        // Linha de fundo alternada
+        if (index % 2 === 0) {
+          doc.setFillColor(248, 249, 250);
+          doc.rect(15, rowY, tableWidth, rowHeight, 'F');
         }
         
-        const itemValue = safeNumber(item.value);
-        totalItemsValue += itemValue;
+        // Borda da linha
+        doc.setDrawColor(200, 200, 200);
+        doc.line(15, rowY, 195, rowY);
         
-        doc.setFont(undefined, 'bold');
-        doc.text(`${index + 1}. ${item.description || 'Sem descrição'}`, 20, yPosition);
-        yPosition += 6;
-        
-        doc.setFont(undefined, 'normal');
-        doc.text(`   Valor: R$ ${formatCurrency(itemValue)}`, 20, yPosition);
-        yPosition += 5;
-        doc.text(`   Categoria: ${item.category || 'Sem categoria'}`, 20, yPosition);
-        yPosition += 5;
-        
-        yPosition += 5; // Espaçamento entre itens
+        // Conteúdo
+        doc.text(item.label, 20, rowY + 6);
+        doc.text(`R$ ${formatCurrency(item.value)}`, 140, rowY + 6);
       });
       
-      // Total dos itens
-      yPosition += 5;
-      doc.setFont(undefined, 'bold');
-      doc.text(`Total dos Itens: R$ ${formatCurrency(totalItemsValue)}`, 20, yPosition);
-      yPosition += 10;
+      // Linha final da tabela
+      const finalRowY = tableStartY + rowHeight + (budgetItems.length * rowHeight);
+      doc.line(15, finalRowY, 195, finalRowY);
+      
+      yPosition = finalRowY + 10;
     }
     
     // COMPOSIÇÃO DE CUSTOS (se houver)
@@ -330,8 +378,13 @@ export const generateJobPDF = async (
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     
-    // Abrir em nova aba
-    window.open(pdfUrl, '_blank');
+    // Abrir em nova aba para impressão
+    const printWindow = window.open(pdfUrl, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
     
     return pdfBlob;
     
@@ -449,8 +502,13 @@ export const generateExpensesPDF = async (expenses: ExpenseData[], companyData?:
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     
-    // Abrir em nova aba
-    window.open(pdfUrl, '_blank');
+    // Abrir em nova aba para impressão
+    const printWindow = window.open(pdfUrl, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
     
     return pdfBlob;
     
@@ -548,8 +606,13 @@ export const generateWorkItemsPDF = async (workItems: WorkItemData[], companyDat
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     
-    // Abrir em nova aba
-    window.open(pdfUrl, '_blank');
+    // Abrir em nova aba para impressão
+    const printWindow = window.open(pdfUrl, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
     
     return pdfBlob;
     
