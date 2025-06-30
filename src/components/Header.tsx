@@ -93,15 +93,14 @@ const Header: React.FC<HeaderProps> = ({
 
                 return (
                   <Button
-                    key={item.id}
-                    onClick={() => onTabChange(item.id)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-150
-                      ${isActive
-                        ? `bg-gradient-to-r ${currentTheme.primary} text-white shadow-sm`
-                        : `bg-transparent text-[color:var(--primary)] dark:text-[color:var(--primary)] shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)]`}
-                      font-medium`}
-                    textShadow={isActive ? undefined : '0 1px 4px rgba(0,0,0,0.10)'}
-                  >
+  key={item.id}
+  onClick={() => onTabChange(item.id)}
+  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-150
+    ${isActive
+      ? `bg-gradient-to-r ${currentTheme.primary} text-white`
+      : `bg-transparent text-[color:var(--primary)] dark:text-[color:var(--primary)]`}
+    font-medium`}
+>
                     <Icon className="w-4 h-4" />
                     <span className="hidden lg:inline">{item.label}</span>
                   </Button>
