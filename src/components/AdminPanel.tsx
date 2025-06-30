@@ -376,7 +376,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
           <CardContent className="text-center p-8">
             <Shield className="h-16 w-16 mx-auto text-red-500 mb-4" />
             <h2 className="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h2>
-            <p className="text-gray-600">Você não tem permissão para acessar este painel.</p>
+            <p className="text-muted-foreground">Você não tem permissão para acessar este painel.</p>
           </CardContent>
         </Card>
       </div>
@@ -389,7 +389,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         <Card className="w-full max-w-md">
           <CardContent className="text-center p-8">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Carregando dados...</p>
+            <p className="text-muted-foreground">Carregando dados...</p>
           </CardContent>
         </Card>
       </div>
@@ -399,106 +399,106 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
   const { freeUsers = 0, premiumUsers = 0, basicUsers = 0, enterpriseUsers = 0, bannedUsers = 0 } = analytics?.userStats || {};
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto p-4 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center justify-center gap-2 text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center justify-center gap-2 text-foreground">
             <Shield className="text-purple-600 h-6 w-6 sm:h-8 sm:w-8" />
             Painel Administrativo
           </h1>
-          <p className="text-sm sm:text-base text-gray-600">Gestão completa da plataforma</p>
+          <p className="text-sm sm:text-base text-muted-foreground">Gestão completa da plataforma</p>
         </div>
 
         {/* Analytics Cards - Mobile First Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardContent className="p-4 text-center">
               <Users className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-blue-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-gray-900">{analytics?.overview?.totalUsers || 0}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Total</p>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{analytics?.overview?.totalUsers || 0}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardContent className="p-4 text-center">
               <Activity className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-green-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-gray-900">{analytics?.overview?.activeUsers || 0}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Ativos</p>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{analytics?.overview?.activeUsers || 0}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Ativos</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardContent className="p-4 text-center">
               <Ban className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-red-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-gray-900">{bannedUsers}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Banidos</p>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{bannedUsers}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Banidos</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardContent className="p-4 text-center">
               <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-purple-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-gray-900">{premiumUsers + basicUsers + enterpriseUsers}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Pagantes</p>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{premiumUsers + basicUsers + enterpriseUsers}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Pagantes</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Planos - Mobile First Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardContent className="p-4 text-center">
-              <Users className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-gray-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-gray-700">{freeUsers}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Free</p>
+              <Users className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-lg sm:text-2xl font-bold text-foreground">{freeUsers}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Free</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardContent className="p-4 text-center">
               <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-green-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-green-700">{basicUsers}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Basic</p>
+              <p className="text-lg sm:text-2xl font-bold text-green-600">{basicUsers}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Basic</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardContent className="p-4 text-center">
               <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-blue-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-blue-700">{premiumUsers}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Premium</p>
+              <p className="text-lg sm:text-2xl font-bold text-blue-600">{premiumUsers}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Premium</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardContent className="p-4 text-center">
               <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-yellow-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-yellow-700">{enterpriseUsers}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Enterprise</p>
+              <p className="text-lg sm:text-2xl font-bold text-yellow-600">{enterpriseUsers}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Enterprise</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Tabs - Mobile First */}
         <Tabs defaultValue="users" className="space-y-4">
-          <TabsList className="grid grid-cols-4 gap-1 w-full h-auto p-1 bg-gray-100">
-            <TabsTrigger value="users" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md">
+          <TabsList className="grid grid-cols-4 gap-1 w-full h-auto p-1 bg-muted">
+            <TabsTrigger value="users" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md">
               <User className="w-5 h-5" />
               <span className="hidden sm:block">Usuários</span>
             </TabsTrigger>
 
-            <TabsTrigger value="companies" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md">
+            <TabsTrigger value="companies" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md">
               <Building className="w-5 h-5" />
               <span className="hidden sm:block">Empresas</span>
             </TabsTrigger>
 
-            <TabsTrigger value="admins" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md">
+            <TabsTrigger value="admins" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md">
               <ShieldCheck className="w-5 h-5" />
               <span className="hidden sm:block">Admins</span>
             </TabsTrigger>
 
-            <TabsTrigger value="analytics" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md">
+            <TabsTrigger value="analytics" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md">
               <BarChart className="w-5 h-5" />
               <span className="hidden sm:block">Analytics</span>
             </TabsTrigger>
@@ -507,7 +507,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
           {/* USERS TAB */}
           <TabsContent value="users" className="space-y-4">
             {/* Filtros - Mobile First */}
-            <Card className="border-0 shadow-sm">
+            <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Search className="h-5 w-5" />
@@ -554,23 +554,23 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
             {/* Users List - Mobile First Cards */}
             <div className="space-y-3">
               {filteredUsers.map((user) => (
-                <Card key={user.id} className="border-0 shadow-sm">
+                <Card key={user.id}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       {/* User Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start gap-3">
                           <div className="flex-shrink-0">
-                            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                              <User className="w-5 h-5 text-gray-600" />
+                            <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-muted-foreground" />
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{user.email}</p>
+                            <p className="font-medium text-foreground truncate">{user.email}</p>
                             {user.name && (
-                              <p className="text-sm text-gray-600 truncate">{user.name}</p>
+                              <p className="text-sm text-muted-foreground truncate">{user.name}</p>
                             )}
-                            <p className="text-xs text-gray-400">ID: {user.id.slice(0, 8)}...</p>
+                            <p className="text-xs text-muted-foreground">ID: {user.id.slice(0, 8)}...</p>
                           </div>
                         </div>
                       </div>
@@ -646,10 +646,10 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
               ))}
               
               {filteredUsers.length === 0 && (
-                <Card className="border-0 shadow-sm">
+                <Card>
                   <CardContent className="text-center py-12">
-                    <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <p className="text-gray-500">Nenhum usuário encontrado</p>
+                    <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Nenhum usuário encontrado</p>
                   </CardContent>
                 </Card>
               )}
@@ -663,7 +663,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
 
           {/* ADMINS TAB */}
           <TabsContent value="admins" className="space-y-4">
-            <Card className="border-0 shadow-sm">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5" />
@@ -689,16 +689,16 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                   {users.filter(u => u.user_type === 'admin').map(admin => (
                     <div key={admin.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2">
                       <div>
-                        <span className="text-sm font-medium">{admin.email}</span>
+                        <span className="text-sm font-medium text-foreground">{admin.email}</span>
                         {admin.name && (
-                          <p className="text-xs text-gray-600">{admin.name}</p>
+                          <p className="text-xs text-muted-foreground">{admin.name}</p>
                         )}
                       </div>
                       <Badge>Admin</Badge>
                     </div>
                   ))}
                   {users.filter(u => u.user_type === 'admin').length === 0 && (
-                    <p className="text-gray-500 text-sm">Nenhum administrador encontrado</p>
+                    <p className="text-muted-foreground text-sm">Nenhum administrador encontrado</p>
                   )}
                 </div>
               </CardContent>
@@ -708,7 +708,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
           {/* ANALYTICS TAB */}
           <TabsContent value="analytics" className="space-y-4">
             {/* Export buttons */}
-            <Card className="border-0 shadow-sm">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <FileText className="h-5 w-5" />
@@ -752,52 +752,52 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card className="border-0 shadow-sm">
+              <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Distribuição de Usuários</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span>Usuários Free:</span>
-                      <span className="font-bold">{freeUsers}</span>
+                      <span className="text-foreground">Usuários Free:</span>
+                      <span className="font-bold text-foreground">{freeUsers}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Usuários Basic:</span>
+                      <span className="text-foreground">Usuários Basic:</span>
                       <span className="font-bold text-green-600">{basicUsers}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Usuários Premium:</span>
+                      <span className="text-foreground">Usuários Premium:</span>
                       <span className="font-bold text-blue-600">{premiumUsers}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Usuários Enterprise:</span>
+                      <span className="text-foreground">Usuários Enterprise:</span>
                       <span className="font-bold text-yellow-600">{enterpriseUsers}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Usuários Banidos:</span>
+                      <span className="text-foreground">Usuários Banidos:</span>
                       <span className="font-bold text-red-600">{bannedUsers}</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-sm">
+              <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Informações Gerais</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span>Total de Usuários:</span>
-                      <span className="font-bold">{analytics?.overview?.totalUsers || 0}</span>
+                      <span className="text-foreground">Total de Usuários:</span>
+                      <span className="font-bold text-foreground">{analytics?.overview?.totalUsers || 0}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Usuários Ativos:</span>
+                      <span className="text-foreground">Usuários Ativos:</span>
                       <span className="font-bold text-green-600">{analytics?.overview?.activeUsers || 0}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Taxa de Conversão:</span>
+                      <span className="text-foreground">Taxa de Conversão:</span>
                       <span className="font-bold text-blue-600">
                         {analytics?.overview?.totalUsers > 0 
                           ? ((premiumUsers + basicUsers + enterpriseUsers) / analytics.overview.totalUsers * 100).toFixed(1)
@@ -806,7 +806,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Receita Estimada:</span>
+                      <span className="text-foreground">Receita Estimada:</span>
                       <span className="font-bold text-purple-600">
                         R$ {(analytics?.overview?.totalRevenue || 0).toLocaleString('pt-BR')}
                       </span>
