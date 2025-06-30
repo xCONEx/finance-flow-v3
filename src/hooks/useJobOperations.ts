@@ -8,7 +8,7 @@ export const useJobOperations = () => {
 
   const createJob = useCallback(async (jobData: any) => {
     console.log('🔄 Criando job:', jobData);
-
+ 
     try {
       await addJob(jobData);
       toast({
