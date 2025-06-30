@@ -462,30 +462,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const checkDueNotifications = () => {
-    const today = new Date();
-    const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
+  // const checkDueNotifications = () => {
+  //   const today = new Date();
+  //   const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
     
-    monthlyCosts.forEach(cost => {
-      if (cost.dueDate && cost.notificationEnabled) {
-        const dueDate = new Date(cost.dueDate);
-        const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  //   monthlyCosts.forEach(cost => {
+  //     if (cost.dueDate && cost.notificationEnabled) {
+  //       const dueDate = new Date(cost.dueDate);
+  //       const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         
-        if (daysDiff === 3) {
-          toast({
-            title: "Vencimento em 3 dias",
-            description: `${cost.description} vence em ${cost.dueDate}`,
-          });
-        } else if (daysDiff === 0) {
-          toast({
-            title: "Vencimento hoje",
-            description: `${cost.description} vence hoje!`,
-            variant: "destructive"
-          });
-        }
-      }
-    });
-  };
+  //       if (daysDiff === 3) {
+  //         toast({
+  //           title: "Vencimento em 3 dias",
+  //           description: `${cost.description} vence em ${cost.dueDate}`,
+  //         });
+  //       } else if (daysDiff === 0) {
+  //         toast({
+  //           title: "Vencimento hoje",
+  //           description: `${cost.description} vence hoje!`,
+  //           variant: "destructive"
+  //         });
+  //       }
+  //     }
+  //   });
+  // };
 
   const createRecurringCosts = async (baseCost: MonthlyCost) => {
     if (!baseCost.isRecurring) return;
@@ -643,32 +643,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('jobs')
-      .insert({
-        user_id: user.id,
-        agency_id: jobData.companyId || null,
-        description: jobData.description,
-        client: jobData.client,
-        event_date: jobData.eventDate || null,
-        estimated_hours: jobData.estimatedHours,
-        difficulty_level: jobData.difficultyLevel,
-        logistics: jobData.logistics,
-        equipment: jobData.equipment,
-        assistance: jobData.assistance,
-        status: jobData.status,
-        category: jobData.category,
-        discount_value: jobData.discountValue,
-        total_costs: jobData.totalCosts,
-        service_value: jobData.serviceValue,
-        value_with_discount: jobData.valueWithDiscount,
-        profit_margin: jobData.profitMargin
-      })
-      .select()
-      .single();
+    // Chamar Supabase Function para criar job com validação de limite
+    const response = await fetch('/functions/v1/create-job-with-limit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      },
+      body: JSON.stringify({ user_id: user.id, jobData })
+    });
 
-    if (error) throw error;
-    if (data) {
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Erro ao criar job');
+    }
+    if (result.job) {
+      const data = result.job;
       const newJob: Job = {
         id: data.id,
         description: data.description,
