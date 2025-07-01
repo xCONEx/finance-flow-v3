@@ -23,6 +23,16 @@ const UserProfile = () => {
     company: profile?.company || '',
     address: profile?.address || ''
   });
+
+  // Atualizar formData quando o profile mudar
+  useEffect(() => {
+    setFormData({
+      name: profile?.name || '',
+      phone: profile?.phone || '',
+      company: profile?.company || '',
+      address: profile?.address || ''
+    });
+  }, [profile]);
   const [loading, setLoading] = useState(false);
   const [userAgency, setUserAgency] = useState<any>(null);
   const [isAgencyCollaborator, setIsAgencyCollaborator] = useState(false);
@@ -189,7 +199,11 @@ const UserProfile = () => {
       }
 
       console.log('✅ Perfil atualizado com sucesso:', data);
-      await updateProfile(profile);
+      
+      // Atualizar o contexto com os novos dados
+      if (data && data[0]) {
+        await updateProfile(data[0]);
+      }
       
       toast({
         title: "Sucesso",
