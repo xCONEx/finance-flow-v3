@@ -109,7 +109,9 @@ const AgencyCollaborators = () => {
       let rpcFunction = 'invite_collaborator';
       let params = {
         target_agency_id: selectedAgency,
-        collaborator_email: inviteEmail.trim()
+        collaborator_email: inviteEmail.trim(),
+        collaborator_role: 'member',
+        invitation_message: null
       };
 
       if (isAdmin) {
