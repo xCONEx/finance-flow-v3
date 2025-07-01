@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +12,7 @@ import MainApp from "./components/MainApp";
 import LoginPage from "./components/LoginPage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PendingInvitationsModal from './components/PendingInvitationsModal';
 
 const queryClient = new QueryClient();
 
@@ -26,6 +26,7 @@ const App = () => (
               <AppProvider>
                 <Toaster />
                 <Sonner />
+                <PendingInvitationsModal />
                 <BrowserRouter>
                   <Routes>
                     <Route path="/login" element={<LoginPage />} />
