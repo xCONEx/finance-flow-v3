@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -109,7 +108,7 @@ const AgencyCollaborators = () => {
       
       let rpcFunction = 'invite_collaborator_owner';
       let params = {
-        agency_id: selectedAgency,
+        target_agency_id: selectedAgency,
         collaborator_email: inviteEmail.trim()
       };
 
