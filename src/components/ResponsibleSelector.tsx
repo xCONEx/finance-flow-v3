@@ -44,8 +44,15 @@ const ResponsibleSelector: React.FC<ResponsibleSelectorProps> = ({
 
   // Carregar colaboradores da agência
   useEffect(() => {
-    if (agencyId) {
+    if (agencyId && typeof agencyId === 'string' && agencyId.length === 36) {
       loadCollaborators();
+    } else {
+      setCollaborators([]);
+      if (agencyId) {
+        console.error('[ResponsibleSelector] agencyId inválido:', agencyId);
+      } else {
+        console.warn('[ResponsibleSelector] Nenhuma agencyId fornecida, não buscando colaboradores.');
+      }
     }
   }, [agencyId]);
 
@@ -126,11 +133,13 @@ const ResponsibleSelector: React.FC<ResponsibleSelectorProps> = ({
         <PopoverTrigger asChild>
           <Button
             className="w-full justify-between border border-gray-300 bg-white hover:bg-gray-50"
-            disabled={disabled || loading}
+            disabled={disabled || loading || !agencyId || agencyId.length !== 36}
           >
             <div className="flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
-              {loading ? 'Carregando...' : placeholder}
+              {(!agencyId || agencyId.length !== 36)
+                ? 'Selecione uma agência para escolher responsáveis'
+                : (loading ? 'Carregando...' : placeholder)}
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -144,7 +153,9 @@ const ResponsibleSelector: React.FC<ResponsibleSelectorProps> = ({
             />
             <CommandList>
               <CommandEmpty>
-                {loading ? 'Carregando colaboradores...' : 'Nenhum colaborador encontrado.'}
+                {(!agencyId || agencyId.length !== 36)
+                  ? 'Selecione uma agência para ver colaboradores.'
+                  : (loading ? 'Carregando colaboradores...' : 'Nenhum colaborador encontrado.')}
               </CommandEmpty>
               <CommandGroup>
                 {filteredCollaborators.map((collaborator) => {
