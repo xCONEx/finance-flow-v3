@@ -226,7 +226,7 @@ class SupabaseKanbanService {
       console.log('👥 [COLLABORATORS] Buscando colaboradores da agência:', agencyId);
       
       const { data, error } = await supabase
-        .rpc('get_agency_collaborators_for_selection', { agency_id: agencyId });
+        .rpc('get_agency_collaborators_for_selection', { p_agency_id: agencyId });
 
       if (error) {
         console.error('❌ [COLLABORATORS] Erro ao buscar colaboradores:', error);
