@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAgency } from '@/contexts/AgencyContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +10,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown, User, Building2, Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { notificationService } from '@/services/notificationService';
+import { Mail } from 'lucide-react';
 
 const ContextSelector = () => {
   const {
@@ -19,8 +22,37 @@ const ContextSelector = () => {
     loading,
     pendingInvitations,
     acceptInvitation,
-    rejectInvitation
+    rejectInvitation,
+    loadPendingInvitations
   } = useAgency();
+
+  const [open, setOpen] = useState(false);
+  const [notified, setNotified] = useState(false);
+
+  useEffect(() => {
+    if (pendingInvitations.length > 0) {
+      setOpen(true);
+      if (!notified) {
+        const invite = pendingInvitations[0];
+        notificationService.showNotification({
+          id: `invite-${invite.id}`,
+          title: 'Convite para Agência',
+          body: `Você foi convidado para a agência: ${invite.agency_name}`,
+          type: 'general',
+          priority: 'high',
+          timestamp: Date.now(),
+          isRead: false,
+          userId: 'system',
+          createdAt: new Date().toISOString(),
+          data: { agencyId: invite.agency_id }
+        });
+        setNotified(true);
+      }
+    } else {
+      setOpen(false);
+      setNotified(false);
+    }
+  }, [pendingInvitations, notified]);
 
   if (agencies.length === 0 && pendingInvitations.length === 0) {
     return (
@@ -112,51 +144,82 @@ const ContextSelector = () => {
               <Bell className="h-3 w-3" />
               Convites Pendentes ({pendingInvitations.length})
             </div>
-            {pendingInvitations.map((invitation) => (
-              <div
-                key={invitation.id}
-                className="px-2 py-2 border-b border-gray-100 last:border-b-0"
-              >
-                <div className="flex flex-col gap-2">
-                  <div>
-                    <div className="text-sm font-medium">{invitation.agency_name}</div>
-                    <div className="text-xs text-gray-600">
-                      Convidado por {invitation.invited_by_name}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Expira em {new Date(invitation.expires_at).toLocaleDateString('pt-BR')}
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      className="h-6 text-xs px-2 bg-green-600 hover:bg-green-700"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        acceptInvitation(invitation.id);
-                      }}
-                    >
-                      Aceitar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-6 text-xs px-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        rejectInvitation(invitation.id);
-                      }}
-                    >
-                      Rejeitar
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <DropdownMenuItem
+              onClick={() => setOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Mail className="h-4 w-4" />
+              Ver Convites
+            </DropdownMenuItem>
           </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+};
+
+const PendingInvitationsModal: React.FC = () => {
+  const { pendingInvitations, acceptInvitation, loadPendingInvitations } = useAgency();
+  const [open, setOpen] = useState(false);
+  const [notified, setNotified] = useState(false);
+
+  useEffect(() => {
+    if (pendingInvitations.length > 0) {
+      setOpen(true);
+      if (!notified) {
+        const invite = pendingInvitations[0];
+        notificationService.showNotification({
+          id: `invite-${invite.id}`,
+          title: 'Convite para Agência',
+          body: `Você foi convidado para a agência: ${invite.agency_name}`,
+          type: 'general',
+          priority: 'high',
+          timestamp: Date.now(),
+          isRead: false,
+          userId: 'system',
+          createdAt: new Date().toISOString(),
+          data: { agencyId: invite.agency_id }
+        });
+        setNotified(true);
+      }
+    } else {
+      setOpen(false);
+      setNotified(false);
+    }
+  }, [pendingInvitations, notified]);
+
+  if (pendingInvitations.length === 0) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Convite para Agência</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {pendingInvitations.map((invitation) => (
+            <div key={invitation.id} className="border rounded-lg p-4 flex items-center gap-3 bg-blue-50">
+              <Building2 className="h-6 w-6 text-blue-600" />
+              <div className="flex-1">
+                <div className="font-medium text-blue-900">{invitation.agency_name}</div>
+                <div className="text-xs text-gray-600 mb-1">Convidado por {invitation.invited_by_name}</div>
+                <div className="text-xs text-gray-500">Expira em {new Date(invitation.expires_at).toLocaleDateString('pt-BR')}</div>
+              </div>
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={async () => {
+                  await acceptInvitation(invitation.id);
+                  await loadPendingInvitations();
+                }}
+              >
+                Aceitar
+              </Button>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
