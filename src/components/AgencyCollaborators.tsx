@@ -106,7 +106,7 @@ const AgencyCollaborators = () => {
       // Usar função RPC apropriada baseada no tipo de usuário
       const isAdmin = profile?.user_type === 'admin';
       
-      let rpcFunction = 'invite_collaborator_owner';
+      let rpcFunction = 'invite_collaborator';
       let params = {
         target_agency_id: selectedAgency,
         collaborator_email: inviteEmail.trim()
