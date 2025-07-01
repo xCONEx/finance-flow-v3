@@ -110,7 +110,7 @@ const AgencyCollaborators = () => {
       let params = {
         target_agency_id: selectedAgency,
         collaborator_email: inviteEmail.trim(),
-        collaborator_role: 'member',
+        collaborator_role: 'viewer',
         invitation_message: null
       };
 
