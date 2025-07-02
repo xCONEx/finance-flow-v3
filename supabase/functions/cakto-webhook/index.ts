@@ -28,7 +28,7 @@ serve(async (req)=>{
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
     const headers = Object.fromEntries(req.headers.entries());
-    const webhookKey = headers['x-webhook-key'] || headers['authorization'];
+    const webhookKey = req.headers.get("x-webhook-key");
     if (webhookKey !== CAKTO_WEBHOOK_KEY) {
       return new Response('Unauthorized', {
         status: 401,
