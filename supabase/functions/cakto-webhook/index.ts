@@ -1,9 +1,8 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Configurações da Cakto
-const CAKTO_WEBHOOK_KEY = '27a5317b-248f-47e8-9c4b-70aff176e556'
+const CAKTO_WEBHOOK_KEY = Deno.env.get('CAKTO_WEBHOOK_KEY') || ''
 
 const PLAN_MAPPING = {
   'yppzpjc': 'basic',     // https://pay.cakto.com.br/yppzpjc
