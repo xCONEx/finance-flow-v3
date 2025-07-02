@@ -54,7 +54,7 @@ serve(async (req) => {
     )
 
     // Validar webhook
-    const webhookKey = req.headers.get('x-webhook-key');
+    const webhookKey = req.headers.get('x-webhook-key') || req.headers.get('authorization')
     if (webhookKey !== KIWIFY_WEBHOOK_KEY) {
       console.error('Webhook Kiwify não autorizado:', webhookKey)
       return new Response('Unauthorized', { 
