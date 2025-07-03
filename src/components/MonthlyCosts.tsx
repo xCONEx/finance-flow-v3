@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, DollarSign, Edit, FileText, Loader2, Calendar, Bell, Repeat, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +17,7 @@ const MonthlyCosts = () => {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingCost, setEditingCost] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Filter out financial transactions and reserve items - only show regular expenses
   const regularExpenses = monthlyCosts.filter(cost => 
@@ -42,21 +42,23 @@ const MonthlyCosts = () => {
   };
 
   const handleDelete = async (id: string) => {
+    setDeletingId(id);
     try {
-      // Cancel notifications for this expense before deleting
-      await cancelExpenseNotifications(id);
-      
+      // Apenas deletar o custo, notificações são removidas em cascata pelo banco
       await deleteMonthlyCost(id);
       toast({
         title: "Custo Removido",
         description: "O custo foi excluído com sucesso.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Erro detalhado ao remover custo:', error);
       toast({
         title: "Erro",
-        description: "Erro ao remover custo.",
+        description: error?.message ? `Erro ao remover custo: ${error.message}` : "Erro ao remover custo.",
         variant: "destructive"
       });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -274,7 +276,7 @@ const MonthlyCosts = () => {
                         variant="outline"
                         onClick={() => handleDelete(cost.id)}
                         className="flex-1 transition-all duration-300 hover:scale-105"
-                        disabled={submitting}
+                        disabled={submitting || deletingId === cost.id}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -343,7 +345,7 @@ const MonthlyCosts = () => {
                           variant="outline"
                           onClick={() => handleDelete(cost.id)}
                           className="transition-all duration-300 hover:scale-105"
-                          disabled={submitting}
+                          disabled={submitting || deletingId === cost.id}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
