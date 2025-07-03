@@ -191,7 +191,15 @@ const CompanyManagement = () => {
         title: "Sucesso",
         description: "Empresa atualizada com sucesso.",
       });
-      fetchCompanies();
+      await fetchCompanies();
+      // Atualiza selectedCompany se o modal ainda estiver aberto
+      setSelectedCompany(prev => {
+        if (prev && prev.id === id) {
+          const updated = companies.find(c => c.id === id);
+          return updated ? { ...updated } : prev;
+        }
+        return prev;
+      });
     } catch (error: any) {
       toast({
         title: "Erro ao editar empresa",
@@ -290,11 +298,11 @@ const CompanyManagement = () => {
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="text-center p-8">
-            <Building2 className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
+            <Building2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-xl font-bold text-foreground mb-2">
               Acesso Restrito
             </h3>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Apenas administradores podem gerenciar empresas.
             </p>
           </CardContent>
@@ -309,11 +317,11 @@ const CompanyManagement = () => {
       {/* Header - Mobile First */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 text-foreground">
             <Building2 className="text-blue-600 h-6 w-6 sm:h-8 sm:w-8" />
             Gerenciamento de Empresas
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-2">
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
             Gerencie empresas e colaboradores do sistema
           </p>
         </div>
@@ -328,18 +336,18 @@ const CompanyManagement = () => {
       </div>
 
       {loading ? (
-        <Card className="border-0 shadow-sm">
+        <Card>
           <CardContent className="flex items-center justify-center py-16">
             <div className="text-center">
               <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600 mb-4" />
-              <p className="text-gray-600">Carregando empresas...</p>
+              <p className="text-muted-foreground">Carregando empresas...</p>
             </div>
           </CardContent>
         </Card>
       ) : (
         <>
           {/* Resumo - Mobile First Grid */}
-          <Card className="border-0 shadow-sm">
+          <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
@@ -348,23 +356,23 @@ const CompanyManagement = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">
                     {companies.length}
                   </div>
-                  <div className="text-sm text-gray-600">Empresas Cadastradas</div>
+                  <div className="text-sm text-muted-foreground">Empresas Cadastradas</div>
                 </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
                     {companies.reduce((sum, c) => sum + (c.collaborators_count || 0), 0)}
                   </div>
-                  <div className="text-sm text-gray-600">Total de Colaboradores</div>
+                  <div className="text-sm text-muted-foreground">Total de Colaboradores</div>
                 </div>
-                <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
                   <div className="text-2xl font-bold text-yellow-600">
                     {companies.filter(c => c.status === 'active').length}
                   </div>
-                  <div className="text-sm text-gray-600">Empresas Ativas</div>
+                  <div className="text-sm text-muted-foreground">Empresas Ativas</div>
                 </div>
               </div>
             </CardContent>
