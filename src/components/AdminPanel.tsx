@@ -37,7 +37,10 @@ import {
   FileText,
   Search,
   Filter,
-  MoreHorizontal
+  MoreHorizontal,
+  Webhook,
+  Play,
+  Zap
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,6 +52,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 type SubscriptionPlan = 'free' | 'basic' | 'premium' | 'enterprise' | 'enterprise-annual';
 type UserType = 'individual' | 'company_owner' | 'employee' | 'admin';
@@ -76,6 +88,16 @@ const AdminPanel = () => {
   const [userTypeFilter, setUserTypeFilter] = useState('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState('all');
   const [newAdminEmail, setNewAdminEmail] = useState('');
+  
+  // Webhook test states
+  const [webhookTestOpen, setWebhookTestOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'cakto' | 'kiwify'>('cakto');
+  const [selectedEvent, setSelectedEvent] = useState('payment.success');
+  const [testEmail, setTestEmail] = useState('');
+  const [testPlanId, setTestPlanId] = useState('yppzpjc');
+  const [testAmount, setTestAmount] = useState('2990');
+  const [webhookResponse, setWebhookResponse] = useState<any>(null);
+  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
 
   // Verificar se o usuário atual é admin
   const isCurrentUserAdmin = user?.email === 'yuriadrskt@gmail.com' || user?.email === 'adm.financeflow@gmail.com';
@@ -369,6 +391,104 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
     return matchesSearch && matchesTypeFilter && matchesSubscriptionFilter;
   });
 
+  // Webhook test functions
+  const testWebhook = async () => {
+    if (!testEmail.trim()) {
+      toast({
+        title: 'Erro',
+        description: 'Por favor, insira um email válido para teste.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsTestingWebhook(true);
+    setWebhookResponse(null);
+
+    try {
+      const webhookUrl = selectedProvider === 'cakto' 
+        ? `${window.location.origin}/api/cakto-webhook`
+        : `${window.location.origin}/api/kiwify-webhook`;
+
+      const testPayload = {
+        event: selectedEvent,
+        data: {
+          id: `test_${Date.now()}`,
+          status: 'success',
+          plan_id: testPlanId,
+          customer_email: testEmail,
+          amount: parseInt(testAmount),
+          currency: 'BRL',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        }
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-webhook-key': selectedProvider === 'cakto' 
+            ? '27a5317b-248f-47e8-9c4b-70aff176e556'
+            : 'kiwify-webhook-key'
+        },
+        body: JSON.stringify(testPayload)
+      });
+
+      const responseData = await response.json();
+      setWebhookResponse({
+        status: response.status,
+        data: responseData,
+        payload: testPayload
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Sucesso',
+          description: `Webhook ${selectedProvider} testado com sucesso!`,
+        });
+      } else {
+        toast({
+          title: 'Erro',
+          description: `Erro no webhook: ${responseData.error || 'Erro desconhecido'}`,
+          variant: 'destructive'
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao testar webhook:', error);
+      setWebhookResponse({
+        error: error.message,
+        status: 'error'
+      });
+      toast({
+        title: 'Erro',
+        description: 'Erro ao testar webhook: ' + error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsTestingWebhook(false);
+    }
+  };
+
+  const getPlanMapping = (provider: 'cakto' | 'kiwify') => {
+    if (provider === 'cakto') {
+      return {
+        'yppzpjc': 'Basic (R$ 29,90)',
+        'kesq5cb': 'Premium (R$ 49,90)',
+        '34p727v': 'Enterprise (R$ 99,90)',
+        'uoxtt9o': 'Enterprise Anual (R$ 1.990,00)'
+      };
+    } else {
+      return {
+        'jtksckF': 'Basic (R$ 29,90)',
+        'kTs280h': 'Premium (R$ 49,90)',
+        'iuQVR8a': 'Enterprise (R$ 99,90)',
+        'CjaLdBJ': 'Enterprise Anual (R$ 1.990,00)'
+      };
+    }
+  };
+
   if (!isCurrentUserAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -411,96 +531,78 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         </div>
 
         {/* Analytics Cards - Mobile First Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="p-4 text-center">
-              <Users className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-blue-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{analytics?.overview?.totalUsers || 0}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total de Usuários</p>
+                  <p className="text-2xl font-bold">{analytics?.overview?.totalUsers || 0}</p>
+                </div>
+                <Users className="h-8 w-8 text-blue-500" />
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4 text-center">
-              <Activity className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-green-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{analytics?.overview?.activeUsers || 0}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Ativos</p>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Usuários Ativos</p>
+                  <p className="text-2xl font-bold">{analytics?.overview?.activeUsers || 0}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-500" />
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4 text-center">
-              <Ban className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-red-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{bannedUsers}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Banidos</p>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Receita Total</p>
+                  <p className="text-2xl font-bold">R$ {analytics?.overview?.totalRevenue || 0}</p>
+                </div>
+                <DollarSign className="h-8 w-8 text-yellow-500" />
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4 text-center">
-              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-purple-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{premiumUsers + basicUsers + enterpriseUsers}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Pagantes</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Planos - Mobile First Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <Users className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-foreground">{freeUsers}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Free</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 text-center">
-              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-green-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-green-600">{basicUsers}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Basic</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 text-center">
-              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-blue-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-blue-600">{premiumUsers}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Premium</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 text-center">
-              <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-yellow-600 mb-2" />
-              <p className="text-lg sm:text-2xl font-bold text-yellow-600">{enterpriseUsers}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Enterprise</p>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Usuários Banidos</p>
+                  <p className="text-2xl font-bold">{analytics?.userStats?.bannedUsers || 0}</p>
+                </div>
+                <Ban className="h-8 w-8 text-red-500" />
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Tabs - Mobile First */}
+        {/* Tabs */}
         <Tabs defaultValue="users" className="space-y-4">
-          <TabsList className="grid grid-cols-4 gap-1 w-full h-auto p-1 bg-muted">
-            <TabsTrigger value="users" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md">
-              <User className="w-5 h-5" />
-              <span className="hidden sm:block">Usuários</span>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Usuários</span>
             </TabsTrigger>
-
-            <TabsTrigger value="companies" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md">
-              <Building className="w-5 h-5" />
-              <span className="hidden sm:block">Empresas</span>
+            <TabsTrigger value="companies" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Empresas</span>
             </TabsTrigger>
-
-            <TabsTrigger value="admins" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md">
-              <ShieldCheck className="w-5 h-5" />
-              <span className="hidden sm:block">Admins</span>
+            <TabsTrigger value="admins" className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">Admins</span>
             </TabsTrigger>
-
-            <TabsTrigger value="analytics" className="flex flex-col items-center gap-1 py-3 px-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md">
-              <BarChart className="w-5 h-5" />
-              <span className="hidden sm:block">Analytics</span>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart className="h-4 w-4" />
+              <span className="hidden sm:inline">Analytics</span>
+            </TabsTrigger>
+            <TabsTrigger value="webhooks" className="flex items-center gap-2">
+              <Webhook className="h-4 w-4" />
+              <span className="hidden sm:inline">Webhooks</span>
             </TabsTrigger>
           </TabsList>
 
@@ -815,6 +917,143 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* WEBHOOKS TAB */}
+          <TabsContent value="webhooks" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Webhook className="h-5 w-5" />
+                  Teste de Webhooks
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="provider">Provedor de Pagamento</Label>
+                      <Select value={selectedProvider} onValueChange={(value: 'cakto' | 'kiwify') => setSelectedProvider(value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cakto">Cakto</SelectItem>
+                          <SelectItem value="kiwify">Kiwify</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="event">Tipo de Evento</Label>
+                      <Select value={selectedEvent} onValueChange={setSelectedEvent}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="payment.success">Pagamento Sucesso</SelectItem>
+                          <SelectItem value="subscription.activated">Assinatura Ativada</SelectItem>
+                          <SelectItem value="subscription.renewed">Assinatura Renovada</SelectItem>
+                          <SelectItem value="payment.failed">Pagamento Falhou</SelectItem>
+                          <SelectItem value="subscription.cancelled">Assinatura Cancelada</SelectItem>
+                          <SelectItem value="subscription.expired">Assinatura Expirada</SelectItem>
+                          <SelectItem value="subscription.trial_started">Trial Iniciado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="email">Email do Usuário</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="usuario@exemplo.com"
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="plan">Plano</Label>
+                      <Select value={testPlanId} onValueChange={setTestPlanId}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(getPlanMapping(selectedProvider)).map(([id, name]) => (
+                            <SelectItem key={id} value={id}>{name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="amount">Valor (em centavos)</Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        placeholder="2990"
+                        value={testAmount}
+                        onChange={(e) => setTestAmount(e.target.value)}
+                      />
+                    </div>
+
+                    <Button 
+                      onClick={testWebhook} 
+                      disabled={isTestingWebhook}
+                      className="w-full"
+                    >
+                      {isTestingWebhook ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Testando...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Testar Webhook
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Resposta do Webhook</Label>
+                      <div className="border rounded-md p-4 bg-muted/50 min-h-[200px] max-h-[400px] overflow-auto">
+                        {webhookResponse ? (
+                          <pre className="text-xs whitespace-pre-wrap">
+                            {JSON.stringify(webhookResponse, null, 2)}
+                          </pre>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">
+                            Clique em "Testar Webhook" para ver a resposta...
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-medium">URLs dos Webhooks:</h4>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">Cakto</Badge>
+                          <code className="bg-muted px-2 py-1 rounded text-xs">
+                            {window.location.origin}/api/cakto-webhook
+                          </code>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">Kiwify</Badge>
+                          <code className="bg-muted px-2 py-1 rounded text-xs">
+                            {window.location.origin}/api/kiwify-webhook
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
