@@ -205,135 +205,159 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [isAuthenticated, user]);
 
-  // Function to save tasks to Supabase
+  // Função para carregar tasks do localStorage
+  const loadTasksFromLocalStorage = (): Task[] => {
+    const savedTasks = localStorage.getItem('entregaFlowTasks');
+    const savedUserId = localStorage.getItem('entregaFlowTasksUserId');
+    if (savedTasks && savedUserId === user?.id) {
+      try {
+        const tasks = JSON.parse(savedTasks);
+        return tasks || [];
+      } catch (parseError) {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  // Função para buscar tarefas do Supabase (tabela tasks)
+  const loadTasksFromSupabase = async (): Promise<Task[]> => {
+    if (!user) return [];
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+      if (error) {
+        console.error('❌ Erro ao buscar tasks na tabela tasks:', error);
+        return loadTasksFromSubscriptionData();
+      }
+      if (!data || data.length === 0) {
+        // Fallback para subscription_data/localStorage
+        return loadTasksFromSubscriptionData();
+      }
+      return data.map((task: any) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description || '',
+        completed: task.completed || false,
+        priority: task.priority || 'média',
+        status: task.status || 'todo',
+        dueDate: task.due_date ? new Date(task.due_date).toISOString().slice(0, 10) : '',
+        createdAt: task.created_at,
+        userId: task.user_id
+      }));
+    } catch (error) {
+      console.error('❌ Erro ao buscar tasks:', error);
+      return loadTasksFromSubscriptionData();
+    }
+  };
+
+  // Fallback: buscar tasks do campo subscription_data do perfil
+  const loadTasksFromSubscriptionData = async (): Promise<Task[]> => {
+    if (!user) return loadTasksFromLocalStorage();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('subscription_data')
+        .eq('id', user.id)
+        .single();
+      if (error) {
+        return loadTasksFromLocalStorage();
+      }
+      const subscriptionData = data?.subscription_data;
+      let tasksData = null;
+      if (subscriptionData && typeof subscriptionData === 'object' && !Array.isArray(subscriptionData)) {
+        const typedData = subscriptionData as Record<string, any>;
+        tasksData = typedData.user_tasks;
+      }
+      if (!tasksData || !tasksData.tasks || tasksData.tasks.length === 0) {
+        return loadTasksFromLocalStorage();
+      }
+      return tasksData.tasks;
+    } catch (error) {
+      return loadTasksFromLocalStorage();
+    }
+  };
+
+  // Função para salvar tasks no Supabase (tabela tasks)
   const saveTasksToSupabase = async (tasksToSave: Task[]) => {
     if (!user) return;
-
     try {
-      console.log('🔍 Salvando tasks no Supabase...');
+      // Sincronizar tasks: deletar todas do usuário e inserir as novas (simples, mas pode ser otimizado)
+      const { error: delError } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('user_id', user.id);
+      if (delError) {
+        throw delError;
+      }
+      if (tasksToSave.length > 0) {
+        const insertData = tasksToSave.map(task => ({
+          id: task.id,
+          user_id: user.id,
+          title: task.title,
+          description: task.description,
+          completed: task.completed,
+          priority: task.priority,
+          status: task.status,
+          due_date: task.dueDate || null,
+          created_at: task.createdAt,
+          updated_at: new Date().toISOString()
+        }));
+        const { error: insError } = await supabase
+          .from('tasks')
+          .insert(insertData);
+        if (insError) {
+          throw insError;
+        }
+      }
+      // Backup no subscription_data e localStorage
+      await saveTasksToSubscriptionData(tasksToSave);
+    } catch (error) {
+      console.error('❌ Erro ao salvar tasks na tabela tasks:', error);
+      // Fallback: salvar no subscription_data/localStorage
+      await saveTasksToSubscriptionData(tasksToSave);
+    }
+  };
 
-      // Buscar dados atuais do perfil
+  // Função para salvar tasks no campo subscription_data do perfil (backup)
+  const saveTasksToSubscriptionData = async (tasksToSave: Task[]) => {
+    if (!user) return;
+    try {
       const { data: currentProfile } = await supabase
         .from('profiles')
         .select('subscription_data')
         .eq('id', user.id)
         .single();
-
-      // Preparar dados das tasks
       const tasksData = {
         tasks: tasksToSave,
         lastUpdated: new Date().toISOString()
       };
-
-      // Preparar subscription_data com type safety
       const currentSubscriptionData = currentProfile?.subscription_data;
-      const baseData = (currentSubscriptionData && typeof currentSubscriptionData === 'object' && !Array.isArray(currentSubscriptionData)) 
+      const baseData = (currentSubscriptionData && typeof currentSubscriptionData === 'object' && !Array.isArray(currentSubscriptionData))
         ? currentSubscriptionData as Record<string, any>
         : {};
-
       const updatedSubscriptionData = {
         ...baseData,
         user_tasks: tasksData
       };
-
-      const { error: updateError } = await supabase
+      await supabase
         .from('profiles')
         .update({
           subscription_data: updatedSubscriptionData as any,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
-
-      if (updateError) {
-        console.error('❌ Erro ao salvar tasks:', updateError);
-        throw updateError;
-      }
-
-      console.log('✅ Tasks salvas com sucesso!');
-      
       // Backup no localStorage
       localStorage.setItem('entregaFlowTasks', JSON.stringify(tasksToSave));
       localStorage.setItem('entregaFlowTasksUserId', user.id);
     } catch (error) {
-      console.error('❌ Erro ao salvar tasks:', error);
-      
-      // Fallback to localStorage
-      console.log('💾 Salvando tasks no localStorage como fallback');
+      // Fallback localStorage
       localStorage.setItem('entregaFlowTasks', JSON.stringify(tasksToSave));
       localStorage.setItem('entregaFlowTasksUserId', user.id);
     }
-  };
-
-  // Function to load tasks from Supabase
-  const loadTasksFromSupabase = async (): Promise<Task[]> => {
-    if (!user) return [];
-
-    try {
-      console.log('📦 Carregando tasks do Supabase...');
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('subscription_data')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error('❌ Erro ao carregar tasks:', error);
-        return loadTasksFromLocalStorage();
-      }
-
-      // Type safety para acessar user_tasks
-      const subscriptionData = data?.subscription_data;
-      let tasksData = null;
-
-      if (subscriptionData && typeof subscriptionData === 'object' && !Array.isArray(subscriptionData)) {
-        const typedData = subscriptionData as Record<string, any>;
-        tasksData = typedData.user_tasks;
-      }
-      
-      if (!tasksData || !tasksData.tasks || tasksData.tasks.length === 0) {
-        console.log('📦 Nenhuma task no Supabase, tentando localStorage...');
-        return loadTasksFromLocalStorage();
-      }
-
-      const loadedTasks: Task[] = tasksData.tasks.map((task: any) => ({
-        id: task.id,
-        title: task.title,
-        description: task.description || '',
-        completed: task.completed || false,
-        priority: task.priority as 'baixa' | 'média' | 'alta',
-        status: task.status as 'todo' | 'editing' | 'urgent' | 'delivered' | 'revision',
-        dueDate: task.dueDate || '',
-        createdAt: task.createdAt,
-        userId: task.userId
-      }));
-
-      console.log('🎉 Tasks carregadas do Supabase:', loadedTasks.length);
-      return loadedTasks;
-    } catch (error) {
-      console.error('❌ Erro ao carregar tasks:', error);
-      return loadTasksFromLocalStorage();
-    }
-  };
-
-  // Function to load tasks from localStorage
-  const loadTasksFromLocalStorage = (): Task[] => {
-    const savedTasks = localStorage.getItem('entregaFlowTasks');
-    const savedUserId = localStorage.getItem('entregaFlowTasksUserId');
-    
-    if (savedTasks && savedUserId === user?.id) {
-      try {
-        const tasks = JSON.parse(savedTasks);
-        console.log('📦 Tasks carregadas do localStorage:', tasks?.length || 0);
-        return tasks || [];
-      } catch (parseError) {
-        console.error('❌ Erro ao fazer parse das tasks do localStorage:', parseError);
-        return [];
-      }
-    }
-    
-    console.log('📦 Nenhuma task encontrada para o usuário');
-    return [];
   };
 
   const loadMonthlyCosts = async () => {
@@ -985,32 +1009,85 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Task functions (mock for now - would need tasks table)
+  // Refatorar funções de manipulação de tarefas para usar a tabela tasks
   const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'userId'>) => {
+    if (!user) return;
     const newTask: Task = {
       ...taskData,
-      id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      userId: user?.id || '',
+      userId: user.id,
     };
-    
-    const updatedTasks = [...tasks, newTask];
-    setTasks(updatedTasks);
-    await saveTasksToSupabase(updatedTasks);
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .insert({
+          id: newTask.id,
+          user_id: newTask.userId,
+          title: newTask.title,
+          description: newTask.description,
+          completed: newTask.completed,
+          priority: newTask.priority,
+          status: newTask.status,
+          due_date: newTask.dueDate || null,
+          created_at: newTask.createdAt,
+          updated_at: new Date().toISOString()
+        });
+      if (error) throw error;
+      setTasks(prev => [...prev, newTask]);
+      await saveTasksToSubscriptionData([...tasks, newTask]);
+    } catch (error) {
+      // Fallback local
+      setTasks(prev => [...prev, newTask]);
+      await saveTasksToSubscriptionData([...tasks, newTask]);
+    }
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
-    const updatedTasks = tasks.map(task => 
-      task.id === id ? { ...task, ...updates } : task
-    );
-    setTasks(updatedTasks);
-    await saveTasksToSupabase(updatedTasks);
+    if (!user) return;
+    const taskToUpdate = tasks.find(t => t.id === id);
+    if (!taskToUpdate) return;
+    const updatedTask = { ...taskToUpdate, ...updates };
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          title: updatedTask.title,
+          description: updatedTask.description,
+          completed: updatedTask.completed,
+          priority: updatedTask.priority,
+          status: updatedTask.status,
+          due_date: updatedTask.dueDate || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', user.id);
+      if (error) throw error;
+      setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+      await saveTasksToSubscriptionData(tasks.map(t => t.id === id ? updatedTask : t));
+    } catch (error) {
+      // Fallback local
+      setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+      await saveTasksToSubscriptionData(tasks.map(t => t.id === id ? updatedTask : t));
+    }
   };
 
   const deleteTask = async (id: string) => {
-    const updatedTasks = tasks.filter(task => task.id !== id);
-    setTasks(updatedTasks);
-    await saveTasksToSupabase(updatedTasks);
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+      if (error) throw error;
+      setTasks(prev => prev.filter(t => t.id !== id));
+      await saveTasksToSubscriptionData(tasks.filter(t => t.id !== id));
+    } catch (error) {
+      // Fallback local
+      setTasks(prev => prev.filter(t => t.id !== id));
+      await saveTasksToSubscriptionData(tasks.filter(t => t.id !== id));
+    }
   };
 
   // Project functions (mock for now - would need projects table)
@@ -1067,6 +1144,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     markAllNotificationsAsRead,
   };
 
+  console.log('SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
 
   return (
     <AppContext.Provider value={value}>
