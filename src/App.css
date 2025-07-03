@@ -40,3 +40,18 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Esconde a barra de rolagem horizontal no mobile para a barra de navegação fixa */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Garante que o body não tenha overflow-x e espaçamento inferior para o menu fixo */
+body {
+  overflow-x: hidden;
+  padding-bottom: 80px; /* espaço para o menu fixo no mobile */
+}
