@@ -599,517 +599,519 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         </div>
 
         {/* Tabs */}
-        <div className="relative">
-          {/* Mobile: barra fixa para os botões de navegação */}
-          <div className="sm:hidden fixed bottom-16 left-0 w-full z-30 bg-background border-t border-border shadow-md flex overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <TabsList className="flex w-full justify-between px-2 py-1 gap-1">
-              <TabsTrigger value="users" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
-                <Users className="h-5 w-5 mb-1" />
-                Usuários
-              </TabsTrigger>
-              <TabsTrigger value="companies" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
-                <Building2 className="h-5 w-5 mb-1" />
-                Empresas
-              </TabsTrigger>
-              <TabsTrigger value="admins" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
-                <ShieldCheck className="h-5 w-5 mb-1" />
-                Admins
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
-                <BarChart className="h-5 w-5 mb-1" />
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger value="webhooks" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
-                <Webhook className="h-5 w-5 mb-1" />
-                Webhooks
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          {/* Desktop: grid normal */}
-          <div className="hidden sm:block">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
-              <TabsTrigger value="users" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                <span className="hidden sm:inline">Usuários</span>
-              </TabsTrigger>
-              <TabsTrigger value="companies" className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Empresas</span>
-              </TabsTrigger>
-              <TabsTrigger value="admins" className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" />
-                <span className="hidden sm:inline">Admins</span>
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex items-center gap-2">
-                <BarChart className="h-4 w-4" />
-                <span className="hidden sm:inline">Analytics</span>
-              </TabsTrigger>
-              <TabsTrigger value="webhooks" className="flex items-center gap-2">
-                <Webhook className="h-4 w-4" />
-                <span className="hidden sm:inline">Webhooks</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          {/* Conteúdo das abas */}
-          <div className="pt-4 sm:pt-0">
-            {/* USERS TAB */}
-            <TabsContent value="users" className="space-y-4">
-              {/* Filtros - Mobile First */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Search className="h-5 w-5" />
-                    Filtros
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Input
-                    placeholder="Buscar por email ou nome..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full"
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Tipo de usuário" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os tipos</SelectItem>
-                        <SelectItem value="individual">Individual</SelectItem>
-                        <SelectItem value="company_owner">Company Owner</SelectItem>
-                        <SelectItem value="employee">Colaborador</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Plano" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os planos</SelectItem>
-                        <SelectItem value="free">Gratuito</SelectItem>
-                        <SelectItem value="basic">Basic</SelectItem>
-                        <SelectItem value="premium">Premium</SelectItem>
-                        <SelectItem value="enterprise">Enterprise</SelectItem>
-                        <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
+        <Tabs defaultValue="users" className="space-y-4">
+          <div className="relative">
+            {/* Mobile: barra fixa para os botões de navegação */}
+            <div className="sm:hidden fixed bottom-16 left-0 w-full z-30 bg-background border-t border-border shadow-md flex overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <TabsList className="flex w-full justify-between px-2 py-1 gap-1">
+                <TabsTrigger value="users" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
+                  <Users className="h-5 w-5 mb-1" />
+                  Usuários
+                </TabsTrigger>
+                <TabsTrigger value="companies" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
+                  <Building2 className="h-5 w-5 mb-1" />
+                  Empresas
+                </TabsTrigger>
+                <TabsTrigger value="admins" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
+                  <ShieldCheck className="h-5 w-5 mb-1" />
+                  Admins
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
+                  <BarChart className="h-5 w-5 mb-1" />
+                  Analytics
+                </TabsTrigger>
+                <TabsTrigger value="webhooks" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
+                  <Webhook className="h-5 w-5 mb-1" />
+                  Webhooks
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            {/* Desktop: grid normal */}
+            <div className="hidden sm:block">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
+                <TabsTrigger value="users" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">Usuários</span>
+                </TabsTrigger>
+                <TabsTrigger value="companies" className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Empresas</span>
+                </TabsTrigger>
+                <TabsTrigger value="admins" className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span className="hidden sm:inline">Admins</span>
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex items-center gap-2">
+                  <BarChart className="h-4 w-4" />
+                  <span className="hidden sm:inline">Analytics</span>
+                </TabsTrigger>
+                <TabsTrigger value="webhooks" className="flex items-center gap-2">
+                  <Webhook className="h-4 w-4" />
+                  <span className="hidden sm:inline">Webhooks</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            {/* Conteúdo das abas */}
+            <div className="pt-4 sm:pt-0">
+              {/* USERS TAB */}
+              <TabsContent value="users" className="space-y-4">
+                {/* Filtros - Mobile First */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Search className="h-5 w-5" />
+                      Filtros
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Input
+                      placeholder="Buscar por email ou nome..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full"
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tipo de usuário" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os tipos</SelectItem>
+                          <SelectItem value="individual">Individual</SelectItem>
+                          <SelectItem value="company_owner">Company Owner</SelectItem>
+                          <SelectItem value="employee">Colaborador</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Plano" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os planos</SelectItem>
+                          <SelectItem value="free">Gratuito</SelectItem>
+                          <SelectItem value="basic">Basic</SelectItem>
+                          <SelectItem value="premium">Premium</SelectItem>
+                          <SelectItem value="enterprise">Enterprise</SelectItem>
+                          <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              {/* Users List - Mobile First Cards */}
-              <div className="space-y-3">
-                {filteredUsers.map((user) => (
-                  <Card key={user.id}>
-                    <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        {/* User Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0">
-                              <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                                <User className="w-5 h-5 text-muted-foreground" />
+                {/* Users List - Mobile First Cards */}
+                <div className="space-y-3">
+                  {filteredUsers.map((user) => (
+                    <Card key={user.id}>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          {/* User Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0">
+                                <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                                  <User className="w-5 h-5 text-muted-foreground" />
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-foreground truncate">{user.email}</p>
+                                {user.name && (
+                                  <p className="text-sm text-muted-foreground truncate">{user.name}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground">ID: {user.id.slice(0, 8)}...</p>
                               </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-foreground truncate">{user.email}</p>
-                              {user.name && (
-                                <p className="text-sm text-muted-foreground truncate">{user.name}</p>
-                              )}
-                              <p className="text-xs text-muted-foreground">ID: {user.id.slice(0, 8)}...</p>
+                          </div>
+
+                          {/* Status and Actions */}
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                            <Badge variant={user.banned ? "destructive" : "secondary"} className="text-xs">
+                              {user.banned ? "Banido" : "Ativo"}
+                            </Badge>
+                            
+                            <div className="flex items-center gap-1">
+                              <Select 
+                                value={user.subscription || 'free'} 
+                                onValueChange={(value: SubscriptionPlan) => handleUpdateSubscription(user.id, value)}
+                              >
+                                <SelectTrigger className="w-24 sm:w-32 h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="free">Free</SelectItem>
+                                  <SelectItem value="basic">Basic</SelectItem>
+                                  <SelectItem value="premium">Premium</SelectItem>
+                                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                                  <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
+                                </SelectContent>
+                              </Select>
+
+                              <Select 
+                                value={user.user_type || 'individual'} 
+                                onValueChange={(value: UserType) => handleUpdateUserField(user.id, 'user_type', value)}
+                              >
+                                <SelectTrigger className="w-24 sm:w-32 h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="individual">Individual</SelectItem>
+                                  <SelectItem value="company_owner">Company Owner</SelectItem>
+                                  <SelectItem value="employee">Colaborador</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                </SelectContent>
+                              </Select>
+
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleBanUser(user.id, !user.banned)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    {user.banned ? (
+                                      <>
+                                        <UserCheck className="h-4 w-4" />
+                                        Desbanir
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Ban className="h-4 w-4" />
+                                        Banir
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </div>
                         </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {filteredUsers.length === 0 && (
+                    <Card>
+                      <CardContent className="text-center py-12">
+                        <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">Nenhum usuário encontrado</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </TabsContent>
 
-                        {/* Status and Actions */}
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                          <Badge variant={user.banned ? "destructive" : "secondary"} className="text-xs">
-                            {user.banned ? "Banido" : "Ativo"}
-                          </Badge>
-                          
-                          <div className="flex items-center gap-1">
-                            <Select 
-                              value={user.subscription || 'free'} 
-                              onValueChange={(value: SubscriptionPlan) => handleUpdateSubscription(user.id, value)}
-                            >
-                              <SelectTrigger className="w-24 sm:w-32 h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="free">Free</SelectItem>
-                                <SelectItem value="basic">Basic</SelectItem>
-                                <SelectItem value="premium">Premium</SelectItem>
-                                <SelectItem value="enterprise">Enterprise</SelectItem>
-                                <SelectItem value="enterprise-annual">Enterprise Anual</SelectItem>
-                              </SelectContent>
-                            </Select>
+              {/* COMPANIES TAB */}
+              <TabsContent value="companies" className="space-y-4">
+                <CompanyManagement />
+              </TabsContent>
 
-                            <Select 
-                              value={user.user_type || 'individual'} 
-                              onValueChange={(value: UserType) => handleUpdateUserField(user.id, 'user_type', value)}
-                            >
-                              <SelectTrigger className="w-24 sm:w-32 h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="individual">Individual</SelectItem>
-                                <SelectItem value="company_owner">Company Owner</SelectItem>
-                                <SelectItem value="employee">Colaborador</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                              </SelectContent>
-                            </Select>
-
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleBanUser(user.id, !user.banned)}
-                                  className="flex items-center gap-2"
-                                >
-                                  {user.banned ? (
-                                    <>
-                                      <UserCheck className="h-4 w-4" />
-                                      Desbanir
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Ban className="h-4 w-4" />
-                                      Banir
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                {filteredUsers.length === 0 && (
-                  <Card>
-                    <CardContent className="text-center py-12">
-                      <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">Nenhum usuário encontrado</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </TabsContent>
-
-            {/* COMPANIES TAB */}
-            <TabsContent value="companies" className="space-y-4">
-              <CompanyManagement />
-            </TabsContent>
-
-            {/* ADMINS TAB */}
-            <TabsContent value="admins" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5" />
-                    Gerenciar Administradores
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Input
-                      placeholder="Email do novo admin"
-                      value={newAdminEmail}
-                      onChange={(e) => setNewAdminEmail(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button onClick={handleAddAdmin} className="sm:w-auto">
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Adicionar Admin
-                    </Button>
-                  </div>
-
-                  <div className="border rounded-lg p-4 space-y-3">
-                    <h4 className="font-semibold text-base">Administradores Atuais:</h4>
-                    {users.filter(u => u.user_type === 'admin').map(admin => (
-                      <div key={admin.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2">
-                        <div>
-                          <span className="text-sm font-medium text-foreground">{admin.email}</span>
-                          {admin.name && (
-                            <p className="text-xs text-muted-foreground">{admin.name}</p>
-                          )}
-                        </div>
-                        <Badge>Admin</Badge>
-                      </div>
-                    ))}
-                    {users.filter(u => u.user_type === 'admin').length === 0 && (
-                      <p className="text-muted-foreground text-sm">Nenhum administrador encontrado</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ANALYTICS TAB */}
-            <TabsContent value="analytics" className="space-y-4">
-              {/* Export buttons */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Exportar Relatórios
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      onClick={() => exportToPDF('monthly')}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      <span className="hidden sm:inline">Relatório Mensal</span>
-                      <span className="sm:hidden">Mensal</span>
-                    </Button>
-                    <Button
-                      onClick={() => exportToPDF('quarterly')}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      <span className="hidden sm:inline">Relatório Trimestral</span>
-                      <span className="sm:hidden">Trimestral</span>
-                    </Button>
-                    <Button
-                      onClick={() => exportToPDF('annual')}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      <span className="hidden sm:inline">Relatório Anual</span>
-                      <span className="sm:hidden">Anual</span>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* ADMINS TAB */}
+              <TabsContent value="admins" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Distribuição de Usuários</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5" />
+                      Gerenciar Administradores
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-foreground">Usuários Free:</span>
-                        <span className="font-bold text-foreground">{freeUsers}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-foreground">Usuários Basic:</span>
-                        <span className="font-bold text-green-600">{basicUsers}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-foreground">Usuários Premium:</span>
-                        <span className="font-bold text-blue-600">{premiumUsers}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-foreground">Usuários Enterprise:</span>
-                        <span className="font-bold text-yellow-600">{enterpriseUsers}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-foreground">Usuários Banidos:</span>
-                        <span className="font-bold text-red-600">{bannedUsers}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Informações Gerais</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-foreground">Total de Usuários:</span>
-                        <span className="font-bold text-foreground">{analytics?.overview?.totalUsers || 0}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-foreground">Usuários Ativos:</span>
-                        <span className="font-bold text-green-600">{analytics?.overview?.activeUsers || 0}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-foreground">Taxa de Conversão:</span>
-                        <span className="font-bold text-blue-600">
-                          {analytics?.overview?.totalUsers > 0 
-                            ? ((premiumUsers + basicUsers + enterpriseUsers) / analytics.overview.totalUsers * 100).toFixed(1)
-                            : 0
-                          }%
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-foreground">Receita Estimada:</span>
-                        <span className="font-bold text-purple-600">
-                          R$ {(analytics?.overview?.totalRevenue || 0).toLocaleString('pt-BR')}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* WEBHOOKS TAB */}
-            <TabsContent value="webhooks" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Webhook className="h-5 w-5" />
-                    Teste de Webhooks
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="provider">Provedor de Pagamento</Label>
-                        <Select value={selectedProvider} onValueChange={(value: 'cakto' | 'kiwify') => setSelectedProvider(value)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="cakto">Cakto</SelectItem>
-                            <SelectItem value="kiwify">Kiwify</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="event">Tipo de Evento</Label>
-                        <Select value={selectedEvent} onValueChange={setSelectedEvent}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="payment.success">Pagamento Sucesso</SelectItem>
-                            <SelectItem value="subscription.activated">Assinatura Ativada</SelectItem>
-                            <SelectItem value="subscription.renewed">Assinatura Renovada</SelectItem>
-                            <SelectItem value="payment.failed">Pagamento Falhou</SelectItem>
-                            <SelectItem value="subscription.cancelled">Assinatura Cancelada</SelectItem>
-                            <SelectItem value="subscription.expired">Assinatura Expirada</SelectItem>
-                            <SelectItem value="subscription.trial_started">Trial Iniciado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="email">Email do Usuário</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="usuario@exemplo.com"
-                          value={testEmail}
-                          onChange={(e) => setTestEmail(e.target.value)}
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="plan">Plano</Label>
-                        <Select value={testPlanId} onValueChange={setTestPlanId}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(getPlanMapping(selectedProvider)).map(([id, name]) => (
-                              <SelectItem key={id} value={id}>{name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="amount">Valor (em centavos)</Label>
-                        <Input
-                          id="amount"
-                          type="number"
-                          placeholder="2990"
-                          value={testAmount}
-                          onChange={(e) => setTestAmount(e.target.value)}
-                        />
-                      </div>
-
-                      <Button 
-                        onClick={testWebhook} 
-                        disabled={isTestingWebhook}
-                        className="w-full"
-                      >
-                        {isTestingWebhook ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Testando...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-4 w-4 mr-2" />
-                            Testar Webhook
-                          </>
-                        )}
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Input
+                        placeholder="Email do novo admin"
+                        value={newAdminEmail}
+                        onChange={(e) => setNewAdminEmail(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button onClick={handleAddAdmin} className="sm:w-auto">
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Adicionar Admin
                       </Button>
                     </div>
 
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Resposta do Webhook</Label>
-                        <div className="border rounded-md p-4 bg-muted/50 min-h-[200px] max-h-[400px] overflow-auto">
-                          {webhookResponse ? (
-                            <pre className="text-xs whitespace-pre-wrap">
-                              {JSON.stringify(webhookResponse, null, 2)}
-                            </pre>
-                          ) : (
-                            <p className="text-muted-foreground text-sm">
-                              Clique em "Testar Webhook" para ver a resposta...
-                            </p>
-                          )}
+                    <div className="border rounded-lg p-4 space-y-3">
+                      <h4 className="font-semibold text-base">Administradores Atuais:</h4>
+                      {users.filter(u => u.user_type === 'admin').map(admin => (
+                        <div key={admin.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2">
+                          <div>
+                            <span className="text-sm font-medium text-foreground">{admin.email}</span>
+                            {admin.name && (
+                              <p className="text-xs text-muted-foreground">{admin.name}</p>
+                            )}
+                          </div>
+                          <Badge>Admin</Badge>
+                        </div>
+                      ))}
+                      {users.filter(u => u.user_type === 'admin').length === 0 && (
+                        <p className="text-muted-foreground text-sm">Nenhum administrador encontrado</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* ANALYTICS TAB */}
+              <TabsContent value="analytics" className="space-y-4">
+                {/* Export buttons */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Exportar Relatórios
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        onClick={() => exportToPDF('monthly')}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span className="hidden sm:inline">Relatório Mensal</span>
+                        <span className="sm:hidden">Mensal</span>
+                      </Button>
+                      <Button
+                        onClick={() => exportToPDF('quarterly')}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span className="hidden sm:inline">Relatório Trimestral</span>
+                        <span className="sm:hidden">Trimestral</span>
+                      </Button>
+                      <Button
+                        onClick={() => exportToPDF('annual')}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span className="hidden sm:inline">Relatório Anual</span>
+                        <span className="sm:hidden">Anual</span>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Distribuição de Usuários</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-foreground">Usuários Free:</span>
+                          <span className="font-bold text-foreground">{freeUsers}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-foreground">Usuários Basic:</span>
+                          <span className="font-bold text-green-600">{basicUsers}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-foreground">Usuários Premium:</span>
+                          <span className="font-bold text-blue-600">{premiumUsers}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-foreground">Usuários Enterprise:</span>
+                          <span className="font-bold text-yellow-600">{enterpriseUsers}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-foreground">Usuários Banidos:</span>
+                          <span className="font-bold text-red-600">{bannedUsers}</span>
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
 
-                      <div className="space-y-2">
-                        <h4 className="font-medium">URLs dos Webhooks:</h4>
-                        <div className="space-y-1 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">Cakto</Badge>
-                            <code className="bg-muted px-2 py-1 rounded text-xs">
-                              https://elsilxqruurrbdebxndx.supabase.co/functions/v1/cakto-webhook
-                            </code>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">Kiwify</Badge>
-                            <code className="bg-muted px-2 py-1 rounded text-xs">
-                              https://elsilxqruurrbdebxndx.supabase.co/functions/v1/kiwify-webhook
-                            </code>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Informações Gerais</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-foreground">Total de Usuários:</span>
+                          <span className="font-bold text-foreground">{analytics?.overview?.totalUsers || 0}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-foreground">Usuários Ativos:</span>
+                          <span className="font-bold text-green-600">{analytics?.overview?.activeUsers || 0}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-foreground">Taxa de Conversão:</span>
+                          <span className="font-bold text-blue-600">
+                            {analytics?.overview?.totalUsers > 0 
+                              ? ((premiumUsers + basicUsers + enterpriseUsers) / analytics.overview.totalUsers * 100).toFixed(1)
+                              : 0
+                            }%
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-foreground">Receita Estimada:</span>
+                          <span className="font-bold text-purple-600">
+                            R$ {(analytics?.overview?.totalRevenue || 0).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* WEBHOOKS TAB */}
+              <TabsContent value="webhooks" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Webhook className="h-5 w-5" />
+                      Teste de Webhooks
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="provider">Provedor de Pagamento</Label>
+                          <Select value={selectedProvider} onValueChange={(value: 'cakto' | 'kiwify') => setSelectedProvider(value)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cakto">Cakto</SelectItem>
+                              <SelectItem value="kiwify">Kiwify</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="event">Tipo de Evento</Label>
+                          <Select value={selectedEvent} onValueChange={setSelectedEvent}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="payment.success">Pagamento Sucesso</SelectItem>
+                              <SelectItem value="subscription.activated">Assinatura Ativada</SelectItem>
+                              <SelectItem value="subscription.renewed">Assinatura Renovada</SelectItem>
+                              <SelectItem value="payment.failed">Pagamento Falhou</SelectItem>
+                              <SelectItem value="subscription.cancelled">Assinatura Cancelada</SelectItem>
+                              <SelectItem value="subscription.expired">Assinatura Expirada</SelectItem>
+                              <SelectItem value="subscription.trial_started">Trial Iniciado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="email">Email do Usuário</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="usuario@exemplo.com"
+                            value={testEmail}
+                            onChange={(e) => setTestEmail(e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="plan">Plano</Label>
+                          <Select value={testPlanId} onValueChange={setTestPlanId}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(getPlanMapping(selectedProvider)).map(([id, name]) => (
+                                <SelectItem key={id} value={id}>{name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="amount">Valor (em centavos)</Label>
+                          <Input
+                            id="amount"
+                            type="number"
+                            placeholder="2990"
+                            value={testAmount}
+                            onChange={(e) => setTestAmount(e.target.value)}
+                          />
+                        </div>
+
+                        <Button 
+                          onClick={testWebhook} 
+                          disabled={isTestingWebhook}
+                          className="w-full"
+                        >
+                          {isTestingWebhook ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Testando...
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4 mr-2" />
+                              Testar Webhook
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Resposta do Webhook</Label>
+                          <div className="border rounded-md p-4 bg-muted/50 min-h-[200px] max-h-[400px] overflow-auto">
+                            {webhookResponse ? (
+                              <pre className="text-xs whitespace-pre-wrap">
+                                {JSON.stringify(webhookResponse, null, 2)}
+                              </pre>
+                            ) : (
+                              <p className="text-muted-foreground text-sm">
+                                Clique em "Testar Webhook" para ver a resposta...
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                          <strong>⚠️ Importante:</strong> Certifique-se de que as Edge Functions estão deployadas no Supabase:
-                          <br />
-                          <code className="bg-yellow-100 px-1 rounded">supabase functions deploy cakto-webhook</code>
-                          <br />
-                          <code className="bg-yellow-100 px-1 rounded">supabase functions deploy kiwify-webhook</code>
+
+                        <div className="space-y-2">
+                          <h4 className="font-medium">URLs dos Webhooks:</h4>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">Cakto</Badge>
+                              <code className="bg-muted px-2 py-1 rounded text-xs">
+                                https://elsilxqruurrbdebxndx.supabase.co/functions/v1/cakto-webhook
+                              </code>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">Kiwify</Badge>
+                              <code className="bg-muted px-2 py-1 rounded text-xs">
+                                https://elsilxqruurrbdebxndx.supabase.co/functions/v1/kiwify-webhook
+                              </code>
+                            </div>
+                          </div>
+                          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                            <strong>⚠️ Importante:</strong> Certifique-se de que as Edge Functions estão deployadas no Supabase:
+                            <br />
+                            <code className="bg-yellow-100 px-1 rounded">supabase functions deploy cakto-webhook</code>
+                            <br />
+                            <code className="bg-yellow-100 px-1 rounded">supabase functions deploy kiwify-webhook</code>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </div>
           </div>
-        </div>
+        </Tabs>
       </div>
     </div>
   );
