@@ -406,9 +406,11 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
     setWebhookResponse(null);
 
     try {
+      // URLs corretas para Supabase Edge Functions
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
       const webhookUrl = selectedProvider === 'cakto' 
-        ? `${window.location.origin}/api/cakto-webhook`
-        : `${window.location.origin}/api/kiwify-webhook`;
+        ? `${supabaseUrl}/functions/v1/cakto-webhook`
+        : `${supabaseUrl}/functions/v1/kiwify-webhook`;
 
       const testPayload = {
         event: selectedEvent,
@@ -425,22 +427,38 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         }
       };
 
+      console.log('🔗 Testando webhook:', webhookUrl);
+      console.log('📦 Payload:', testPayload);
+
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-webhook-key': selectedProvider === 'cakto' 
             ? '27a5317b-248f-47e8-9c4b-70aff176e556'
-            : 'kiwify-webhook-key'
+            : 'kiwify-webhook-key',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify(testPayload)
       });
 
-      const responseData = await response.json();
+      console.log('📡 Response status:', response.status);
+      
+      let responseData;
+      const responseText = await response.text();
+      
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Erro ao fazer parse da resposta:', responseText);
+        responseData = { error: 'Resposta não é JSON válido', raw: responseText };
+      }
+
       setWebhookResponse({
         status: response.status,
         data: responseData,
-        payload: testPayload
+        payload: testPayload,
+        url: webhookUrl
       });
 
       if (response.ok) {
@@ -456,7 +474,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         });
       }
     } catch (error: any) {
-      console.error('Erro ao testar webhook:', error);
+      console.error('❌ Erro ao testar webhook:', error);
       setWebhookResponse({
         error: error.message,
         status: 'error'
@@ -1039,15 +1057,22 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">Cakto</Badge>
                           <code className="bg-muted px-2 py-1 rounded text-xs">
-                            {window.location.origin}/api/cakto-webhook
+                            {(import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co')}/functions/v1/cakto-webhook
                           </code>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">Kiwify</Badge>
                           <code className="bg-muted px-2 py-1 rounded text-xs">
-                            {window.location.origin}/api/kiwify-webhook
+                            {(import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co')}/functions/v1/kiwify-webhook
                           </code>
                         </div>
+                      </div>
+                      <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                        <strong>⚠️ Importante:</strong> Certifique-se de que as Edge Functions estão deployadas no Supabase:
+                        <br />
+                        <code className="bg-yellow-100 px-1 rounded">supabase functions deploy cakto-webhook</code>
+                        <br />
+                        <code className="bg-yellow-100 px-1 rounded">supabase functions deploy kiwify-webhook</code>
                       </div>
                     </div>
                   </div>
