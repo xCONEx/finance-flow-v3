@@ -407,10 +407,9 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
 
     try {
       // URLs corretas para Supabase Edge Functions
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
       const webhookUrl = selectedProvider === 'cakto' 
-        ? `${supabaseUrl}/functions/v1/cakto-webhook`
-        : `${supabaseUrl}/functions/v1/kiwify-webhook`;
+        ? 'https://elsilxqruurrbdebxndx.supabase.co/functions/v1/cakto-webhook'
+        : 'https://elsilxqruurrbdebxndx.supabase.co/functions/v1/kiwify-webhook';
 
       const testPayload = {
         event: selectedEvent,
@@ -436,7 +435,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
           'Content-Type': 'application/json',
           'x-webhook-key': selectedProvider === 'cakto' 
             ? '27a5317b-248f-47e8-9c4b-70aff176e556'
-            : 'kiwify-webhook-key',
+            : 'v4x4jy8w3lf',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify(testPayload)
@@ -1057,13 +1056,13 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">Cakto</Badge>
                           <code className="bg-muted px-2 py-1 rounded text-xs">
-                            {(import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co')}/functions/v1/cakto-webhook
+                            https://elsilxqruurrbdebxndx.supabase.co/functions/v1/cakto-webhook
                           </code>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">Kiwify</Badge>
                           <code className="bg-muted px-2 py-1 rounded text-xs">
-                            {(import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co')}/functions/v1/kiwify-webhook
+                            https://elsilxqruurrbdebxndx.supabase.co/functions/v1/kiwify-webhook
                           </code>
                         </div>
                       </div>
