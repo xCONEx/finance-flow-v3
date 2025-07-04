@@ -402,13 +402,13 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         .order('granted_at', { ascending: false });
       if (error) throw error;
       // Buscar perfis dos user_id
-      const userIds = (roles || []).map(r => r.user_id);
+      const userIds = (roles || []).map(r => r.user_id).filter(Boolean);
       let profilesMap: Record<string, any> = {};
       if (userIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, email, name, last_sign_in_at')
-          .in('id', userIds);
+          .in('id', userIds.length > 1 ? userIds : [userIds[0]]);
         if (!profilesError && profiles) {
           profilesMap = Object.fromEntries(profiles.map(p => [p.id, p]));
         }
@@ -998,7 +998,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                         .map(role => (
                           <div key={role.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2">
                             <div className="flex-1">
-                              <span className="text-sm font-medium text-foreground">{role.profile?.email || role.user_id}</span>
+                              <span className="text-sm font-medium text-foreground">{role.profile?.name || role.profile?.email || 'Desconhecido'}</span>
                               {role.profile?.name && (
                                 <p className="text-xs text-muted-foreground">{role.profile.name}</p>
                               )}
