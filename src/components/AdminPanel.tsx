@@ -405,7 +405,10 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
       const userIds = (roles || []).map(r => r.user_id).filter(Boolean);
       console.log('userIds:', userIds, 'length:', userIds.length);
       let profilesMap: Record<string, any> = {};
-      if (userIds.length === 1) {
+      if (userIds.length === 0) {
+        // Não faz query nenhuma, apenas zera o mapa
+        profilesMap = {};
+      } else if (userIds.length === 1) {
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, email, name, last_sign_in_at')
