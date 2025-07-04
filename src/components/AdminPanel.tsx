@@ -404,11 +404,19 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
       // Buscar perfis dos user_id
       const userIds = (roles || []).map(r => r.user_id).filter(Boolean);
       let profilesMap: Record<string, any> = {};
-      if (userIds.length > 0) {
+      if (userIds.length === 1) {
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, email, name, last_sign_in_at')
-          .in('id', userIds.length > 1 ? userIds : [userIds[0]]);
+          .eq('id', userIds[0]);
+        if (!profilesError && profiles) {
+          profilesMap = Object.fromEntries(profiles.map(p => [p.id, p]));
+        }
+      } else if (userIds.length > 1) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, email, name, last_sign_in_at')
+          .in('id', userIds);
         if (!profilesError && profiles) {
           profilesMap = Object.fromEntries(profiles.map(p => [p.id, p]));
         }
