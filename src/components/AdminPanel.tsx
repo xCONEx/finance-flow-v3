@@ -403,7 +403,6 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
       if (error) throw error;
       // Buscar perfis dos user_id
       const userIds = (roles || []).map(r => r.user_id).filter(Boolean);
-      console.log('userIds:', userIds, 'length:', userIds.length);
       let profilesMap: Record<string, any> = {};
       if (userIds.length === 0) {
         // Não faz query nenhuma, apenas zera o mapa
