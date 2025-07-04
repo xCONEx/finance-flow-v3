@@ -101,11 +101,8 @@ const AdminPanel = () => {
   const [webhookResponse, setWebhookResponse] = useState<any>(null);
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
 
-  // Verificar se o usuário atual é admin
-  const isCurrentUserAdmin = user?.email === 'yuriadrskt@gmail.com' || user?.email === 'adm.financeflow@gmail.com';
-
   const loadData = useCallback(async () => {
-    if (!isCurrentUserAdmin) return;
+    if (!isAdmin) return;
     
     try {
       setLoading(true);
@@ -154,13 +151,13 @@ const AdminPanel = () => {
     } finally {
       setLoading(false);
     }
-  }, [isCurrentUserAdmin, toast]);
+  }, [isAdmin, toast]);
 
   useEffect(() => {
-    if (isCurrentUserAdmin) {
+    if (isAdmin) {
       loadData();
     }
-  }, [loadData]);
+  }, [isAdmin, loadData]);
 
   const calculateRevenue = (profiles: UserProfile[]) => {
     const planValues = {
