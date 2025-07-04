@@ -58,10 +58,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAdminRoles } from '@/hooks/useAdminRoles';
+import { format } from 'date-fns';
 
 type SubscriptionPlan = 'free' | 'basic' | 'premium' | 'enterprise' | 'enterprise-annual';
 type UserType = 'individual' | 'company_owner' | 'employee' | 'admin';
@@ -100,6 +102,16 @@ const AdminPanel = () => {
   const [testAmount, setTestAmount] = useState('2990');
   const [webhookResponse, setWebhookResponse] = useState<any>(null);
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
+
+  const [newAdminRole, setNewAdminRole] = useState('admin');
+  const [adminRolesFiltered, setAdminRolesFiltered] = useState([]);
+  const [adminRoles, setAdminRoles] = useState<any[]>([]);
+  const [adminLogs, setAdminLogs] = useState<any[]>([]);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [roleToRemove, setRoleToRemove] = useState<any>(null);
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [editingRoleType, setEditingRoleType] = useState<string>('admin');
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!isAdmin) return;
@@ -376,6 +388,99 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
       });
     } catch (error) {
       console.error('Erro ao adicionar admin:', error);
+    }
+  };
+
+  const fetchAdminRoles = useCallback(async () => {
+    setLoadingAdmins(true);
+    try {
+      // Buscar todos os admins ativos, join com profiles para email/nome
+      const { data, error } = await supabase
+        .from('admin_roles')
+        .select('*, profiles:profiles(id, email, name, last_sign_in_at)')
+        .eq('is_active', true)
+        .order('granted_at', { ascending: false });
+      if (error) throw error;
+      setAdminRoles(data || []);
+      // Buscar logs (últimas 20 ações)
+      const { data: logs, error: logError } = await supabase
+        .from('admin_roles')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(20);
+      if (!logError) setAdminLogs(logs || []);
+    } catch (err) {
+      toast({ title: 'Erro', description: 'Erro ao buscar administradores', variant: 'destructive' });
+    } finally {
+      setLoadingAdmins(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { fetchAdminRoles(); }, [fetchAdminRoles]);
+
+  const handleAddAdminRole = async () => {
+    if (!newAdminEmail.trim()) {
+      toast({ title: 'Erro', description: 'Insira um email válido.', variant: 'destructive' });
+      return;
+    }
+    try {
+      // Buscar user_id pelo email
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('id, email, name')
+        .eq('email', newAdminEmail.trim())
+        .single();
+      if (userError || !userData) throw new Error('Usuário não encontrado');
+      // Inserir role
+      const { error } = await supabase
+        .from('admin_roles')
+        .insert({
+          user_id: userData.id,
+          role_type: newAdminRole,
+          is_active: true,
+          granted_by: user?.id,
+          granted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      if (error) throw error;
+      setNewAdminEmail('');
+      setNewAdminRole('admin');
+      toast({ title: 'Sucesso', description: 'Administrador adicionado.' });
+      fetchAdminRoles();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message || 'Erro ao adicionar admin', variant: 'destructive' });
+    }
+  };
+
+  const handleEditRoleType = async (role: any) => {
+    try {
+      const { error } = await supabase
+        .from('admin_roles')
+        .update({ role_type: editingRoleType, updated_at: new Date().toISOString(), updated_by: user?.id })
+        .eq('id', role.id);
+      if (error) throw error;
+      setEditingRoleId(null);
+      toast({ title: 'Sucesso', description: 'Tipo de role atualizado.' });
+      fetchAdminRoles();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message || 'Erro ao editar role', variant: 'destructive' });
+    }
+  };
+
+  const handleRemoveAdminRole = async () => {
+    if (!roleToRemove) return;
+    try {
+      const { error } = await supabase
+        .from('admin_roles')
+        .update({ is_active: false, updated_at: new Date().toISOString(), updated_by: user?.id })
+        .eq('id', roleToRemove.id);
+      if (error) throw error;
+      setShowRemoveModal(false);
+      setRoleToRemove(null);
+      toast({ title: 'Sucesso', description: 'Administrador removido.' });
+      fetchAdminRoles();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message || 'Erro ao remover admin', variant: 'destructive' });
     }
   };
 
@@ -817,6 +922,25 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* Busca, filtro, adicionar admin */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Input
+                        placeholder="Buscar por email ou ID..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tipo de role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="super_admin">Super Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Input
                         placeholder="Email do novo admin"
@@ -824,29 +948,114 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                         onChange={(e) => setNewAdminEmail(e.target.value)}
                         className="flex-1"
                       />
-                      <Button onClick={handleAddAdmin} className="sm:w-auto">
+                      <Select value={newAdminRole} onValueChange={setNewAdminRole}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tipo de role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="super_admin">Super Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button onClick={handleAddAdminRole} className="sm:w-auto">
                         <UserPlus className="h-4 w-4 mr-2" />
-                        Adicionar Admin
+                        Adicionar
                       </Button>
                     </div>
-
+                    {/* Lista de admins/super_admins */}
                     <div className="border rounded-lg p-4 space-y-3">
                       <h4 className="font-semibold text-base">Administradores Atuais:</h4>
-                      {users.filter(u => u.user_type === 'admin').map(admin => (
-                        <div key={admin.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2">
-                          <div>
-                            <span className="text-sm font-medium text-foreground">{admin.email}</span>
-                            {admin.name && (
-                              <p className="text-xs text-muted-foreground">{admin.name}</p>
-                            )}
+                      {loadingAdmins ? (
+                        <div>Carregando...</div>
+                      ) : adminRoles
+                        .filter(role => (userTypeFilter === 'all' ? true : role.role_type === userTypeFilter))
+                        .filter(role => {
+                          const email = role.profiles?.email || '';
+                          const name = role.profiles?.name || '';
+                          return (
+                            email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            role.user_id.toLowerCase().includes(searchQuery.toLowerCase())
+                          );
+                        })
+                        .map(role => (
+                          <div key={role.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2">
+                            <div className="flex-1">
+                              <span className="text-sm font-medium text-foreground">{role.profiles?.email || role.user_id}</span>
+                              {role.profiles?.name && (
+                                <p className="text-xs text-muted-foreground">{role.profiles.name}</p>
+                              )}
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                <Badge variant={role.role_type === 'super_admin' ? 'destructive' : 'secondary'} className="text-xs">
+                                  {role.role_type === 'super_admin' ? 'Super Admin' : 'Admin'}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">Concedido por: {role.granted_by || '-'}</span>
+                                <span className="text-xs text-muted-foreground">Em: {role.granted_at ? format(new Date(role.granted_at), 'dd/MM/yyyy HH:mm') : '-'}</span>
+                                <span className="text-xs text-muted-foreground">Último acesso: {role.profiles?.last_sign_in_at ? format(new Date(role.profiles.last_sign_in_at), 'dd/MM/yyyy HH:mm') : '-'}</span>
+                                <span className="text-xs text-muted-foreground">Status: {role.is_active ? 'Ativo' : 'Inativo'}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {editingRoleId === role.id ? (
+                                <>
+                                  <Select value={editingRoleType} onValueChange={setEditingRoleType}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="admin">Admin</SelectItem>
+                                      <SelectItem value="super_admin">Super Admin</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Button size="sm" onClick={() => handleEditRoleType(role)}>Salvar</Button>
+                                  <Button size="sm" variant="outline" onClick={() => setEditingRoleId(null)}>Cancelar</Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button size="sm" variant="outline" onClick={() => { setEditingRoleId(role.id); setEditingRoleType(role.role_type); }}>Editar</Button>
+                                  <Button size="sm" variant="destructive" onClick={() => { setRoleToRemove(role); setShowRemoveModal(true); }}>Remover</Button>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <Badge>Admin</Badge>
-                        </div>
-                      ))}
-                      {users.filter(u => u.user_type === 'admin').length === 0 && (
+                        ))
+                      }
+                      {adminRoles.length === 0 && !loadingAdmins && (
                         <p className="text-muted-foreground text-sm">Nenhum administrador encontrado</p>
                       )}
                     </div>
+                    {/* Histórico de logs */}
+                    <div className="mt-6">
+                      <h4 className="font-semibold text-base mb-2">Histórico de Ações Recentes</h4>
+                      <div className="border rounded-lg p-3 bg-muted/50 max-h-64 overflow-auto text-xs">
+                        {adminLogs.length > 0 ? (
+                          adminLogs.map(log => (
+                            <div key={log.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b last:border-b-0 py-1 gap-2">
+                              <span>Ação: {log.is_active ? (log.updated_at ? 'Edição' : 'Adição') : 'Remoção'}</span>
+                              <span>Usuário: {log.user_id}</span>
+                              <span>Role: {log.role_type}</span>
+                              <span>Por: {log.updated_by || log.granted_by || '-'}</span>
+                              <span>Em: {format(new Date(log.updated_at || log.granted_at), 'dd/MM/yyyy HH:mm')}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground">Nenhuma ação registrada</span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Modal de confirmação para remoção */}
+                    <Dialog open={showRemoveModal} onOpenChange={setShowRemoveModal}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Remover Administrador</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4">
+                          Tem certeza que deseja remover o administrador <b>{roleToRemove?.profiles?.email || roleToRemove?.user_id}</b> ({roleToRemove?.role_type})?
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setShowRemoveModal(false)}>Cancelar</Button>
+                          <Button variant="destructive" onClick={handleRemoveAdminRole}>Remover</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </CardContent>
                 </Card>
               </TabsContent>
