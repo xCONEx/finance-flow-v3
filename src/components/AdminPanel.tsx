@@ -602,8 +602,8 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         <Tabs defaultValue="users" className="space-y-4">
           <div className="relative">
             {/* Mobile: barra fixa para os botões de navegação */}
-            <div className="sm:hidden fixed bottom-16 left-0 w-full z-30 bg-background border-t border-border shadow-md flex overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch', minHeight: 64 }}>
-              <TabsList className="flex w-full justify-between px-2 py-1 gap-1">
+            <div className="sm:hidden fixed bottom-0 left-0 w-full z-30 bg-background border-t border-border shadow-lg flex overflow-x-auto no-scrollbar rounded-t-2xl pb-2 pt-2 px-2" style={{ WebkitOverflowScrolling: 'touch', minHeight: 72 }}>
+              <TabsList className="flex w-full justify-between gap-1">
                 <TabsTrigger value="users" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs break-words">
                   <Users className="h-5 w-5 mb-1" />
                   <span className="block leading-tight">Usuários</span>
