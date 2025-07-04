@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import LoginPage from './LoginPage';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAdminRoles } from '@/hooks/useAdminRoles';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -40,4 +40,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   return <>{children}</>;
 };
 
+const SuperAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isSuperAdmin, loading } = useAdminRoles();
+  if (loading) return <div>Carregando permissões...</div>;
+  if (!isSuperAdmin) return <div style={{ color: 'red', fontWeight: 'bold', margin: 32 }}>Acesso restrito: apenas super administradores.</div>;
+  return <>{children}</>;
+};
+
 export default ProtectedRoute;
+export { SuperAdminRoute };
