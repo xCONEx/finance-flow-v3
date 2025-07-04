@@ -61,6 +61,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useAdminRoles } from '@/hooks/useAdminRoles';
 
 type SubscriptionPlan = 'free' | 'basic' | 'premium' | 'enterprise' | 'enterprise-annual';
 type UserType = 'individual' | 'company_owner' | 'employee' | 'admin';
@@ -80,6 +81,7 @@ interface UserProfile {
 const AdminPanel = () => {
   const { toast } = useToast();
   const { user } = useSupabaseAuth();
+  const { isAdmin, isSuperAdmin, loading: loadingRoles } = useAdminRoles();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
@@ -506,18 +508,14 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
     }
   };
 
-  if (!isCurrentUserAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center p-8">
-            <Shield className="h-16 w-16 mx-auto text-red-500 mb-4" />
-            <h2 className="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h2>
-            <p className="text-muted-foreground">Você não tem permissão para acessar este painel.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // Exibir loading enquanto verifica roles
+  if (loadingRoles) {
+    return <div>Carregando permissões...</div>;
+  }
+
+  // Bloquear acesso para quem não é admin/super_admin
+  if (!isAdmin) {
+    return <div style={{ color: 'red', fontWeight: 'bold', margin: 32 }}>Acesso restrito: apenas administradores podem acessar este painel.</div>;
   }
 
   if (loading) {
