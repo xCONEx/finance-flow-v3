@@ -1144,8 +1144,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     markAllNotificationsAsRead,
   };
 
-  console.log('SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
-
   return (
     <AppContext.Provider value={value}>
       {children}
