@@ -408,8 +408,8 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
     try {
       // URLs corretas para Supabase Edge Functions
       const webhookUrl = selectedProvider === 'cakto' 
-        ? 'https://elsilxqruurrbdebxndx.supabase.co/functions/v1/cakto-webhook'
-        : 'https://elsilxqruurrbdebxndx.supabase.co/functions/v1/kiwify-webhook';
+        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cakto-webhook`
+        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/kiwify-webhook`;
 
       const testPayload = {
         event: selectedEvent,
@@ -434,8 +434,8 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         headers: {
           'Content-Type': 'application/json',
           'x-webhook-key': selectedProvider === 'cakto' 
-            ? '27a5317b-248f-47e8-9c4b-70aff176e556'
-            : 'v4x4jy8w3lf',
+            ? import.meta.env.VITE_CAKTO_WEBHOOK_KEY
+            : import.meta.env.VITE_KIWIFY_WEBHOOK_KEY,
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify(testPayload)
@@ -1087,11 +1087,11 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                           <div className="space-y-1 text-sm">
                             <div className="flex flex-wrap items-center gap-2">
                               <Badge variant="outline">Cakto</Badge>
-                              <code className="bg-muted px-2 py-1 rounded text-xs break-all">https://elsilxqruurrbdebxndx.supabase.co/functions/v1/cakto-webhook</code>
+                              <code className="bg-muted px-2 py-1 rounded text-xs break-all">{import.meta.env.VITE_SUPABASE_URL}/functions/v1/cakto-webhook</code>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
                               <Badge variant="outline">Kiwify</Badge>
-                              <code className="bg-muted px-2 py-1 rounded text-xs break-all">https://elsilxqruurrbdebxndx.supabase.co/functions/v1/kiwify-webhook</code>
+                              <code className="bg-muted px-2 py-1 rounded text-xs break-all">{import.meta.env.VITE_SUPABASE_URL}/functions/v1/kiwify-webhook</code>
                             </div>
                           </div>
                           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 break-words">
