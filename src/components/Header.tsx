@@ -172,7 +172,7 @@ const Header: React.FC<HeaderProps> = ({
                   <CreditCard className="w-4 h-4 mr-2" />
                   Planos
                 </DropdownMenuItem>
-                {isAdmin && (
+                {!loadingRoles && isAdmin && (
                   <DropdownMenuItem onClick={() => onTabChange('admin')}>
                     <Settings className="w-4 h-4 mr-2" />
                     Admin Panel
