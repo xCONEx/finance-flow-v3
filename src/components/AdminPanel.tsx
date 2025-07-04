@@ -626,8 +626,8 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                 </TabsTrigger>
               </TabsList>
             </div>
-            {/* Espaço extra para garantir que o conteúdo não fique atrás dos menus */}
-            <div className="sm:hidden" style={{ height: 110 }} />
+            {/* Espaço extra para garantir que o conteúdo não fique atrás dos menus (ajustado para altura dos dois menus) */}
+            <div className="sm:hidden" style={{ height: 180 }} />
             {/* Desktop: grid normal */}
             <div className="hidden sm:block">
               <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
