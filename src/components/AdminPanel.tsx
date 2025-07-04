@@ -531,7 +531,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
   const { freeUsers = 0, premiumUsers = 0, basicUsers = 0, enterpriseUsers = 0, bannedUsers = 0 } = analytics?.userStats || {};
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-32 sm:pb-0">
       <div className="max-w-7xl mx-auto p-4 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -622,7 +622,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
               </TabsList>
             </div>
             {/* Espaço extra para garantir que o conteúdo não fique atrás dos menus (ajustado para altura dos dois menus) */}
-            <div className="sm:hidden" style={{ height: 180 }} />
+            <div className="sm:hidden" style={{ height: 80 }} />
             {/* Desktop: grid normal */}
             <div className="hidden sm:block">
               <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
@@ -653,7 +653,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
               {/* USERS TAB */}
               <TabsContent value="users" className="space-y-4">
                 {/* Filtros - Mobile First */}
-                <Card>
+                <Card className="w-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Search className="h-5 w-5" />
@@ -698,9 +698,9 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                 </Card>
 
                 {/* Users List - Mobile First Cards */}
-                <div className="space-y-3">
+                <div className="space-y-3 w-full">
                   {filteredUsers.map((user) => (
-                    <Card key={user.id}>
+                    <Card key={user.id} className="w-full">
                       <CardContent className="p-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                           {/* User Info */}
@@ -792,7 +792,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                   ))}
                   
                   {filteredUsers.length === 0 && (
-                    <Card>
+                    <Card className="w-full">
                       <CardContent className="text-center py-12">
                         <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <p className="text-muted-foreground">Nenhum usuário encontrado</p>
