@@ -45,9 +45,10 @@ const Header: React.FC<HeaderProps> = ({
   const { currentTheme, toggleDarkMode, isDark } = useTheme();
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   const { isAdmin, isSuperAdmin, loading: loadingRoles } = useAdminRoles();
-  
+
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
+
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -94,15 +95,14 @@ const Header: React.FC<HeaderProps> = ({
 
                 return (
                   <Button
-                    key={item.id}
-                    onClick={() => onTabChange(item.id)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-150
-                      ${isActive
-                        ? `bg-gradient-to-r ${currentTheme.primary} text-white shadow-sm`
-                        : `bg-transparent text-[color:var(--primary)] dark:text-[color:var(--primary)] shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)]`}
-                      font-medium`}
-                    textShadow={isActive ? undefined : '0 1px 4px rgba(0,0,0,0.10)'}
-                  >
+  key={item.id}
+  onClick={() => onTabChange(item.id)}
+  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-150
+    ${isActive
+      ? `bg-gradient-to-r ${currentTheme.primary} text-white`
+      : `bg-transparent text-[color:var(--primary)] dark:text-[color:var(--primary)]`}
+    font-medium`}
+>
                     <Icon className="w-4 h-4" />
                     <span className="hidden lg:inline">{item.label}</span>
                   </Button>
@@ -116,10 +116,11 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-4">
             {/* Privacy Toggle */}
             <Button
-              onClick={toggleValuesVisibility}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-              title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
-            >
+  onClick={toggleValuesVisibility}
+  variant="ghost"
+  className="p-2 hover:bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+  title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
+>
               {valuesHidden ? (
                 <EyeOff className="h-4 w-4" />
               ) : (
@@ -132,7 +133,7 @@ const Header: React.FC<HeaderProps> = ({
           
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="flex items-center space-x-2 p-2">
+                <Button variant="ghost" className="flex items-center space-x-2 p-2 hover:bg-transparent">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={user?.user_metadata?.avatar_url} />
                     <AvatarFallback>
