@@ -5,6 +5,7 @@ import { Building2, Users, Plus, Loader2 } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAdminRoles } from '@/hooks/useAdminRoles';
 
 // Componentes
 import CompanyTable from './company/CompanyTable';
@@ -43,6 +44,7 @@ interface Collaborator {
 
 const CompanyManagement = () => {
   const { user, profile } = useSupabaseAuth();
+  const { isAdmin, loading: loadingRoles } = useAdminRoles();
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -56,8 +58,6 @@ const CompanyManagement = () => {
   const [showCollaboratorsDialog, setShowCollaboratorsDialog] = useState(false);
 
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-
-  const isAdmin = profile?.user_type === 'admin';
 
   // 🔍 Fetch Companies
   const fetchCompanies = async () => {
@@ -291,6 +291,11 @@ const CompanyManagement = () => {
       fetchUsers();
     }
   }, [isAdmin]);
+
+  // Exibir loading enquanto verifica roles
+  if (loadingRoles) {
+    return <div>Carregando permissões...</div>;
+  }
 
   // 🔒 Not admin
   if (!isAdmin) {
