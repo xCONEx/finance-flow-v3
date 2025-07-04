@@ -53,5 +53,5 @@
 /* Garante que o body não tenha overflow-x e espaçamento inferior para o menu fixo */
 body {
   overflow-x: hidden;
-  padding-bottom: 110px; /* espaço maior para o menu fixo no mobile */
+  padding-bottom: 180px; /* espaço para os dois menus fixos no mobile */
 }
