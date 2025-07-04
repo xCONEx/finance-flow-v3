@@ -602,27 +602,27 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         <Tabs defaultValue="users" className="space-y-4">
           <div className="relative">
             {/* Mobile: barra fixa para os botões de navegação */}
-            <div className="sm:hidden fixed bottom-16 left-0 w-full z-30 bg-background border-t border-border shadow-md flex overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="sm:hidden fixed bottom-16 left-0 w-full z-30 bg-background border-t border-border shadow-md flex overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch', minHeight: 64 }}>
               <TabsList className="flex w-full justify-between px-2 py-1 gap-1">
-                <TabsTrigger value="users" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
+                <TabsTrigger value="users" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs break-words">
                   <Users className="h-5 w-5 mb-1" />
-                  Usuários
+                  <span className="block leading-tight">Usuários</span>
                 </TabsTrigger>
-                <TabsTrigger value="companies" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
+                <TabsTrigger value="companies" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs break-words">
                   <Building2 className="h-5 w-5 mb-1" />
-                  Empresas
+                  <span className="block leading-tight">Empresas</span>
                 </TabsTrigger>
-                <TabsTrigger value="admins" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
+                <TabsTrigger value="admins" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs break-words">
                   <ShieldCheck className="h-5 w-5 mb-1" />
-                  Admins
+                  <span className="block leading-tight">Admins</span>
                 </TabsTrigger>
-                <TabsTrigger value="analytics" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
+                <TabsTrigger value="analytics" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs break-words">
                   <BarChart className="h-5 w-5 mb-1" />
-                  Analytics
+                  <span className="block leading-tight">Analytics</span>
                 </TabsTrigger>
-                <TabsTrigger value="webhooks" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs">
+                <TabsTrigger value="webhooks" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs break-words">
                   <Webhook className="h-5 w-5 mb-1" />
-                  Webhooks
+                  <span className="block leading-tight">Webhooks</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -1067,9 +1067,9 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                       <div className="space-y-4">
                         <div>
                           <Label>Resposta do Webhook</Label>
-                          <div className="border rounded-md p-4 bg-muted/50 min-h-[200px] max-h-[400px] overflow-auto">
+                          <div className="border rounded-md p-4 bg-muted/50 min-h-[200px] max-h-[400px] overflow-auto break-words whitespace-pre-wrap">
                             {webhookResponse ? (
-                              <pre className="text-xs whitespace-pre-wrap">
+                              <pre className="text-xs whitespace-pre-wrap break-words">
                                 {JSON.stringify(webhookResponse, null, 2)}
                               </pre>
                             ) : (
@@ -1083,25 +1083,19 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                         <div className="space-y-2">
                           <h4 className="font-medium">URLs dos Webhooks:</h4>
                           <div className="space-y-1 text-sm">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Badge variant="outline">Cakto</Badge>
-                              <code className="bg-muted px-2 py-1 rounded text-xs">
-                                https://elsilxqruurrbdebxndx.supabase.co/functions/v1/cakto-webhook
-                              </code>
+                              <code className="bg-muted px-2 py-1 rounded text-xs break-all">https://elsilxqruurrbdebxndx.supabase.co/functions/v1/cakto-webhook</code>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Badge variant="outline">Kiwify</Badge>
-                              <code className="bg-muted px-2 py-1 rounded text-xs">
-                                https://elsilxqruurrbdebxndx.supabase.co/functions/v1/kiwify-webhook
-                              </code>
+                              <code className="bg-muted px-2 py-1 rounded text-xs break-all">https://elsilxqruurrbdebxndx.supabase.co/functions/v1/kiwify-webhook</code>
                             </div>
                           </div>
-                          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                            <strong>⚠️ Importante:</strong> Certifique-se de que as Edge Functions estão deployadas no Supabase:
-                            <br />
-                            <code className="bg-yellow-100 px-1 rounded">supabase functions deploy cakto-webhook</code>
-                            <br />
-                            <code className="bg-yellow-100 px-1 rounded">supabase functions deploy kiwify-webhook</code>
+                          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 break-words">
+                            <strong>⚠️ Importante:</strong> Certifique-se de que as Edge Functions estão deployadas no Supabase:<br />
+                            <code className="bg-yellow-100 px-1 rounded break-all">supabase functions deploy cakto-webhook</code><br />
+                            <code className="bg-yellow-100 px-1 rounded break-all">supabase functions deploy kiwify-webhook</code>
                           </div>
                         </div>
                       </div>
