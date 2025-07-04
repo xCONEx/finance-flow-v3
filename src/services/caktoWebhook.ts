@@ -1,4 +1,3 @@
-
 // Exemplo de estrutura para Firebase Cloud Function
 // Este arquivo deve ser usado como referência para implementar no Firebase Functions
 
@@ -16,7 +15,7 @@ export interface CaktoWebhookPayload {
   };
 }
 
-export const CAKTO_WEBHOOK_KEY = '27a5317b-248f-47e8-9c4b-70aff176e556';
+export const CAKTO_WEBHOOK_KEY = import.meta.env.VITE_CAKTO_WEBHOOK_KEY || process.env.CAKTO_WEBHOOK_KEY;
 
 export const PLAN_MAPPING = {
   'yppzpjc': 'basic',     // https://pay.cakto.com.br/yppzpjc
