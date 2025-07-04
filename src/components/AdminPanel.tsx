@@ -602,7 +602,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         <Tabs defaultValue="users" className="space-y-4">
           <div className="relative">
             {/* Mobile: barra fixa para os botões de navegação */}
-            <div className="sm:hidden fixed bottom-0 left-0 w-full z-30 bg-background border-t border-border shadow-lg flex overflow-x-auto no-scrollbar rounded-t-2xl pb-2 pt-2 px-2" style={{ WebkitOverflowScrolling: 'touch', minHeight: 72 }}>
+            <div className="sm:hidden fixed left-4 right-4 bottom-20 z-40 bg-white/80 dark:bg-[#141414]/80 backdrop-blur-md border border-gray-200 dark:border-[#262626] rounded-2xl shadow-xl px-4 py-2 flex overflow-x-auto no-scrollbar justify-between gap-1" style={{ WebkitOverflowScrolling: 'touch', minHeight: 64, marginBottom: 0 }}>
               <TabsList className="flex w-full justify-between gap-1">
                 <TabsTrigger value="users" className="flex flex-col items-center flex-1 min-w-[60px] py-2 px-1 text-xs break-words">
                   <Users className="h-5 w-5 mb-1" />
@@ -626,6 +626,8 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                 </TabsTrigger>
               </TabsList>
             </div>
+            {/* Espaço extra para garantir que o conteúdo não fique atrás dos menus */}
+            <div className="sm:hidden" style={{ height: 110 }} />
             {/* Desktop: grid normal */}
             <div className="hidden sm:block">
               <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
