@@ -401,13 +401,10 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         .eq('is_active', true)
         .order('granted_at', { ascending: false });
       if (error) throw error;
-      // Buscar perfis dos user_id
-      const userIds = (roles || []).map(r => r.user_id).filter(Boolean);
+      // Extrair userIds únicos
+      const userIds = Array.from(new Set((roles || []).map(r => r.user_id).filter(Boolean)));
       let profilesMap: Record<string, any> = {};
-      if (userIds.length === 0) {
-        // Não faz query nenhuma, apenas zera o mapa
-        profilesMap = {};
-      } else if (userIds.length === 1) {
+      if (userIds.length === 1) {
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, email, name, last_sign_in_at')
@@ -480,14 +477,13 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
     }
   };
 
-  const handleEditRoleType = async (role: any) => {
+  const handleEditRoleType = async (role: any, newType: string) => {
     try {
       const { error } = await supabase
         .from('admin_roles')
-        .update({ role_type: editingRoleType, updated_at: new Date().toISOString(), updated_by: user?.id })
+        .update({ role_type: newType, updated_at: new Date().toISOString(), updated_by: user?.id })
         .eq('id', role.id);
       if (error) throw error;
-      setEditingRoleId(null);
       toast({ title: 'Sucesso', description: 'Tipo de role atualizado.' });
       fetchAdminRoles();
     } catch (err: any) {
@@ -495,16 +491,13 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
     }
   };
 
-  const handleRemoveAdminRole = async () => {
-    if (!roleToRemove) return;
+  const handleRemoveAdminRole = async (role: any) => {
     try {
       const { error } = await supabase
         .from('admin_roles')
         .update({ is_active: false, updated_at: new Date().toISOString(), updated_by: user?.id })
-        .eq('id', roleToRemove.id);
+        .eq('id', role.id);
       if (error) throw error;
-      setShowRemoveModal(false);
-      setRoleToRemove(null);
       toast({ title: 'Sucesso', description: 'Administrador removido.' });
       fetchAdminRoles();
     } catch (err: any) {
@@ -1025,15 +1018,14 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                             <div className="flex items-center gap-2">
                               {editingRoleId === role.id ? (
                                 <>
-                                  <Select value={editingRoleType} onValueChange={setEditingRoleType}>
+                                  <Select value={editingRoleType} onValueChange={(newType: string) => handleEditRoleType(role, newType)}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="admin">Admin</SelectItem>
                                       <SelectItem value="super_admin">Super Admin</SelectItem>
                                     </SelectContent>
                                   </Select>
-                                  <Button size="sm" onClick={() => handleEditRoleType(role)}>Salvar</Button>
-                                  <Button size="sm" variant="outline" onClick={() => setEditingRoleId(null)}>Cancelar</Button>
+                                  <Button size="sm" onClick={() => setEditingRoleId(null)}>Cancelar</Button>
                                 </>
                               ) : (
                                 <>
@@ -1079,7 +1071,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                         </div>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setShowRemoveModal(false)}>Cancelar</Button>
-                          <Button variant="destructive" onClick={handleRemoveAdminRole}>Remover</Button>
+                          <Button variant="destructive" onClick={() => handleRemoveAdminRole(roleToRemove)}>Remover</Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
