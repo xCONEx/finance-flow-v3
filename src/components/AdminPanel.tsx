@@ -394,14 +394,31 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
   const fetchAdminRoles = useCallback(async () => {
     setLoadingAdmins(true);
     try {
-      // Buscar todos os admins ativos, join com profiles para email/nome
-      const { data, error } = await supabase
+      // Buscar todos os admins ativos
+      const { data: roles, error } = await supabase
         .from('admin_roles')
-        .select('*, profiles:profiles(id, email, name, last_sign_in_at)')
+        .select('*')
         .eq('is_active', true)
         .order('granted_at', { ascending: false });
       if (error) throw error;
-      setAdminRoles(data || []);
+      // Buscar perfis dos user_id
+      const userIds = (roles || []).map(r => r.user_id);
+      let profilesMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, email, name, last_sign_in_at')
+          .in('id', userIds);
+        if (!profilesError && profiles) {
+          profilesMap = Object.fromEntries(profiles.map(p => [p.id, p]));
+        }
+      }
+      // Merge dos dados
+      const merged = (roles || []).map(role => ({
+        ...role,
+        profile: profilesMap[role.user_id] || null
+      }));
+      setAdminRoles(merged);
       // Buscar logs (últimas 20 ações)
       const { data: logs, error: logError } = await supabase
         .from('admin_roles')
@@ -970,28 +987,27 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                       ) : adminRoles
                         .filter(role => (userTypeFilter === 'all' ? true : role.role_type === userTypeFilter))
                         .filter(role => {
-                          const email = role.profiles?.email || '';
-                          const name = role.profiles?.name || '';
+                          const adminEmail = role.profile?.email || '';
+                          const adminName = role.profile?.name || '';
                           return (
-                            email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            adminEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            adminName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             role.user_id.toLowerCase().includes(searchQuery.toLowerCase())
                           );
                         })
                         .map(role => (
                           <div key={role.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2">
                             <div className="flex-1">
-                              <span className="text-sm font-medium text-foreground">{role.profiles?.email || role.user_id}</span>
-                              {role.profiles?.name && (
-                                <p className="text-xs text-muted-foreground">{role.profiles.name}</p>
+                              <span className="text-sm font-medium text-foreground">{role.profile?.email || role.user_id}</span>
+                              {role.profile?.name && (
+                                <p className="text-xs text-muted-foreground">{role.profile.name}</p>
                               )}
                               <div className="flex flex-wrap gap-2 mt-1">
                                 <Badge variant={role.role_type === 'super_admin' ? 'destructive' : 'secondary'} className="text-xs">
                                   {role.role_type === 'super_admin' ? 'Super Admin' : 'Admin'}
                                 </Badge>
                                 <span className="text-xs text-muted-foreground">Concedido por: {role.granted_by || '-'}</span>
-                                <span className="text-xs text-muted-foreground">Em: {role.granted_at ? format(new Date(role.granted_at), 'dd/MM/yyyy HH:mm') : '-'}</span>
-                                <span className="text-xs text-muted-foreground">Último acesso: {role.profiles?.last_sign_in_at ? format(new Date(role.profiles.last_sign_in_at), 'dd/MM/yyyy HH:mm') : '-'}</span>
+                                <span className="text-xs text-muted-foreground">Último acesso: {role.profile?.last_sign_in_at ? format(new Date(role.profile.last_sign_in_at), 'dd/MM/yyyy HH:mm') : '-'}</span>
                                 <span className="text-xs text-muted-foreground">Status: {role.is_active ? 'Ativo' : 'Inativo'}</span>
                               </div>
                             </div>
@@ -1048,7 +1064,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                           <DialogTitle>Remover Administrador</DialogTitle>
                         </DialogHeader>
                         <div className="py-4">
-                          Tem certeza que deseja remover o administrador <b>{roleToRemove?.profiles?.email || roleToRemove?.user_id}</b> ({roleToRemove?.role_type})?
+                          Tem certeza que deseja remover o administrador <b>{roleToRemove?.profile?.email || roleToRemove?.user_id}</b> ({roleToRemove?.role_type})?
                         </div>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setShowRemoveModal(false)}>Cancelar</Button>
