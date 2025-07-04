@@ -46,15 +46,6 @@ const Header: React.FC<HeaderProps> = ({
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   const { isAdmin, isSuperAdmin, loading: loadingRoles, roles } = useAdminRoles();
 
-  console.log('HEADER DEBUG', {
-    userId: user?.id,
-    email: user?.email,
-    roles,
-    isAdmin,
-    isSuperAdmin,
-    loadingRoles
-  });
-
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
 
