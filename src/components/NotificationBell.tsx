@@ -5,47 +5,15 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { notificationService } from '../services/notificationService';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { InAppNotification, NotificationType } from '../types/notification';
 import { useTheme } from '../contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 
 const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<InAppNotification[]>([]);
+  const { notifications, loading, markAsRead, markAllAsRead, deleteNotification, unreadCount } = useRealtimeNotifications();
   const { isDark } = useTheme();
-
-  useEffect(() => {
-    // Carregar notificações iniciais
-    loadNotifications();
-    
-    // Atualizar notificações periodicamente
-    const interval = setInterval(loadNotifications, 30000); // 30 segundos
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadNotifications = () => {
-    const inAppNotifications = notificationService.getInAppNotifications();
-    setNotifications(inAppNotifications);
-  };
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const handleMarkAsRead = async (id: string) => {
-    await notificationService.markInAppNotificationAsRead(id);
-    loadNotifications();
-  };
-
-  const handleMarkAllAsRead = async () => {
-    await notificationService.markAllInAppNotificationsAsRead();
-    loadNotifications();
-  };
-
-  const handleDeleteNotification = async (id: string) => {
-    await notificationService.deleteInAppNotification(id);
-    loadNotifications();
-  };
 
   const formatDueDate = (dueDate: string) => {
     const date = new Date(dueDate);
@@ -73,7 +41,7 @@ const NotificationBell = () => {
     return created.toLocaleDateString('pt-BR');
   };
 
-  const getNotificationIcon = (type: NotificationType) => {
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'expense_reminder':
         return '💰';
@@ -94,10 +62,9 @@ const NotificationBell = () => {
     }
   };
 
-  const getNotificationColor = (type: NotificationType, priority: string) => {
+  const getNotificationColor = (type: string, priority: string) => {
     if (priority === 'urgent') return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950';
     if (priority === 'high') return 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950';
-    
     switch (type) {
       case 'expense_due':
         return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950';
@@ -146,7 +113,7 @@ const NotificationBell = () => {
                     variant="ghost"
                     size="sm"
                     className="h-8 px-2 text-xs"
-                    onClick={handleMarkAllAsRead}
+                    onClick={markAllAsRead}
                   >
                     <CheckCheck className="h-3 w-3 mr-1" />
                     Marcar todas
@@ -177,8 +144,8 @@ const NotificationBell = () => {
                     <div
                       className={cn(
                         "p-4 border-l-4 transition-colors hover:bg-muted/50",
-                        getNotificationColor(notification.type, notification.priority),
-                        !notification.isRead && "bg-muted/30"
+                        getNotificationColor(notification.type, notification.data?.priority || 'medium'),
+                        !notification.is_read && "bg-muted/30"
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -191,31 +158,31 @@ const NotificationBell = () => {
                               <p className="text-sm font-medium text-foreground truncate">
                                 {notification.title}
                               </p>
-                              {!notification.isRead && (
+                              {!notification.is_read && (
                                 <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground mb-1 line-clamp-2">
-                              {notification.message}
+                              {notification.body}
                             </p>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{formatTimeAgo(notification.createdAt)}</span>
-                              {notification.dueDate && (
+                              <span>{formatTimeAgo(notification.created_at)}</span>
+                              {notification.data?.dueDate && (
                                 <>
                                   <span>•</span>
-                                  <span>Vence {formatDueDate(notification.dueDate)}</span>
+                                  <span>Vence {formatDueDate(notification.data.dueDate)}</span>
                                 </>
                               )}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          {!notification.isRead && (
+                          {!notification.is_read && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-6 w-6 p-0"
-                              onClick={() => handleMarkAsRead(notification.id)}
+                              onClick={() => markAsRead(notification.id)}
                             >
                               <CheckCheck className="h-3 w-3" />
                             </Button>
@@ -224,7 +191,7 @@ const NotificationBell = () => {
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleDeleteNotification(notification.id)}
+                            onClick={() => deleteNotification(notification.id)}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
