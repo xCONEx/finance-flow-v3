@@ -79,6 +79,27 @@ const NotificationBell = () => {
     }
   };
 
+  // Função para gerar chave única de agrupamento
+  const getGroupKey = (notification: any) => {
+    const expenseId = notification.data?.expenseId || '';
+    return `${notification.title}|${notification.type}|${expenseId || notification.body}`;
+  };
+
+  // Filtrar notificações: apenas a mais recente de cada grupo, e só não lidas
+  const filteredNotifications = React.useMemo(() => {
+    const map = new Map<string, any>();
+    notifications
+      .filter((n) => !n.is_read) // só não lidas
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) // mais recentes primeiro
+      .forEach((n) => {
+        const key = getGroupKey(n);
+        if (!map.has(key)) {
+          map.set(key, n);
+        }
+      });
+    return Array.from(map.values());
+  }, [notifications]);
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -139,7 +160,7 @@ const NotificationBell = () => {
               </div>
             ) : (
               <div className="max-h-96 overflow-y-auto">
-                {notifications.map((notification, index) => (
+                {filteredNotifications.map((notification, index) => (
                   <div key={notification.id}>
                     <div
                       className={cn(
