@@ -163,9 +163,9 @@ const AdminPanel = () => {
   const calculateRevenue = (profiles: UserProfile[]) => {
     const planValues = {
       'free': 0,
-      'basic': 29,
-      'premium': 49,
-      'enterprise': 99,
+      'basic': 29.90,
+      'premium': 59.90,
+      'enterprise': 199,
       'enterprise-annual': 1990
     };
 
@@ -224,9 +224,9 @@ Receita Total: R$ ${totalRevenue.toLocaleString('pt-BR')}
 
 === DISTRIBUIÇÃO DE PLANOS ===
 Usuários Free: ${planCounts.freeUsers} (R$ 0)
-Usuários Basic: ${planCounts.basicUsers} (R$ ${(planCounts.basicUsers * 29).toLocaleString('pt-BR')})
-Usuários Premium: ${planCounts.premiumUsers} (R$ ${(planCounts.premiumUsers * 49).toLocaleString('pt-BR')})
-Usuários Enterprise: ${planCounts.enterpriseUsers} (R$ ${(planCounts.enterpriseUsers * 99).toLocaleString('pt-BR')})
+Usuários Basic: ${planCounts.basicUsers} (R$ ${(planCounts.basicUsers * 29.90).toLocaleString('pt-BR')})
+Usuários Premium: ${planCounts.premiumUsers} (R$ ${(planCounts.premiumUsers * 59.90).toLocaleString('pt-BR')})
+Usuários Enterprise: ${planCounts.enterpriseUsers} (R$ ${(planCounts.enterpriseUsers * 199).toLocaleString('pt-BR')})
 Usuários Enterprise Anual: ${planCounts.enterpriseAnnualUsers} (R$ ${(planCounts.enterpriseAnnualUsers * 1990).toLocaleString('pt-BR')})
 
 === MÉTRICAS ===
@@ -434,6 +434,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'x-webhook-key': webhookKey
         },
         body: JSON.stringify(testPayload)
