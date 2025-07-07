@@ -15,7 +15,8 @@ import {
   X,
   Bell,
   Eye,
-  EyeOff
+  EyeOff,
+  ChevronsRight
 } from 'lucide-react';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -122,18 +123,23 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
           <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsOpen(false)} />
           <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-[#141414] rounded-t-2xl shadow-2xl">
             <div className="p-6 space-y-6">
-              {/* Conta Atual como botão */}
-              <div className="flex flex-col items-center space-y-2 pb-2">
+              {/* Conta Atual como botão estilizado */}
+              <div className="flex flex-col items-center pb-2">
                 <button
-                  className="flex flex-col items-center w-full focus:outline-none"
+                  className="w-full flex flex-col items-center bg-muted/60 dark:bg-muted/30 rounded-xl py-4 mb-2 shadow-sm border border-gray-100 dark:border-gray-800 hover:bg-muted/80 transition group focus:outline-none"
                   onClick={() => setIsAccountModalOpen(true)}
                 >
-                  <Avatar className="h-12 w-12 mb-1">
+                  <Avatar className="h-14 w-14 mb-2 shadow">
                     <AvatarImage src={user?.user_metadata?.avatar_url} />
                     <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[160px]">{user?.email}</span>
+                  <span className="text-base font-semibold text-gray-900 dark:text-white truncate max-w-[180px] mb-1">{user?.email}</span>
+                  <span className="text-xs text-muted-foreground mb-1">Conta atual</span>
+                  <span className="flex items-center gap-1 text-primary text-xs font-medium group-hover:underline">
+                    Trocar de conta <ChevronsRight className="h-4 w-4 ml-1" />
+                  </span>
                 </button>
+                <div className="w-full border-b border-gray-200 dark:border-gray-700 mt-2" />
               </div>
 
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
