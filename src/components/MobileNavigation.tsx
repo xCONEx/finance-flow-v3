@@ -123,30 +123,32 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
           <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsOpen(false)} />
           <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-[#141414] rounded-t-2xl shadow-2xl">
             <div className="p-6 space-y-6">
-              {/* Conta Atual como botão estilizado */}
+              {/* Conta Atual como botão compacto */}
               <div className="flex flex-col items-center pb-2">
                 <button
-                  className="w-full flex flex-col items-center bg-muted/60 dark:bg-muted/30 rounded-xl py-4 mb-2 shadow-sm border border-gray-100 dark:border-gray-800 hover:bg-muted/80 transition group focus:outline-none"
+                  className="w-full flex items-center bg-muted/60 dark:bg-muted/30 rounded-xl py-3 px-3 mb-2 shadow-sm border border-gray-100 dark:border-gray-800 hover:bg-muted/80 transition group focus:outline-none"
                   onClick={() => setIsAccountModalOpen(true)}
                 >
-                  <Avatar className="h-14 w-14 mb-2 shadow">
+                  <Avatar className="h-11 w-11 mr-3">
                     <AvatarImage src={user?.user_metadata?.avatar_url} />
                     <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white truncate max-w-[180px] mb-1">{user?.email}</span>
-                  <span className="text-xs text-muted-foreground mb-1">Conta atual</span>
-                  <span className="flex items-center gap-1 text-primary text-xs font-medium group-hover:underline">
-                    Trocar de conta <ChevronsRight className="h-4 w-4 ml-1" />
+                  <div className="flex flex-col flex-1 items-start min-w-0">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[140px]">{user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>
+                    <span className="text-xs text-muted-foreground truncate max-w-[140px]">{user?.email}</span>
+                  </div>
+                  <span className="flex items-center ml-2 text-primary">
+                    <ChevronsRight className="h-5 w-5" />
                   </span>
                 </button>
-                <div className="w-full border-b border-gray-200 dark:border-gray-700 mt-2" />
+                <div className="w-full border-b border-gray-200 dark:border-gray-700 mt-1" />
               </div>
 
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <h3 className="text-lg font-semibold mb-4">Navegação</h3>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+                <h3 className="text-lg font-semibold mb-2">Navegação</h3>
                 
                 {/* Navigation Items */}
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {navigationItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
@@ -155,7 +157,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                       <Button
                         key={item.id}
                         variant={isActive ? 'default' : 'ghost'}
-                        className={`w-full justify-start h-12 ${
+                        className={`w-full justify-start h-11 px-3 ${
                           isActive 
                             ? `bg-gradient-to-r ${currentTheme.primary} text-white` 
                             : 'text-gray-700 dark:text-gray-300'
@@ -170,10 +172,10 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 </div>
 
                 {/* Additional Options */}
-                <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="space-y-1 pt-2 border-t border-gray-200 dark:border-gray-700">
                   <Button
                     variant="ghost"
-                    className="w-full justify-start h-12"
+                    className="w-full justify-start h-11 px-3"
                     onClick={() => handleTabChange('profile')}
                   >
                     <User className="w-5 h-5 mr-3" />
@@ -182,7 +184,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                   
                   <Button
                     variant="ghost"
-                    className="w-full justify-start h-12"
+                    className="w-full justify-start h-11 px-3"
                     onClick={() => handleTabChange('settings')}
                   >
                     <Settings className="w-5 h-5 mr-3" />
@@ -191,7 +193,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                   
                   <Button
                     variant="ghost"
-                    className="w-full justify-start h-12"
+                    className="w-full justify-start h-11 px-3"
                     onClick={() => handleTabChange('subscription')}
                   >
                     <CreditCard className="w-5 h-5 mr-3" />
@@ -201,7 +203,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                   {!loadingRoles && isAdmin && (
                     <Button
                       variant="ghost"
-                      className="w-full justify-start h-12"
+                      className="w-full justify-start h-11 px-3"
                       onClick={() => handleTabChange('admin')}
                     >
                       <Settings className="w-5 h-5 mr-3" />
@@ -211,10 +213,10 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 </div>
 
                 {/* Sign Out */}
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                   <Button
                     variant="ghost"
-                    className="w-full justify-start h-12 text-red-600 hover:text-red-700"
+                    className="w-full justify-start h-11 text-red-600 hover:text-red-700"
                     onClick={handleSignOut}
                   >
                     <X className="w-5 h-5 mr-3" />
