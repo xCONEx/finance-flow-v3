@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAgency } from '@/contexts/AgencyContext';
-import { notificationService } from '@/services/notificationService';
+import { notificationService, createNotification } from '@/services/notificationService';
 import { Building2 } from 'lucide-react';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 
 const PendingInvitationsModal: React.FC = () => {
   const { pendingInvitations, acceptInvitation, loadPendingInvitations } = useAgency();
+  const { user } = useSupabaseAuth();
   const [open, setOpen] = useState(false);
   const [notified, setNotified] = useState(false);
 
@@ -15,6 +17,16 @@ const PendingInvitationsModal: React.FC = () => {
       setOpen(true);
       if (!notified) {
         const invite = pendingInvitations[0];
+        if (invite && invite.id && invite.agency_id && invite.agency_name && user?.id) {
+          createNotification({
+            user_id: user.id,
+            type: 'invite',
+            title: 'Convite para Agência',
+            body: `Você foi convidado para a agência: ${invite.agency_name}`,
+            data: { agencyId: invite.agency_id, invitationId: invite.id },
+            is_read: false
+          });
+        }
         notificationService.showNotification({
           id: `invite-${invite.id}`,
           title: 'Convite para Agência',
