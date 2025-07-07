@@ -32,6 +32,7 @@ import { useAdminRoles } from '@/hooks/useAdminRoles';
 import AccountSwitcher from './AccountSwitcher';
 import MobileAccountSwitcher from './MobileAccountSwitcher';
 import { useMobile } from '@/hooks/use-mobile';
+import { useRecentAccounts } from '@/hooks/useRecentAccounts';
 
 interface HeaderProps {
   activeTab: string;
@@ -49,6 +50,7 @@ const Header: React.FC<HeaderProps> = ({
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   const { isAdmin, isSuperAdmin, loading: loadingRoles, roles } = useAdminRoles();
   const isMobile = useMobile();
+  const { accounts, removeAccount, addAccount } = useRecentAccounts(user?.email);
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
@@ -74,6 +76,20 @@ const Header: React.FC<HeaderProps> = ({
   const getActiveTabTitle = () => {
     const activeItem = navigationItems.find(item => item.id === activeTab);
     return activeItem ? activeItem.label : 'Dashboard';
+  };
+
+  // Handler para trocar de conta
+  const handleSwitchAccount = async (email: string) => {
+    // Aqui você pode implementar lógica de logout/login automático
+    // Por enquanto, apenas faz logout e redireciona para login
+    await signOut();
+    window.location.href = '/login?email=' + encodeURIComponent(email);
+  };
+
+  // Handler para adicionar nova conta
+  const handleAddAccount = () => {
+    // Redireciona para tela de login
+    window.location.href = '/login';
   };
 
   return (
@@ -136,11 +152,14 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Account Switcher */}
             {isMobile ? (
-              <MobileAccountSwitcher />
-            ) : (
-              <AccountSwitcher variant="header" />
-            )}
-          
+              <MobileAccountSwitcher
+                accounts={accounts}
+                currentEmail={user?.email || ''}
+                onSwitch={handleSwitchAccount}
+                onRemove={removeAccount}
+                onAdd={handleAddAccount}
+              />
+            ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 p-2 hover:bg-transparent">
@@ -154,7 +173,7 @@ const Header: React.FC<HeaderProps> = ({
                   <ChevronDown className="w-4 h-4 text-gray-500" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#141414] z-50">
+              <DropdownMenuContent align="end" className="w-64 bg-white dark:bg-[#141414] z-50">
                 <div className="px-3 py-2 border-b border-gray-200 dark:border-[#262626]">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {profile?.name || user?.email?.split('@')[0]}
@@ -169,6 +188,16 @@ const Header: React.FC<HeaderProps> = ({
                        profile?.subscription === 'premium' ? 'Premium' : 'Free'}
                     </Badge>
                   </div>
+                </div>
+                {/* Trocar Conta - contas recentes */}
+                <div className="border-b border-gray-200 dark:border-[#262626]">
+                  <AccountSwitcher
+                    accounts={accounts}
+                    currentEmail={user?.email || ''}
+                    onSwitch={handleSwitchAccount}
+                    onRemove={removeAccount}
+                    onAdd={handleAddAccount}
+                  />
                 </div>
                 <DropdownMenuItem onClick={() => onTabChange('profile')}>
                   <User className="w-4 h-4 mr-2" />
