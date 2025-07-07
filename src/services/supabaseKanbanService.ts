@@ -1,4 +1,5 @@
 import { supabase } from '../integrations/supabase/client';
+import { createNotification } from './notificationService';
 
 export interface KanbanProject {
   id: string;
@@ -252,19 +253,42 @@ class SupabaseKanbanService {
   async notifyProjectResponsibles(projectId: string, notificationType: string = 'update'): Promise<boolean> {
     try {
       console.log('🔔 [NOTIFY] Notificando responsáveis do projeto:', projectId, 'Tipo:', notificationType);
-      
-      const { data, error } = await supabase
-        .rpc('notify_project_responsibles', { 
-          project_id: projectId, 
-          notification_type: notificationType 
-        });
-
-      if (error) {
-        console.error('❌ [NOTIFY] Erro ao notificar responsáveis:', error);
-        throw error;
+      // Buscar responsáveis do projeto
+      const responsaveis = await this.getProjectResponsibles(projectId);
+      if (!responsaveis.length) {
+        console.warn('Nenhum responsável encontrado para o projeto:', projectId);
+        return false;
       }
-
-      console.log('✅ [NOTIFY] Notificação enviada com sucesso');
+      // Buscar dados do projeto para compor a notificação
+      const { data: projectData, error: projectError } = await supabase
+        .from('kanban_boards')
+        .select('title')
+        .eq('id', projectId)
+        .single();
+      if (projectError) {
+        console.error('Erro ao buscar dados do projeto para notificação:', projectError);
+        throw projectError;
+      }
+      const projectTitle = projectData?.title || 'Projeto';
+      // Montar mensagem
+      let title = 'Atualização no Projeto';
+      let body = `O projeto "${projectTitle}" foi atualizado.`;
+      if (notificationType === 'move') {
+        title = 'Projeto Movido';
+        body = `O projeto "${projectTitle}" mudou de status.`;
+      }
+      // Persistir notificação para cada responsável
+      await Promise.all(responsaveis.map(responsavel =>
+        createNotification({
+          user_id: responsavel.user_id,
+          type: 'job_update',
+          title,
+          body,
+          data: { projectId, notificationType },
+          is_read: false
+        })
+      ));
+      console.log('✅ [NOTIFY] Notificações persistidas para responsáveis:', responsaveis.length);
       return true;
     } catch (error) {
       console.error('❌ [NOTIFY] Erro ao notificar responsáveis:', error);
