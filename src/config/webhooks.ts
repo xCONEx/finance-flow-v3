@@ -1,24 +1,28 @@
 // Configuração dos Webhooks
 export const WEBHOOK_CONFIG = {
   cakto: {
-    key: '27a5317b-248f-47e8-9c4b-70aff176e556',
+    key: '', // Será preenchido pela variável de ambiente
     url: 'https://elsilxqruurrbdebxndx.supabase.co/functions/v1/cakto-webhook'
   },
   kiwify: {
-    key: 'v4x4jy8w3lf',
+    key: '', // Será preenchido pela variável de ambiente
     url: 'https://elsilxqruurrbdebxndx.supabase.co/functions/v1/kiwify-webhook'
   }
 } as const;
 
 // Função para obter a chave do webhook
 export const getWebhookKey = (provider: 'cakto' | 'kiwify'): string => {
-  // Primeiro tenta pegar da variável de ambiente
+  // Sempre pegar da variável de ambiente
   const envKey = provider === 'cakto' 
     ? import.meta.env.VITE_CAKTO_WEBHOOK_KEY
     : import.meta.env.VITE_KIWIFY_WEBHOOK_KEY;
   
-  // Se não estiver configurada, usa a chave hardcoded
-  return envKey || WEBHOOK_CONFIG[provider].key;
+  if (!envKey) {
+    console.warn(`⚠️ Variável de ambiente VITE_${provider.toUpperCase()}_WEBHOOK_KEY não configurada`);
+    return '';
+  }
+  
+  return envKey;
 };
 
 // Função para obter a URL do webhook
