@@ -545,15 +545,103 @@ export async function createNotification(notification: {
   data?: any;
   is_read?: boolean;
 }): Promise<void> {
-  await supabase.from('notifications').insert({
-    user_id: notification.user_id,
-    type: notification.type,
-    title: notification.title,
-    body: notification.body,
-    data: notification.data || {},
-    is_read: notification.is_read ?? false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  });
+  try {
+    console.log('🔔 [CREATE] Tentando criar notificação:', {
+      user_id: notification.user_id,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body
+    });
+
+    // Verificar se o usuário está autenticado
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('❌ Usuário não autenticado:', authError);
+      throw new Error('Usuário não autenticado');
+    }
+
+    console.log('✅ Usuário autenticado:', user.id);
+
+    // Primeiro, tentar inserção direta
+    const { error: insertError } = await supabase.from('notifications').insert({
+      user_id: notification.user_id,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      data: notification.data || {},
+      is_read: notification.is_read ?? false
+    });
+
+    if (insertError) {
+      console.error('❌ Erro na inserção direta:', insertError);
+      
+      // Se falhar, tentar via função RPC
+      console.log('🔄 Tentando via função RPC...');
+      const { error: rpcError } = await supabase.rpc('create_notification', {
+        p_user_id: notification.user_id,
+        p_type: notification.type,
+        p_title: notification.title,
+        p_body: notification.body,
+        p_data: notification.data || {},
+        p_is_read: notification.is_read ?? false
+      });
+
+      if (rpcError) {
+        console.error('❌ Erro na função RPC:', rpcError);
+        throw rpcError;
+      }
+      
+      console.log('✅ Notificação criada via RPC:', notification.title);
+    } else {
+      console.log('✅ Notificação criada com sucesso no Supabase:', notification.title);
+    }
+  } catch (error) {
+    console.error('❌ Erro ao criar notificação:', error);
+    throw error;
+  }
+}
+
+/**
+ * Função de teste para verificar se conseguimos inserir notificações
+ */
+export async function testNotificationInsertion(): Promise<void> {
+  try {
+    console.log('🧪 [TEST] Testando inserção de notificação...');
+    
+    // Verificar autenticação
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('❌ [TEST] Usuário não autenticado:', authError);
+      return;
+    }
+    
+    console.log('✅ [TEST] Usuário autenticado:', user.id);
+    
+    // Tentar inserir uma notificação de teste
+    const { data, error } = await supabase.from('notifications').insert({
+      user_id: user.id,
+      type: 'test',
+      title: 'Teste de Notificação',
+      body: 'Esta é uma notificação de teste',
+      data: { test: true },
+      is_read: false
+    }).select();
+    
+    if (error) {
+      console.error('❌ [TEST] Erro ao inserir notificação de teste:', error);
+      console.error('❌ [TEST] Dados enviados:', {
+        user_id: user.id,
+        type: 'test',
+        title: 'Teste de Notificação',
+        body: 'Esta é uma notificação de teste',
+        data: { test: true },
+        is_read: false
+      });
+    } else {
+      console.log('✅ [TEST] Notificação de teste inserida com sucesso:', data);
+    }
+  } catch (error) {
+    console.error('❌ [TEST] Erro geral no teste:', error);
+  }
 }
 
