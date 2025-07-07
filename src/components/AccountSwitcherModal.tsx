@@ -36,7 +36,11 @@ export const AccountSwitcherModal: React.FC<AccountSwitcherModalProps> = ({
   };
 
   const handleLogout = async () => {
-    await signOut();
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
     onClose();
   };
 
