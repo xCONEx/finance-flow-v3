@@ -62,6 +62,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAdminRoles } from '@/hooks/useAdminRoles';
+import { getWebhookKey, getWebhookUrl } from '@/config/webhooks';
 
 type SubscriptionPlan = 'free' | 'basic' | 'premium' | 'enterprise' | 'enterprise-annual';
 type UserType = 'individual' | 'company_owner' | 'employee' | 'admin';
@@ -405,10 +406,9 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
     setWebhookResponse(null);
 
     try {
-      // URLs corretas para Supabase Edge Functions
-      const webhookUrl = selectedProvider === 'cakto' 
-        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cakto-webhook`
-        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/kiwify-webhook`;
+      // Usar as funções de configuração
+      const webhookUrl = getWebhookUrl(selectedProvider);
+      const webhookKey = getWebhookKey(selectedProvider);
 
       const testPayload = {
         event: selectedEvent,
@@ -427,15 +427,14 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
 
       console.log('🔗 Testando webhook:', webhookUrl);
       console.log('📦 Payload:', testPayload);
+      console.log('🔑 Webhook Key:', webhookKey ? '***' + webhookKey.slice(-4) : 'NÃO CONFIGURADA');
+      console.log('🔑 Supabase Key:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'CONFIGURADA' : 'NÃO CONFIGURADA');
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-webhook-key': selectedProvider === 'cakto' 
-            ? import.meta.env.VITE_CAKTO_WEBHOOK_KEY
-            : import.meta.env.VITE_KIWIFY_WEBHOOK_KEY,
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          'x-webhook-key': webhookKey
         },
         body: JSON.stringify(testPayload)
       });
