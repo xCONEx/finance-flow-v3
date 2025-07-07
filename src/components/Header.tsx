@@ -29,7 +29,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import NotificationBell from './NotificationBell';
 import { useAdminRoles } from '@/hooks/useAdminRoles';
-import AccountSwitcher from './AccountSwitcher';
+import { AccountSwitcherModal } from './AccountSwitcherModal';
 import MobileAccountSwitcher from './MobileAccountSwitcher';
 import { useMobile } from '@/hooks/use-mobile';
 import { useRecentAccounts } from '@/hooks/useRecentAccounts';
@@ -50,7 +50,8 @@ const Header: React.FC<HeaderProps> = ({
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   const { isAdmin, isSuperAdmin, loading: loadingRoles, roles } = useAdminRoles();
   const isMobile = useMobile();
-  const { accounts, removeAccount, addAccount } = useRecentAccounts(user?.email);
+  const { accounts } = useRecentAccounts(user?.email);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
@@ -78,19 +79,7 @@ const Header: React.FC<HeaderProps> = ({
     return activeItem ? activeItem.label : 'Dashboard';
   };
 
-  // Handler para trocar de conta
-  const handleSwitchAccount = async (email: string) => {
-    // Aqui você pode implementar lógica de logout/login automático
-    // Por enquanto, apenas faz logout e redireciona para login
-    await signOut();
-    window.location.href = '/login?email=' + encodeURIComponent(email);
-  };
 
-  // Handler para adicionar nova conta
-  const handleAddAccount = () => {
-    // Redireciona para tela de login
-    window.location.href = '/login';
-  };
 
   return (
     <header className="bg-white dark:bg-[#141414] border-b border-gray-200 dark:border-[#262626] sticky top-0 z-40">
@@ -153,11 +142,7 @@ const Header: React.FC<HeaderProps> = ({
             {/* Account Switcher */}
             {isMobile ? (
               <MobileAccountSwitcher
-                accounts={accounts}
-                currentEmail={user?.email || ''}
-                onSwitch={handleSwitchAccount}
-                onRemove={removeAccount}
-                onAdd={handleAddAccount}
+                onOpenModal={() => setIsAccountModalOpen(true)}
               />
             ) : null}
             <DropdownMenu>
@@ -189,16 +174,11 @@ const Header: React.FC<HeaderProps> = ({
                     </Badge>
                   </div>
                 </div>
-                {/* Trocar Conta - contas recentes */}
-                <div className="border-b border-gray-200 dark:border-[#262626]">
-                  <AccountSwitcher
-                    accounts={accounts}
-                    currentEmail={user?.email || ''}
-                    onSwitch={handleSwitchAccount}
-                    onRemove={removeAccount}
-                    onAdd={handleAddAccount}
-                  />
-                </div>
+                {/* Botão Trocar de Conta */}
+                <DropdownMenuItem onClick={() => setIsAccountModalOpen(true)}>
+                  <User className="w-4 h-4 mr-2" />
+                  Trocar de Conta
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onTabChange('profile')}>
                   <User className="w-4 h-4 mr-2" />
                   Meu Perfil
@@ -226,6 +206,12 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Modal de Troca de Conta */}
+      <AccountSwitcherModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+      />
     </header>
   );
 };
