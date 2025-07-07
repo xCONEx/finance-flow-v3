@@ -7,6 +7,7 @@ import {
   NotificationSettings,
   NotificationTemplate
 } from '../types/notification';
+import { supabase } from '../integrations/supabase/client';
 
 class NotificationService {
   private isInitialized = false;
@@ -221,15 +222,9 @@ class NotificationService {
       let description = expense.description || 'Despesa';
       let amount = expense.value ? `R$ ${expense.value.toFixed(2)}` : '';
       let client = expense.client || '';
-      
       let message = description;
-      if (amount) {
-        message += `, ${amount}`;
-      }
-      if (client) {
-        message += `, Cliente: ${client}`;
-      }
-      
+      if (amount) message += `, ${amount}`;
+      if (client) message += `, Cliente: ${client}`;
       return message;
     };
 
@@ -238,6 +233,17 @@ class NotificationService {
       const threeDaysBefore = new Date(dueDate.getTime() - (3 * 24 * 60 * 60 * 1000));
       if (threeDaysBefore > now) {
         const delay3Days = threeDaysBefore.getTime() - now.getTime();
+        // Persistir notificação no Supabase
+        if (expense.userId) {
+          await createNotification({
+            user_id: expense.userId,
+            type: 'expense_reminder',
+            title: '💰 Despesa vence em 3 dias',
+            body: formatExpenseNotification(expense),
+            data: { type: 'expense_reminder', expenseId: expense.id, dueDate: expense.dueDate, amount: expense.value },
+            is_read: false
+          });
+        }
         await this.scheduleNotification({
           id: `${expenseTag}-3days`,
           title: '💰 Despesa vence em 3 dias',
@@ -249,12 +255,7 @@ class NotificationService {
           isRead: false,
           userId: expense.userId || 'system',
           createdAt: new Date().toISOString(),
-          data: { 
-            type: 'expense_reminder', 
-            expenseId: expense.id, 
-            dueDate: expense.dueDate,
-            amount: expense.value
-          }
+          data: { type: 'expense_reminder', expenseId: expense.id, dueDate: expense.dueDate, amount: expense.value }
         }, delay3Days);
       }
     }
@@ -264,6 +265,16 @@ class NotificationService {
       const oneDayBefore = new Date(dueDate.getTime() - (24 * 60 * 60 * 1000));
       if (oneDayBefore > now) {
         const delay1Day = oneDayBefore.getTime() - now.getTime();
+        if (expense.userId) {
+          await createNotification({
+            user_id: expense.userId,
+            type: 'expense_reminder',
+            title: '⚠️ Despesa vence amanhã!',
+            body: formatExpenseNotification(expense),
+            data: { type: 'expense_reminder', expenseId: expense.id, dueDate: expense.dueDate, amount: expense.value },
+            is_read: false
+          });
+        }
         await this.scheduleNotification({
           id: `${expenseTag}-1day`,
           title: '⚠️ Despesa vence amanhã!',
@@ -275,12 +286,7 @@ class NotificationService {
           isRead: false,
           userId: expense.userId || 'system',
           createdAt: new Date().toISOString(),
-          data: { 
-            type: 'expense_reminder', 
-            expenseId: expense.id, 
-            dueDate: expense.dueDate,
-            amount: expense.value
-          }
+          data: { type: 'expense_reminder', expenseId: expense.id, dueDate: expense.dueDate, amount: expense.value }
         }, delay1Day);
       }
     }
@@ -288,6 +294,16 @@ class NotificationService {
     // Notificação no dia do vencimento
     if (this.settings.reminderTiming.sameDay && dueDate > now) {
       const delayDueDate = dueDate.getTime() - now.getTime();
+      if (expense.userId) {
+        await createNotification({
+          user_id: expense.userId,
+          type: 'expense_due',
+          title: '🚨 Despesa vence hoje!',
+          body: formatExpenseNotification(expense),
+          data: { type: 'expense_due', expenseId: expense.id, dueDate: expense.dueDate, amount: expense.value },
+          is_read: false
+        });
+      }
       await this.scheduleNotification({
         id: `${expenseTag}-today`,
         title: '🚨 Despesa vence hoje!',
@@ -299,12 +315,7 @@ class NotificationService {
         isRead: false,
         userId: expense.userId || 'system',
         createdAt: new Date().toISOString(),
-        data: { 
-          type: 'expense_due', 
-          expenseId: expense.id, 
-          dueDate: expense.dueDate,
-          amount: expense.value
-        }
+        data: { type: 'expense_due', expenseId: expense.id, dueDate: expense.dueDate, amount: expense.value }
       }, delayDueDate);
     }
 
@@ -521,4 +532,28 @@ class NotificationService {
 
 export const notificationService = new NotificationService();
 export default notificationService;
+
+/**
+ * Função utilitária para criar uma notificação centralizada no Supabase
+ * @param notification Objeto com dados da notificação
+ */
+export async function createNotification(notification: {
+  user_id: string;
+  type: string;
+  title: string;
+  body: string;
+  data?: any;
+  is_read?: boolean;
+}): Promise<void> {
+  await supabase.from('notifications').insert({
+    user_id: notification.user_id,
+    type: notification.type,
+    title: notification.title,
+    body: notification.body,
+    data: notification.data || {},
+    is_read: notification.is_read ?? false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+}
 
