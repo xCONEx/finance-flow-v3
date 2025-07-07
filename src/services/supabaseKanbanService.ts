@@ -17,7 +17,7 @@ export interface KanbanProject {
   responsaveis?: string[]; // Array de UUIDs dos responsáveis
   notificar_responsaveis?: boolean; // Se deve notificar os responsáveis
 }
-
+ 
 export interface ProjectResponsible {
   user_id: string;
   name: string;
