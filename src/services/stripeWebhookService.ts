@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { supabase } from '../integrations/supabase/client';
-import { notificationService } from './notificationService';
+import { notificationService, createNotification } from './notificationService';
 import { PaymentNotification, TransactionLog } from '../types/stripe';
 
 class StripeWebhookService {
@@ -403,6 +403,16 @@ class StripeWebhookService {
    */
   private async sendPaymentNotification(notification: PaymentNotification): Promise<void> {
     try {
+      // Persistir notificação no Supabase
+      await createNotification({
+        user_id: notification.userId,
+        type: notification.type,
+        title: this.getNotificationTitle(notification.type),
+        body: this.getNotificationMessage(notification.type, notification.data),
+        data: notification.data,
+        is_read: false
+      });
+      // Exibir localmente (opcional, se for backend pode ser omitido)
       await notificationService.showNotification({
         id: `stripe-${notification.timestamp}`,
         userId: notification.userId,
