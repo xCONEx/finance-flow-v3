@@ -13,7 +13,9 @@ import {
   User,
   Menu,
   X,
-  Bell
+  Bell,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -93,9 +95,9 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
               >
                 {valuesHidden ? (
-                  <X className="h-4 w-4" />
+                  <EyeOff className="h-4 w-4" />
                 ) : (
-                  <Bell className="h-4 w-4" />
+                  <Eye className="h-4 w-4" />
                 )}
               </Button>
               
@@ -120,16 +122,18 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
           <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsOpen(false)} />
           <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-[#141414] rounded-t-2xl shadow-2xl">
             <div className="p-6 space-y-6">
-              {/* Botão Trocar de Conta */}
-              <div className="space-y-4">
-                <Button
-                  variant="outline"
-                  className="w-full flex items-center gap-2 justify-center"
+              {/* Conta Atual como botão */}
+              <div className="flex flex-col items-center space-y-2 pb-2">
+                <button
+                  className="flex flex-col items-center w-full focus:outline-none"
                   onClick={() => setIsAccountModalOpen(true)}
                 >
-                  <User className="h-5 w-5 mr-2" />
-                  Trocar de Conta
-                </Button>
+                  <Avatar className="h-12 w-12 mb-1">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[160px]">{user?.email}</span>
+                </button>
               </div>
 
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
