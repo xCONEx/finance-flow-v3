@@ -21,6 +21,7 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useAdminRoles } from '@/hooks/useAdminRoles';
 import MobileAccountSwitcher from './MobileAccountSwitcher';
 import NotificationBell from './NotificationBell';
+import { AccountSwitcherModal } from './AccountSwitcherModal';
 
 interface MobileNavigationProps {
   activeTab: string;
@@ -38,6 +39,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   const { isAdmin, isSuperAdmin, loading: loadingRoles } = useAdminRoles();
   const [isOpen, setIsOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
@@ -118,10 +120,16 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
           <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsOpen(false)} />
           <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-[#141414] rounded-t-2xl shadow-2xl">
             <div className="p-6 space-y-6">
-              {/* Account Switcher */}
+              {/* Botão Trocar de Conta */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Conta Atual</h3>
-                <MobileAccountSwitcher />
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center gap-2 justify-center"
+                  onClick={() => setIsAccountModalOpen(true)}
+                >
+                  <User className="h-5 w-5 mr-2" />
+                  Trocar de Conta
+                </Button>
               </div>
 
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -208,6 +216,11 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
           </div>
         </div>
       )}
+
+      <AccountSwitcherModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+      />
     </>
   );
 };
