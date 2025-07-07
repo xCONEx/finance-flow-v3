@@ -7,6 +7,7 @@ import { Separator } from './ui/separator';
 import { useRecentAccounts } from '../hooks/useRecentAccounts';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { LogOut, Plus, X, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface AccountSwitcherModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const AccountSwitcherModal: React.FC<AccountSwitcherModalProps> = ({
 }) => {
   const { accounts, removeAccount, clearAccounts } = useRecentAccounts();
   const { user, signOut } = useSupabaseAuth();
+  const navigate = useNavigate();
 
   const handleSwitchAccount = async (email: string) => {
     await signOut();
@@ -32,7 +34,7 @@ export const AccountSwitcherModal: React.FC<AccountSwitcherModalProps> = ({
 
   const handleAddAccount = () => {
     onClose();
-    window.location.href = '/login';
+    navigate('/login');
   };
 
   const handleLogout = async () => {
