@@ -14,10 +14,13 @@ import FinancialManagement from './financial/FinancialManagement';
 import ClientsManagement from './clients/ClientsManagement';
 import { AgencyProvider } from '@/contexts/AgencyContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
+import MobileNavigation from './MobileNavigation';
+import { useMobile } from '@/hooks/use-mobile';
 
 const MainApp = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { user, profile, agency } = useSupabaseAuth();
+  const isMobile = useMobile();
 
   // Verificar se é admin ou tem acesso ao team
   const isAdmin = profile?.user_type === 'admin';
@@ -56,21 +59,36 @@ const MainApp = () => {
   return (
     <AgencyProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-[#111]">
-        <Header 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab}
-          showTeamOption={showTeamOption}
-        />
-        
-        <main className="max-w-7xl mx-auto px-4 py-6">
-          {renderContent()}
-        </main>
+        {isMobile ? (
+          <>
+            <MobileNavigation 
+              activeTab={activeTab} 
+              onTabChange={setActiveTab} 
+              showTeamOption={showTeamOption}
+            />
+            <main className="max-w-7xl mx-auto px-4 py-6 pb-20">
+              {renderContent()}
+            </main>
+          </>
+        ) : (
+          <>
+            <Header 
+              activeTab={activeTab} 
+              onTabChange={setActiveTab}
+              showTeamOption={showTeamOption}
+            />
+            
+            <main className="max-w-7xl mx-auto px-4 py-6">
+              {renderContent()}
+            </main>
 
-        <Navigation 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab}
-          showTeamOption={showTeamOption}
-        />
+            <Navigation 
+              activeTab={activeTab} 
+              onTabChange={setActiveTab}
+              showTeamOption={showTeamOption}
+            />
+          </>
+        )}
       </div>
     </AgencyProvider>
   );

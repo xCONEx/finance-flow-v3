@@ -17,6 +17,7 @@ import { UsageLimitWarning } from './UsageLimitWarning';
 import { SubscriptionStatus } from './SubscriptionStatus';
 import PremiumFeatureBlock from './PremiumFeatureBlock';
 import { UsageStatus } from './UsageStatus';
+import ContextIndicator from './ContextIndicator';
 
 const Dashboard = () => {
   const { user, profile, agency } = useSupabaseAuth();
@@ -184,6 +185,11 @@ const Dashboard = () => {
       {/* Header simplificado */}
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold">Dashboard Pessoal</h1>
+        
+        {/* Context Indicator */}
+        <div className="flex justify-center">
+          <ContextIndicator variant="full" className="max-w-md" />
+        </div>
         
         {/* Informação para colaboradores */}
         {isCompanyUser && (

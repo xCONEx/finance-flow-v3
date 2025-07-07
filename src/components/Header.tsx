@@ -29,6 +29,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import NotificationBell from './NotificationBell';
 import { useAdminRoles } from '@/hooks/useAdminRoles';
+import AccountSwitcher from './AccountSwitcher';
+import MobileAccountSwitcher from './MobileAccountSwitcher';
+import { useMobile } from '@/hooks/use-mobile';
 
 interface HeaderProps {
   activeTab: string;
@@ -45,6 +48,7 @@ const Header: React.FC<HeaderProps> = ({
   const { currentTheme, toggleDarkMode, isDark } = useTheme();
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   const { isAdmin, isSuperAdmin, loading: loadingRoles, roles } = useAdminRoles();
+  const isMobile = useMobile();
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
@@ -130,6 +134,12 @@ const Header: React.FC<HeaderProps> = ({
             
             <NotificationBell />
 
+            {/* Account Switcher */}
+            {isMobile ? (
+              <MobileAccountSwitcher />
+            ) : (
+              <AccountSwitcher variant="header" />
+            )}
           
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
