@@ -69,6 +69,7 @@ const MainApp = () => {
             open={shouldShowOnboarding}
             onOpenChange={(open) => setShowOnboarding(open)}
             initialStep={profile?.onboarding_step || 1}
+            onNavigateTab={setActiveTab}
           />
         )}
         {isMobile ? (
