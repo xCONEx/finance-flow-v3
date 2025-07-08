@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { LogIn, Mail, Lock, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import { Capacitor } from '@capacitor/core';
 
@@ -18,6 +17,7 @@ const LoginPage = () => {
   const { signIn, signUp, signInWithGoogle, signInWithBiometric, isAuthenticated } = useSupabaseAuth();
   const { currentTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -63,6 +63,15 @@ const LoginPage = () => {
       navigate('/');
     }
   }, [isAuthenticated, navigate]);
+
+  // Preencher email da query string
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const emailParam = params.get('email');
+    if (emailParam) {
+      setFormData(prev => ({ ...prev, email: emailParam }));
+    }
+  }, [location.search]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
