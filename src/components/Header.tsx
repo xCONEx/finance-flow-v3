@@ -29,8 +29,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import NotificationBell from './NotificationBell';
 import { useAdminRoles } from '@/hooks/useAdminRoles';
-import { AccountSwitcherModal } from './AccountSwitcherModal';
-import MobileAccountSwitcher from './MobileAccountSwitcher';
 import { useMobile } from '@/hooks/use-mobile';
 import { useRecentAccounts } from '@/hooks/useRecentAccounts';
 
@@ -50,12 +48,9 @@ const Header: React.FC<HeaderProps> = ({
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   const { isAdmin, isSuperAdmin, loading: loadingRoles, roles } = useAdminRoles();
   const isMobile = useMobile();
-  const { accounts } = useRecentAccounts(user?.email);
-  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
-
 
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -78,8 +73,6 @@ const Header: React.FC<HeaderProps> = ({
     const activeItem = navigationItems.find(item => item.id === activeTab);
     return activeItem ? activeItem.label : 'Dashboard';
   };
-
-
 
   return (
     <header className="bg-white dark:bg-[#141414] border-b border-gray-200 dark:border-[#262626] sticky top-0 z-40">
@@ -104,14 +97,14 @@ const Header: React.FC<HeaderProps> = ({
 
                 return (
                   <Button
-  key={item.id}
-  onClick={() => onTabChange(item.id)}
-  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-150
-    ${isActive
-      ? `bg-gradient-to-r ${currentTheme.primary} text-white`
-      : `bg-transparent text-[color:var(--primary)] dark:text-[color:var(--primary)]`}
-    font-medium`}
->
+                    key={item.id}
+                    onClick={() => onTabChange(item.id)}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-150
+                      ${isActive
+                        ? `bg-gradient-to-r ${currentTheme.primary} text-white`
+                        : `bg-transparent text-[color:var(--primary)] dark:text-[color:var(--primary)]`}
+                      font-medium`}
+                  >
                     <Icon className="w-4 h-4" />
                     <span className="hidden lg:inline">{item.label}</span>
                   </Button>
@@ -120,16 +113,15 @@ const Header: React.FC<HeaderProps> = ({
             </nav>
           </div>
 
-
           {/* Ações do usuário */}
           <div className="flex items-center space-x-4">
             {/* Privacy Toggle */}
             <Button
-  onClick={toggleValuesVisibility}
-  variant="ghost"
-  className="p-2 hover:bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-  title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
->
+              onClick={toggleValuesVisibility}
+              variant="ghost"
+              className="p-2 hover:bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+              title={valuesHidden ? 'Mostrar valores' : 'Ocultar valores'}
+            >
               {valuesHidden ? (
                 <EyeOff className="h-4 w-4" />
               ) : (
@@ -139,12 +131,6 @@ const Header: React.FC<HeaderProps> = ({
             
             <NotificationBell />
 
-            {/* Account Switcher */}
-            {isMobile ? (
-              <MobileAccountSwitcher
-                onOpenModal={() => setIsAccountModalOpen(true)}
-              />
-            ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 p-2 hover:bg-transparent">
@@ -174,11 +160,6 @@ const Header: React.FC<HeaderProps> = ({
                     </Badge>
                   </div>
                 </div>
-                {/* Botão Trocar de Conta */}
-                <DropdownMenuItem onClick={() => setIsAccountModalOpen(true)}>
-                  <User className="w-4 h-4 mr-2" />
-                  Trocar de Conta
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onTabChange('profile')}>
                   <User className="w-4 h-4 mr-2" />
                   Meu Perfil
@@ -206,12 +187,6 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </div>
-      
-      {/* Modal de Troca de Conta */}
-      <AccountSwitcherModal
-        isOpen={isAccountModalOpen}
-        onClose={() => setIsAccountModalOpen(false)}
-      />
     </header>
   );
 };
