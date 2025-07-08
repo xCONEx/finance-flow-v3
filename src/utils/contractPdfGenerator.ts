@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency } from './formatters';
@@ -48,20 +47,32 @@ const checkPageBreak = (doc: jsPDF, currentY: number, neededSpace: number = 30) 
 };
 
 const addCompanyData = (doc: jsPDF, userData: any, margin: number, currentY: number, pageWidth: number) => {
-  // Seção DADOS DA EMPRESA
-  currentY = addSection(doc, 'DADOS DA EMPRESA', margin, currentY, pageWidth, margin);
+  // Verificar se há dados da empresa para exibir
+  const companyName = userData?.company || userData?.full_name;
+  const email = userData?.email;
   
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'normal');
+  if (companyName || email) {
+    // Seção DADOS DA EMPRESA
+    currentY = addSection(doc, 'DADOS DA EMPRESA', margin, currentY, pageWidth, margin);
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    
+    if (companyName) {
+      doc.text(`Empresa: ${companyName}`, margin, currentY);
+      currentY += 8;
+    }
+    
+    if (email) {
+      doc.text(`Email: ${email}`, margin, currentY);
+      currentY += 8;
+    }
+    
+    return currentY + 17; // Espaçamento adicional
+  }
   
-  const companyName = userData?.company || userData?.full_name || 'Nome da empresa não informado';
-  const email = userData?.email || 'Email não informado';
-  
-  doc.text(`Empresa: ${companyName}`, margin, currentY);
-  doc.text(`Email: ${email}`, margin, currentY + 8);
-  
-  return currentY + 25;
+  return currentY;
 };
 
 export const generateContractPDF = async (contract: any, client: any, userData: any) => {
@@ -79,26 +90,39 @@ export const generateContractPDF = async (contract: any, client: any, userData: 
   currentY = checkPageBreak(doc, currentY, 60);
   
   // Dados do cliente
-  currentY = addSection(doc, 'DADOS DO CLIENTE', margin, currentY, pageWidth, margin);
+  // Verificar se há dados do cliente para exibir
+  const hasClientData = client?.name || client?.email || client?.phone || client?.cnpj;
   
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'normal');
-  doc.text(`Cliente: ${client.name || 'Não informado'}`, margin, currentY);
-  if (client.email) {
-    doc.text(`Email: ${client.email}`, margin, currentY + 8);
-    currentY += 8;
-  }
-  if (client.phone) {
-    doc.text(`Telefone: ${client.phone}`, margin, currentY + 8);
-    currentY += 8;
-  }
-  if (client.cnpj) {
-    doc.text(`CNPJ: ${client.cnpj}`, margin, currentY + 8);
-    currentY += 8;
+  if (hasClientData) {
+    currentY = addSection(doc, 'DADOS DO CLIENTE', margin, currentY, pageWidth, margin);
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    
+    if (client.name) {
+      doc.text(`Cliente: ${client.name}`, margin, currentY);
+      currentY += 8;
+    }
+    
+    if (client.email) {
+      doc.text(`Email: ${client.email}`, margin, currentY);
+      currentY += 8;
+    }
+    
+    if (client.phone) {
+      doc.text(`Telefone: ${client.phone}`, margin, currentY);
+      currentY += 8;
+    }
+    
+    if (client.cnpj) {
+      doc.text(`CNPJ: ${client.cnpj}`, margin, currentY);
+      currentY += 8;
+    }
+    
+    currentY += 17; // Espaçamento adicional
   }
   
-  currentY += 25;
   currentY = checkPageBreak(doc, currentY, 80);
   
   // Detalhes do contrato
