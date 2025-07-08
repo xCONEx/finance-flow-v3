@@ -67,6 +67,7 @@ const EntregaFlowKanban = () => {
   const { isAgencyMode, currentAgencyId, currentUserId, contextLabel } = useKanbanContext();
   const { currentContext, agencies } = useAgency();
   const [editFields, setEditFields] = useState<Omit<Partial<KanbanProject>, 'priority'> & { priority?: 'alta' | 'media' | 'baixa' }>({});
+  const [isEditing, setIsEditing] = useState(false);
 
   // Verificar se é owner da agência atual
   const isOwner = isAgencyMode && currentAgencyId && 
@@ -166,6 +167,12 @@ const EntregaFlowKanban = () => {
       setNewLink('');
     }
   }, [showEditModal, selectedProject]);
+
+  useEffect(() => {
+    if (showEditModal) {
+      setIsEditing(false);
+    }
+  }, [showEditModal]);
 
   const loadProjects = async () => {
     if (!currentUserId) {
@@ -814,7 +821,7 @@ const EntregaFlowKanban = () => {
 
       {/* Modal de Edição */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl px-2 sm:px-8">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Editar Projeto
@@ -858,6 +865,8 @@ const EntregaFlowKanban = () => {
                       value={editFields.title || ''}
                       onChange={e => setEditFields(f => ({ ...f, title: e.target.value }))}
                       required
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div>
@@ -866,6 +875,8 @@ const EntregaFlowKanban = () => {
                       value={editFields.client || ''}
                       onChange={e => setEditFields(f => ({ ...f, client: e.target.value }))}
                       required
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                 </div>
@@ -876,6 +887,8 @@ const EntregaFlowKanban = () => {
                       type="date"
                       value={editFields.dueDate || ''}
                       onChange={e => setEditFields(f => ({ ...f, dueDate: e.target.value }))}
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                   </div>
                   <div>
@@ -883,6 +896,7 @@ const EntregaFlowKanban = () => {
                     <Select
                       value={editFields.priority || 'media'}
                       onValueChange={value => setEditFields(f => ({ ...f, priority: value }))}
+                      disabled={!isEditing}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -901,6 +915,8 @@ const EntregaFlowKanban = () => {
                     value={editFields.description || ''}
                     onChange={e => setEditFields(f => ({ ...f, description: e.target.value }))}
                     rows={3}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                   />
                 </div>
                 {/* Responsáveis (apenas para agências) */}
@@ -912,6 +928,7 @@ const EntregaFlowKanban = () => {
                       selectedResponsibles={editFields.responsaveis || []}
                       onResponsiblesChange={responsaveis => setEditFields(f => ({ ...f, responsaveis }))}
                       placeholder="Selecionar responsáveis..."
+                      disabled={!isEditing}
                     />
                   </div>
                 )}
@@ -924,6 +941,7 @@ const EntregaFlowKanban = () => {
                       checked={editFields.notificar_responsaveis}
                       onChange={e => setEditFields(f => ({ ...f, notificar_responsaveis: e.target.checked }))}
                       className="rounded border-gray-300"
+                      disabled={!isEditing}
                     />
                     <label htmlFor="notificar_responsaveis_edit" className="text-sm text-gray-700">
                       Notificar responsáveis sobre mudanças
@@ -939,6 +957,8 @@ const EntregaFlowKanban = () => {
                       value={newLink}
                       onChange={e => setNewLink(e.target.value)}
                       className="w-64"
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
                     />
                     <Button
                       type="button"
@@ -966,6 +986,7 @@ const EntregaFlowKanban = () => {
                         }
                       }}
                       className="bg-black text-white"
+                      disabled={!isEditing}
                     >
                       Adicionar
                     </Button>
@@ -999,6 +1020,7 @@ const EntregaFlowKanban = () => {
                                 priority: sanitizePriority(f.priority),
                               };
                             })}
+                            disabled={!isEditing}
                           >
                             Remover
                           </Button>
@@ -1015,12 +1037,23 @@ const EntregaFlowKanban = () => {
                   >
                     Fechar
                   </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-black text-white hover:bg-gray-800"
-                  >
-                    Salvar Alterações
-                  </Button>
+                  {!isEditing && (
+                    <Button
+                      type="button"
+                      className="flex-1 bg-blue-500 text-white hover:bg-blue-600"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      Editar
+                    </Button>
+                  )}
+                  {isEditing && (
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-black text-white hover:bg-gray-800"
+                    >
+                      Salvar Alterações
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     className="flex-1 bg-red-500 text-white hover:bg-red-600"
