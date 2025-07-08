@@ -22,9 +22,7 @@ import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { useAdminRoles } from '@/hooks/useAdminRoles';
-import MobileAccountSwitcher from './MobileAccountSwitcher';
 import NotificationBell from './NotificationBell';
-import { AccountSwitcherModal } from './AccountSwitcherModal';
 
 interface MobileNavigationProps {
   activeTab: string;
@@ -42,7 +40,6 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   const { valuesHidden, toggleValuesVisibility } = usePrivacy();
   const { isAdmin, isSuperAdmin, loading: loadingRoles } = useAdminRoles();
   const [isOpen, setIsOpen] = useState(false);
-  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   const hasEnterprisePlan = profile?.subscription === 'enterprise' || profile?.subscription === 'enterprise-annual';
   const hasPremiumPlan = ['premium', 'enterprise', 'enterprise-annual'].includes(profile?.subscription);
@@ -125,10 +122,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
             <div className="p-6 space-y-6">
               {/* Conta Atual como botão compacto */}
               <div className="flex flex-col items-center pb-2">
-                <button
-                  className="w-full flex items-center bg-muted/60 dark:bg-muted/30 rounded-xl py-3 px-3 mb-2 shadow-sm border border-gray-100 dark:border-gray-800 hover:bg-muted/80 transition group focus:outline-none"
-                  onClick={() => setIsAccountModalOpen(true)}
-                >
+                <div className="w-full flex items-center bg-muted/60 dark:bg-muted/30 rounded-xl py-3 px-3 mb-2 shadow-sm border border-gray-100 dark:border-gray-800">
                   <Avatar className="h-11 w-11 mr-3">
                     <AvatarImage src={user?.user_metadata?.avatar_url} />
                     <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
@@ -137,10 +131,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
                     <span className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[140px]">{user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>
                     <span className="text-xs text-muted-foreground truncate max-w-[140px]">{user?.email}</span>
                   </div>
-                  <span className="flex items-center ml-2 text-primary">
-                    <ChevronsRight className="h-5 w-5" />
-                  </span>
-                </button>
+                </div>
                 <div className="w-full border-b border-gray-200 dark:border-gray-700 mt-1" />
               </div>
 
@@ -228,11 +219,6 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
           </div>
         </div>
       )}
-
-      <AccountSwitcherModal
-        isOpen={isAccountModalOpen}
-        onClose={() => setIsAccountModalOpen(false)}
-      />
     </>
   );
 };
