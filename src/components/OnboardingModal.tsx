@@ -127,7 +127,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ open, onOpenChange, i
               <Button onClick={async () => {
                 if (step === steps.length) {
                   await handleNext();
-                  onNavigateTab('dashboard');
+                  onNavigateTab('management');
                 } else {
                   await handleNext();
                 }
