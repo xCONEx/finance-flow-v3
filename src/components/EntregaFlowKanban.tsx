@@ -66,6 +66,7 @@ const EntregaFlowKanban = () => {
   const { user } = useSupabaseAuth();
   const { isAgencyMode, currentAgencyId, currentUserId, contextLabel } = useKanbanContext();
   const { currentContext, agencies } = useAgency();
+  const [editFields, setEditFields] = useState<Omit<Partial<KanbanProject>, 'priority'> & { priority?: 'alta' | 'media' | 'baixa' }>({});
 
   // Verificar se é owner da agência atual
   const isOwner = isAgencyMode && currentAgencyId && 
@@ -146,6 +147,25 @@ const EntregaFlowKanban = () => {
       setLoading(false);
     }
   }, [isAgencyMode, currentAgencyId, currentUserId, user]);
+
+  useEffect(() => {
+    if (showEditModal && selectedProject) {
+      setEditFields({
+        title: selectedProject.title,
+        client: selectedProject.client,
+        dueDate: selectedProject.dueDate,
+        priority: (['alta', 'media', 'baixa'].includes(selectedProject.priority as string)
+          ? selectedProject.priority
+          : 'media') as 'alta' | 'media' | 'baixa',
+        status: selectedProject.status,
+        description: selectedProject.description,
+        links: selectedProject.links ? [...selectedProject.links] : [],
+        responsaveis: selectedProject.responsaveis ? [...selectedProject.responsaveis] : [],
+        notificar_responsaveis: selectedProject.notificar_responsaveis ?? true,
+      });
+      setNewLink('');
+    }
+  }, [showEditModal, selectedProject]);
 
   const loadProjects = async () => {
     if (!currentUserId) {
@@ -413,6 +433,12 @@ const EntregaFlowKanban = () => {
     const diffTime = today.getTime() - deadline.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
+
+  // Função utilitária para garantir o tipo correto de priority
+  function sanitizePriority(value: any): 'alta' | 'media' | 'baixa' {
+    if (value === 'alta' || value === 'media' || value === 'baixa') return value;
+    return 'media';
+  }
 
   if (loading) {
     return (
@@ -730,7 +756,8 @@ const EntregaFlowKanban = () => {
                     if (newLink) {
                       setNewProject({
                         ...newProject,
-                        links: [...(newProject.links || []), newLink]
+                        links: [...(newProject.links || []), newLink],
+                        priority: sanitizePriority(newProject.priority) as 'alta' | 'media' | 'baixa',
                       });
                       setNewLink('');
                     }
@@ -789,121 +816,227 @@ const EntregaFlowKanban = () => {
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2">
-                Editar Projeto
-                {selectedProject?.priority === 'alta' && (
-                  <Badge className="bg-red-500 text-white">Alta</Badge>
-                )}
-                <Badge className="bg-gray-100 text-gray-800">{selectedProject?.status}</Badge>
-                {selectedProject?.agency_id && (
-                  <Badge className="bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1">
-                    <Building className="h-3 w-3" />
-                    Empresa
-                  </Badge>
-                )}
-              </DialogTitle>
-              <Button
-                className="bg-red-500 text-white hover:bg-red-600"
-                onClick={() => selectedProject && handleDeleteProject(selectedProject.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle className="flex items-center gap-2">
+              Editar Projeto
+              {selectedProject?.priority === 'alta' && (
+                <Badge className="bg-red-500 text-white">Alta</Badge>
+              )}
+              <Badge className="bg-gray-100 text-gray-800">{selectedProject?.status}</Badge>
+              {selectedProject?.agency_id && (
+                <Badge className="bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1">
+                  <Building className="h-3 w-3" />
+                  Empresa
+                </Badge>
+              )}
+            </DialogTitle>
           </DialogHeader>
-          
           {selectedProject && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Cliente</label>
-                  <p className="text-sm text-gray-900">{selectedProject.client}</p>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                // Salvar alterações
+                const updatedProject = {
+                  ...selectedProject,
+                  ...editFields,
+                  updatedAt: new Date().toISOString(),
+                };
+                await supabaseKanbanService.saveProject(updatedProject);
+                setSelectedProject(updatedProject);
+                setProjects(projects.map(p => p.id === updatedProject.id ? updatedProject : p));
+                setShowEditModal(false);
+                toast({
+                  title: "Projeto Atualizado",
+                  description: `Projeto atualizado com sucesso!`,
+                });
+              }}
+            >
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Título do Projeto</label>
+                    <Input
+                      value={editFields.title || ''}
+                      onChange={e => setEditFields(f => ({ ...f, title: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Cliente</label>
+                    <Input
+                      value={editFields.client || ''}
+                      onChange={e => setEditFields(f => ({ ...f, client: e.target.value }))}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Data de Entrega</label>
+                    <Input
+                      type="date"
+                      value={editFields.dueDate || ''}
+                      onChange={e => setEditFields(f => ({ ...f, dueDate: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Prioridade</label>
+                    <Select
+                      value={editFields.priority || 'media'}
+                      onValueChange={value => setEditFields(f => ({ ...f, priority: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="alta">Alta</SelectItem>
+                        <SelectItem value="media">Média</SelectItem>
+                        <SelectItem value="baixa">Baixa</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Data de Entrega</label>
-                  <p className={`text-sm ${
-                    selectedProject.dueDate && isOverdue(selectedProject.dueDate) && selectedProject.status !== 'entregue' ? 
-                    'text-red-600 font-medium' : 'text-gray-900'
-                  }`}>
-                    {selectedProject.dueDate ? new Date(selectedProject.dueDate).toLocaleDateString('pt-BR') : 'Não definido'}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700">Descrição</label>
-                <p className="text-sm text-gray-900 mt-1">{selectedProject.description || 'Sem descrição'}</p>
-              </div>
-
-              {/* Responsáveis (apenas para agências) */}
-              {isAgencyMode && currentAgencyId && selectedProject.agency_id && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Responsáveis</label>
-                  <ResponsibleSelector
-                    agencyId={currentAgencyId}
-                    selectedResponsibles={selectedProject.responsaveis || []}
-                    onResponsiblesChange={async (responsaveis) => {
-                      const updatedProject = {
-                        ...selectedProject,
-                        responsaveis,
-                        updatedAt: new Date().toISOString()
-                      };
-                      await supabaseKanbanService.saveProject(updatedProject);
-                      setSelectedProject(updatedProject);
-                      const updatedProjects = projects.map(p => 
-                        p.id === selectedProject.id ? updatedProject : p
-                      );
-                      setProjects(updatedProjects);
-                    }}
-                    placeholder="Selecionar responsáveis..."
+                  <label className="text-sm font-medium text-gray-700">Descrição</label>
+                  <Textarea
+                    value={editFields.description || ''}
+                    onChange={e => setEditFields(f => ({ ...f, description: e.target.value }))}
+                    rows={3}
                   />
                 </div>
-              )}
-
-              <div>
-                <div className="flex items-center justify-between mb-3">
+                {/* Responsáveis (apenas para agências) */}
+                {isAgencyMode && currentAgencyId && selectedProject.agency_id && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Responsáveis</label>
+                    <ResponsibleSelector
+                      agencyId={currentAgencyId}
+                      selectedResponsibles={editFields.responsaveis || []}
+                      onResponsiblesChange={responsaveis => setEditFields(f => ({ ...f, responsaveis }))}
+                      placeholder="Selecionar responsáveis..."
+                    />
+                  </div>
+                )}
+                {/* Notificação de responsáveis (apenas para agências) */}
+                {isAgencyMode && currentAgencyId && selectedProject.agency_id && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="notificar_responsaveis_edit"
+                      checked={editFields.notificar_responsaveis}
+                      onChange={e => setEditFields(f => ({ ...f, notificar_responsaveis: e.target.checked }))}
+                      className="rounded border-gray-300"
+                    />
+                    <label htmlFor="notificar_responsaveis_edit" className="text-sm text-gray-700">
+                      Notificar responsáveis sobre mudanças
+                    </label>
+                  </div>
+                )}
+                {/* Links de Entrega */}
+                <div>
                   <label className="text-sm font-medium text-gray-700">Links de Entrega</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mb-2">
                     <Input
                       placeholder="Cole o link aqui"
                       value={newLink}
-                      onChange={(e) => setNewLink(e.target.value)}
+                      onChange={e => setNewLink(e.target.value)}
                       className="w-64"
                     />
-                    <Button onClick={handleAddLink} className="bg-black text-white">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        if (newLink) {
+                          setEditFields(f => {
+                            return {
+                              id: f.id,
+                              title: f.title,
+                              client: f.client,
+                              dueDate: f.dueDate,
+                              status: f.status,
+                              description: f.description,
+                              links: [...(f.links || []), newLink],
+                              createdAt: f.createdAt,
+                              updatedAt: f.updatedAt,
+                              user_id: f.user_id,
+                              agency_id: f.agency_id,
+                              responsaveis: f.responsaveis,
+                              notificar_responsaveis: f.notificar_responsaveis,
+                              priority: sanitizePriority(f.priority),
+                            };
+                          });
+                          setNewLink('');
+                        }
+                      }}
+                      className="bg-black text-white"
+                    >
                       Adicionar
                     </Button>
                   </div>
+                  <div className="space-y-2">
+                    {(!editFields.links || editFields.links.length === 0) ? (
+                      <p className="text-sm text-gray-500 italic">Nenhum link adicionado</p>
+                    ) : (
+                      editFields.links.map((link, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                          <ExternalLink className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm text-gray-700 flex-1">{link}</span>
+                          <Button
+                            type="button"
+                            className="bg-gray-100 text-gray-800 hover:bg-gray-200"
+                            onClick={() => setEditFields(f => {
+                              return {
+                                id: f.id,
+                                title: f.title,
+                                client: f.client,
+                                dueDate: f.dueDate,
+                                status: f.status,
+                                description: f.description,
+                                links: f.links ? f.links.filter((_, i) => i !== index) : [],
+                                createdAt: f.createdAt,
+                                updatedAt: f.updatedAt,
+                                user_id: f.user_id,
+                                agency_id: f.agency_id,
+                                responsaveis: f.responsaveis,
+                                notificar_responsaveis: f.notificar_responsaveis,
+                                priority: sanitizePriority(f.priority),
+                              };
+                            })}
+                          >
+                            Remover
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-
-                <div className="space-y-2">
-                  {(!selectedProject.links || selectedProject.links.length === 0) ? (
-                    <p className="text-sm text-gray-500 italic">Nenhum link adicionado</p>
-                  ) : (
-                    selectedProject.links.map((link, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                        <ExternalLink className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm text-gray-700 flex-1">{link}</span>
-                        <Button className="bg-gray-100 text-gray-800 hover:bg-gray-200">
-                          <a href={link} target="_blank" rel="noopener noreferrer">
-                            Abrir
-                          </a>
-                        </Button>
-                      </div>
-                    ))
-                  )}
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="flex-1 bg-gray-100 text-gray-800 hover:bg-gray-200"
+                  >
+                    Fechar
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-black text-white hover:bg-gray-800"
+                  >
+                    Salvar Alterações
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 bg-red-500 text-white hover:bg-red-600"
+                    onClick={async () => {
+                      if (selectedProject) {
+                        if (window.confirm('Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.')) {
+                          await handleDeleteProject(selectedProject.id);
+                        }
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" /> Deletar
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button 
-                  onClick={() => setShowEditModal(false)} 
-                  className="flex-1 bg-gray-100 text-gray-800 hover:bg-gray-200"
-                >
-                  Fechar
-                </Button>
-              </div>
-            </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>
