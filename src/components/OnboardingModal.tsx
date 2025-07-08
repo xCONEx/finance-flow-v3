@@ -36,9 +36,17 @@ interface OnboardingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialStep?: number;
+  onNavigateTab: (tabId: string) => void;
 }
 
-const OnboardingModal: React.FC<OnboardingModalProps> = ({ open, onOpenChange, initialStep = 1 }) => {
+const stepTabMap = [
+  'management', // Rotina
+  'management', // Itens
+  'management', // Equipamentos
+  'clients',    // Clientes
+];
+
+const OnboardingModal: React.FC<OnboardingModalProps> = ({ open, onOpenChange, initialStep = 1, onNavigateTab }) => {
   const { user, profile, updateProfile } = useSupabaseAuth();
   const [step, setStep] = useState(initialStep);
   const [loading, setLoading] = useState(false);
@@ -102,14 +110,12 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ open, onOpenChange, i
             <h2 className="text-xl font-bold mb-2">{steps[step - 1].title}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">{steps[step - 1].description}</p>
             <Button
-              asChild
               variant="outline"
               className="mb-2 w-full"
               disabled={loading}
+              onClick={() => onNavigateTab(stepTabMap[step - 1])}
             >
-              <a href={steps[step - 1].link} target="_blank" rel="noopener noreferrer">
-                {steps[step - 1].actionLabel}
-              </a>
+              {steps[step - 1].actionLabel}
             </Button>
           </div>
           <div className="flex justify-between gap-2">
@@ -120,7 +126,14 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ open, onOpenChange, i
               <Button variant="outline" onClick={handleSkip} disabled={loading}>
                 Pular
               </Button>
-              <Button onClick={handleNext} disabled={loading}>
+              <Button onClick={async () => {
+                if (step === steps.length) {
+                  await handleNext();
+                  onNavigateTab('dashboard');
+                } else {
+                  await handleNext();
+                }
+              }} disabled={loading}>
                 {step === steps.length ? 'Finalizar' : 'Próximo'}
               </Button>
             </div>
