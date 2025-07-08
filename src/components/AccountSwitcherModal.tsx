@@ -24,7 +24,6 @@ export const AccountSwitcherModal: React.FC<AccountSwitcherModalProps> = ({
 
   const handleSwitchAccount = async (email: string) => {
     await signOut();
-    // Redirecionar para login com o email selecionado
     window.location.href = `/login?email=${encodeURIComponent(email)}`;
   };
 
@@ -32,9 +31,9 @@ export const AccountSwitcherModal: React.FC<AccountSwitcherModalProps> = ({
     removeAccount(email);
   };
 
-  const handleAddAccount = () => {
-    onClose();
-    navigate('/login');
+  const handleAddAccount = async () => {
+    await signOut();
+    window.location.href = '/login';
   };
 
   const handleLogout = async () => {
@@ -43,7 +42,7 @@ export const AccountSwitcherModal: React.FC<AccountSwitcherModalProps> = ({
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
-    onClose();
+    window.location.href = '/login';
   };
 
   const getInitials = (email: string) => {
