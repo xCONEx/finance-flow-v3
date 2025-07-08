@@ -842,7 +842,7 @@ const EntregaFlowKanban = () => {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="p-2 ml-2 text-gray-500 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+                  className="p-2 ml-2 sm:ml-2 ml-8 text-gray-500 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
                   onClick={() => setIsEditing(true)}
                   aria-label="Editar"
                 >
