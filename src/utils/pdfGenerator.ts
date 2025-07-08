@@ -136,7 +136,7 @@ export const generateJobPDF = async (
   
   try {
     // Header - Título principal
-    doc.setFillColor(...primaryColor);
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 0, 210, 30, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
@@ -147,9 +147,9 @@ export const generateJobPDF = async (
     
     // DADOS DA EMPRESA
     if (shouldShowCompanyData(companyData)) {
-      doc.setFillColor(...lightGray);
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.rect(15, yPosition, 180, 8, 'F');
-      doc.setTextColor(...secondaryColor);
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
       doc.setFontSize(12);
       doc.text('DADOS DA EMPRESA', 20, yPosition + 6);
       yPosition += 15;
@@ -179,44 +179,70 @@ export const generateJobPDF = async (
     }
     
     // DADOS DO CLIENTE
-    doc.setFillColor(...lightGray);
-    doc.rect(15, yPosition, 180, 8, 'F');
-    doc.setTextColor(...secondaryColor);
-    doc.setFontSize(12);
-    doc.text('DADOS DO CLIENTE', 20, yPosition + 6);
-    yPosition += 15;
+    // Verificar se há dados do cliente para exibir
+    const hasClientData = clientData?.name || clientData?.email || clientData?.cnpj || clientData?.phone || clientData?.address || job.client;
     
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    
-    // Se tiver cliente cadastrado, usar os dados do cliente
-    // Se não tiver, usar apenas os dados colocados no job
-    const clientName = clientData?.name || job.client || 'Não informado';
-    const clientEmail = clientData?.email || 'Não informado';
-    const clientCnpj = clientData?.cnpj || 'Não informado';
-    const clientPhone = clientData?.phone || 'Não informado';
-    const clientAddress = clientData?.address || 'Não informado';
-    
-    const clientFields = [
-      { label: 'Nome do Cliente:', value: clientName },
-      { label: 'E-mail do Cliente:', value: clientEmail },
-      { label: 'CNPJ do Cliente:', value: clientCnpj },
-      { label: 'Telefone do Cliente:', value: clientPhone },
-      { label: 'Endereço do Cliente:', value: clientAddress }
-    ];
-    
-    clientFields.forEach(field => {
-      doc.text(field.label, 20, yPosition);
-      doc.text(field.value, 70, yPosition);
-      yPosition += 6;
-    });
-    
-    yPosition += 10;
+    if (hasClientData) {
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.rect(15, yPosition, 180, 8, 'F');
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.setFontSize(12);
+      doc.text('DADOS DO CLIENTE', 20, yPosition + 6);
+      yPosition += 15;
+      
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      
+      // Se tiver cliente cadastrado, usar os dados do cliente
+      // Se não tiver, usar apenas os dados colocados no job
+      const clientName = clientData?.name || job.client;
+      const clientEmail = clientData?.email;
+      const clientCnpj = clientData?.cnpj;
+      const clientPhone = clientData?.phone;
+      const clientAddress = clientData?.address;
+      
+      // Criar array apenas com campos que têm dados
+      const clientFields = [];
+      
+      if (clientName) {
+        clientFields.push({ label: 'Nome do Cliente:', value: clientName });
+      }
+      
+      if (clientEmail) {
+        clientFields.push({ label: 'E-mail do Cliente:', value: clientEmail });
+      }
+      
+      if (clientCnpj) {
+        clientFields.push({ label: 'CNPJ do Cliente:', value: clientCnpj });
+      }
+      
+      if (clientPhone) {
+        clientFields.push({ label: 'Telefone do Cliente:', value: clientPhone });
+      }
+      
+      if (clientAddress) {
+        clientFields.push({ label: 'Endereço do Cliente:', value: clientAddress });
+      }
+      
+      // Só exibir a seção se houver pelo menos um campo com dados
+      if (clientFields.length > 0) {
+        clientFields.forEach(field => {
+          doc.text(field.label, 20, yPosition);
+          doc.text(field.value, 70, yPosition);
+          yPosition += 6;
+        });
+        
+        yPosition += 10;
+      } else {
+        // Se não há campos com dados, remover o título da seção
+        yPosition -= 15;
+      }
+    }
     
     // DETALHES DO SERVIÇO
-    doc.setFillColor(...lightGray);
+    doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
     doc.rect(15, yPosition, 180, 8, 'F');
-    doc.setTextColor(...secondaryColor);
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
     doc.setFontSize(12);
     doc.text('DETALHES DO SERVIÇO', 20, yPosition + 6);
     yPosition += 15;
@@ -247,7 +273,7 @@ export const generateJobPDF = async (
     if (hasAnyValues) {
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.rect(15, yPosition, 180, 8, 'F');
-      doc.setTextColor(...secondaryColor);
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
       doc.setFontSize(12);
       doc.text('ITENS DO ORÇAMENTO', 20, yPosition + 6);
       yPosition += 15;
@@ -341,7 +367,7 @@ export const generateJobPDF = async (
     }
     
     // VALOR TOTAL - Destacado
-    doc.setFillColor(...primaryColor);
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(15, yPosition, 180, 15, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
