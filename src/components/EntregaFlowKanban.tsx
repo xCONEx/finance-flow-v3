@@ -23,7 +23,8 @@ import {
   Eye,
   Building,
   Bell,
-  BellOff
+  BellOff,
+  Pencil
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
@@ -823,19 +824,32 @@ const EntregaFlowKanban = () => {
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl px-2 sm:px-8">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              Editar Projeto
-              {selectedProject?.priority === 'alta' && (
-                <Badge className="bg-red-500 text-white">Alta</Badge>
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="flex items-center gap-2">
+                Editar Projeto
+                {selectedProject?.priority === 'alta' && (
+                  <Badge className="bg-red-500 text-white">Alta</Badge>
+                )}
+                <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{selectedProject?.status}</Badge>
+                {selectedProject?.agency_id && (
+                  <Badge className="bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700">
+                    <Building className="h-3 w-3" />
+                    Empresa
+                  </Badge>
+                )}
+              </DialogTitle>
+              {!isEditing && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="p-2 ml-2 text-gray-500 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+                  onClick={() => setIsEditing(true)}
+                  aria-label="Editar"
+                >
+                  <Pencil className="h-5 w-5" />
+                </Button>
               )}
-              <Badge className="bg-gray-100 text-gray-800">{selectedProject?.status}</Badge>
-              {selectedProject?.agency_id && (
-                <Badge className="bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1">
-                  <Building className="h-3 w-3" />
-                  Empresa
-                </Badge>
-              )}
-            </DialogTitle>
+            </div>
           </DialogHeader>
           {selectedProject && (
             <form
@@ -860,45 +874,48 @@ const EntregaFlowKanban = () => {
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Título do Projeto</label>
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Título do Projeto</label>
                     <Input
                       value={editFields.title || ''}
                       onChange={e => setEditFields(f => ({ ...f, title: e.target.value }))}
                       required
                       readOnly={!isEditing}
                       disabled={!isEditing}
+                      className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Cliente</label>
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Cliente</label>
                     <Input
                       value={editFields.client || ''}
                       onChange={e => setEditFields(f => ({ ...f, client: e.target.value }))}
                       required
                       readOnly={!isEditing}
                       disabled={!isEditing}
+                      className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Data de Entrega</label>
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Data de Entrega</label>
                     <Input
                       type="date"
                       value={editFields.dueDate || ''}
                       onChange={e => setEditFields(f => ({ ...f, dueDate: e.target.value }))}
                       readOnly={!isEditing}
                       disabled={!isEditing}
+                      className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Prioridade</label>
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Prioridade</label>
                     <Select
                       value={editFields.priority || 'media'}
                       onValueChange={value => setEditFields(f => ({ ...f, priority: value }))}
                       disabled={!isEditing}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -910,19 +927,20 @@ const EntregaFlowKanban = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Descrição</label>
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Descrição</label>
                   <Textarea
                     value={editFields.description || ''}
                     onChange={e => setEditFields(f => ({ ...f, description: e.target.value }))}
                     rows={3}
                     readOnly={!isEditing}
                     disabled={!isEditing}
+                    className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
                   />
                 </div>
                 {/* Responsáveis (apenas para agências) */}
                 {isAgencyMode && currentAgencyId && selectedProject.agency_id && (
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Responsáveis</label>
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Responsáveis</label>
                     <ResponsibleSelector
                       agencyId={currentAgencyId}
                       selectedResponsibles={editFields.responsaveis || []}
@@ -950,13 +968,13 @@ const EntregaFlowKanban = () => {
                 )}
                 {/* Links de Entrega */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Links de Entrega</label>
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Links de Entrega</label>
                   <div className="flex gap-2 mb-2">
                     <Input
                       placeholder="Cole o link aqui"
                       value={newLink}
                       onChange={e => setNewLink(e.target.value)}
-                      className="w-64"
+                      className="w-64 border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
                       readOnly={!isEditing}
                       disabled={!isEditing}
                     />
@@ -1033,40 +1051,32 @@ const EntregaFlowKanban = () => {
                   <Button
                     type="button"
                     onClick={() => setShowEditModal(false)}
-                    className="flex-1 bg-gray-100 text-gray-800 hover:bg-gray-200"
+                    className="flex-1 bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
                   >
                     Fechar
                   </Button>
-                  {!isEditing && (
-                    <Button
-                      type="button"
-                      className="flex-1 bg-blue-500 text-white hover:bg-blue-600"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      Editar
-                    </Button>
-                  )}
-                  {isEditing && (
+                  {isEditing ? (
                     <Button
                       type="submit"
-                      className="flex-1 bg-black text-white hover:bg-gray-800"
+                      className="flex-1 bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                     >
                       Salvar Alterações
                     </Button>
-                  )}
-                  <Button
-                    type="button"
-                    className="flex-1 bg-red-500 text-white hover:bg-red-600"
-                    onClick={async () => {
-                      if (selectedProject) {
-                        if (window.confirm('Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.')) {
-                          await handleDeleteProject(selectedProject.id);
+                  ) : (
+                    <Button
+                      type="button"
+                      className="flex-1 bg-red-500 text-white hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800"
+                      onClick={async () => {
+                        if (selectedProject) {
+                          if (window.confirm('Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.')) {
+                            await handleDeleteProject(selectedProject.id);
+                          }
                         }
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" /> Deletar
-                  </Button>
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" /> Deletar
+                    </Button>
+                  )}
                 </div>
               </div>
             </form>
