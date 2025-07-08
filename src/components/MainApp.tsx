@@ -16,11 +16,16 @@ import { AgencyProvider } from '@/contexts/AgencyContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import MobileNavigation from './MobileNavigation';
 import { useMobile } from '@/hooks/use-mobile';
+import OnboardingModal from './OnboardingModal';
 
 const MainApp = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { user, profile, agency } = useSupabaseAuth();
   const isMobile = useMobile();
+  const [showOnboarding, setShowOnboarding] = useState(true);
+
+  // Verificar se deve exibir o onboarding
+  const shouldShowOnboarding = user && profile && !profile.onboarding_completed && showOnboarding;
 
   // Verificar se é admin ou tem acesso ao team
   const isAdmin = profile?.user_type === 'admin';
@@ -59,6 +64,13 @@ const MainApp = () => {
   return (
     <AgencyProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-[#111]">
+        {shouldShowOnboarding && (
+          <OnboardingModal
+            open={shouldShowOnboarding}
+            onOpenChange={(open) => setShowOnboarding(open)}
+            initialStep={profile?.onboarding_step || 1}
+          />
+        )}
         {isMobile ? (
           <>
             <MobileNavigation 
