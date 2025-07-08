@@ -9,26 +9,22 @@ const steps = [
   {
     title: 'Configurar Rotina',
     description: 'Defina sua rotina de trabalho para calcular corretamente seus valores.',
-    actionLabel: 'Ir para Rotina',
-    link: '/management?tab=routine',
+    actionLabel: 'Ir para Gerenciamento',
   },
   {
     title: 'Adicionar Itens',
     description: 'Adicione itens de trabalho que você utiliza no dia a dia.',
-    actionLabel: 'Ir para Itens',
-    link: '/management?tab=items',
+    actionLabel: undefined,
   },
   {
     title: 'Adicionar Equipamentos',
     description: 'Cadastre seus equipamentos para controle de custos e depreciação.',
-    actionLabel: 'Ir para Equipamentos',
-    link: '/management?tab=items', // Equipamentos e itens juntos
+    actionLabel: undefined,
   },
   {
     title: 'Adicionar Clientes',
     description: 'Cadastre pelo menos um cliente para começar a usar o sistema.',
-    actionLabel: 'Ir para Clientes',
-    link: '/clients',
+    actionLabel: undefined,
   },
 ];
 
@@ -109,14 +105,16 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ open, onOpenChange, i
           <div className="mt-2">
             <h2 className="text-xl font-bold mb-2">{steps[step - 1].title}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">{steps[step - 1].description}</p>
-            <Button
-              variant="outline"
-              className="mb-2 w-full"
-              disabled={loading}
-              onClick={() => onNavigateTab(stepTabMap[step - 1])}
-            >
-              {steps[step - 1].actionLabel}
-            </Button>
+            {steps[step - 1].actionLabel && (
+              <Button
+                variant="outline"
+                className="mb-2 w-full"
+                disabled={loading}
+                onClick={() => onNavigateTab(stepTabMap[step - 1])}
+              >
+                {steps[step - 1].actionLabel}
+              </Button>
+            )}
           </div>
           <div className="flex justify-between gap-2">
             <Button variant="ghost" onClick={handleRestart} disabled={loading}>
