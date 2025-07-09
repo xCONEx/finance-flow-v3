@@ -115,11 +115,11 @@ export const SubscriptionPlans: React.FC = () => {
   // Filtrar planos baseado no toggle anual/mensal
   const getDisplayPlans = () => {
     if (isAnnual) {
-      // Mostrar apenas o plano Enterprise anual quando anual estiver selecionado
-      return plans.filter(plan => plan.id === 'enterprise-annual');
+      // Quando anual, mostrar Básico, Premium e Enterprise Anual
+      return plans.filter(plan => plan.id === 'basic' || plan.id === 'premium' || plan.id === 'enterprise-annual');
     } else {
-      // Mostrar planos mensais (excluindo o anual)
-      return plans.filter(plan => plan.id !== 'enterprise-annual');
+      // Quando mensal, mostrar Básico, Premium e Enterprise mensal
+      return plans.filter(plan => plan.id === 'basic' || plan.id === 'premium' || plan.id === 'enterprise');
     }
   };
 
