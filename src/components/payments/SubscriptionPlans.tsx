@@ -184,11 +184,11 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
     const allPlans = plans.length > 0 ? plans : defaultPlans;
     
     if (isAnnual) {
-      // Mostrar apenas o plano Enterprise anual quando anual estiver selecionado
-      return allPlans.filter(plan => plan.id === 'enterprise-annual');
+      // Quando anual, mostrar Básico, Profissional e Enterprise Anual
+      return allPlans.filter(plan => plan.id === 'basic' || plan.id === 'pro' || plan.id === 'enterprise-annual');
     } else {
-      // Mostrar planos mensais (excluindo o anual)
-      return allPlans.filter(plan => plan.id !== 'enterprise-annual');
+      // Quando mensal, mostrar Básico, Profissional e Enterprise mensal
+      return allPlans.filter(plan => plan.id === 'basic' || plan.id === 'pro' || plan.id === 'enterprise');
     }
   };
 
