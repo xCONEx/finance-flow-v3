@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,24 +8,6 @@ import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 
 const plans = [
-  {
-    id: 'free',
-    name: 'Gratuito',
-    price: 'R$ 0',
-    period: 'para sempre',
-    description: 'Ideal para começar',
-    icon: <Check className="h-5 w-5" />,
-    features: [
-      'Até 5 jobs por mês',
-      'Até 3 projetos',
-      '100MB de armazenamento',
-      'Dashboard básico',
-      'Relatórios simples',
-      'Suporte por email'
-    ],
-    caktoUrl: null,
-    popular: false
-  },
   {
     id: 'basic',
     name: 'Básico',
@@ -108,6 +90,7 @@ const plans = [
 export const SubscriptionPlans: React.FC = () => {
   const { user } = useSupabaseAuth();
   const { subscription, loading } = useSubscription();
+  const [isAnnual, setIsAnnual] = useState(false);
 
   const handlePlanSelect = (plan: typeof plans[0]) => {
     if (!plan.caktoUrl) return;
@@ -129,6 +112,17 @@ export const SubscriptionPlans: React.FC = () => {
     return subscription === planId;
   };
 
+  // Filtrar planos baseado no toggle anual/mensal
+  const getDisplayPlans = () => {
+    if (isAnnual) {
+      // Mostrar apenas o plano Enterprise anual quando anual estiver selecionado
+      return plans.filter(plan => plan.id === 'enterprise-annual');
+    } else {
+      // Mostrar planos mensais (excluindo o anual)
+      return plans.filter(plan => plan.id !== 'enterprise-annual');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -137,17 +131,43 @@ export const SubscriptionPlans: React.FC = () => {
     );
   }
 
+  const displayPlans = getDisplayPlans();
+
   return (
     <div className="container mx-auto px-4 py-8 pb-24 md:pb-6">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold mb-4">Escolha seu plano</h2>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
           Selecione o plano ideal para seu negócio
         </p>
+        
+        {/* Toggle Mensal/Anual */}
+        <div className="flex items-center justify-center gap-4 mb-8">
+          <span className={`text-sm font-medium ${!isAnnual ? 'text-primary' : 'text-gray-500'}`}>
+            Mensal
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAnnual(!isAnnual)}
+            className={`relative w-16 h-8 rounded-full transition-all duration-200 ${
+              isAnnual ? 'bg-primary' : 'bg-gray-200'
+            }`}
+          >
+            <div
+              className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-200 ${
+                isAnnual ? 'translate-x-8' : 'translate-x-0'
+              }`}
+            />
+          </Button>
+          <span className={`text-sm font-medium ${isAnnual ? 'text-primary' : 'text-gray-500'}`}>
+            Anual
+          </span>
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        {plans.map((plan) => (
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {displayPlans.map((plan) => (
           <Card 
             key={plan.id} 
             className={`relative ${plan.popular ? 'border-primary shadow-lg scale-105' : ''} ${
@@ -199,14 +219,6 @@ export const SubscriptionPlans: React.FC = () => {
               {isCurrentPlan(plan.id) ? (
                 <Button className="w-full" disabled>
                   Plano Atual
-                </Button>
-              ) : plan.id === 'free' ? (
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  disabled
-                >
-                  Plano Gratuito
                 </Button>
               ) : (
                 <Button 
