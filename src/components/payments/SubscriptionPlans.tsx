@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -103,6 +103,8 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
   onSelectPlan,
   loading = false,
 }) => {
+  const [isAnnual, setIsAnnual] = useState(false);
+
   const defaultPlans: SubscriptionPlan[] = [
     {
       id: 'basic',
@@ -157,9 +159,40 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
       ],
       description: 'Para grandes empresas e necessidades específicas',
     },
+    {
+      id: 'enterprise-annual',
+      name: 'Enterprise Anual',
+      price: 999.90,
+      currency: 'BRL',
+      interval: 'year',
+      stripePriceId: 'price_enterprise_annual',
+      features: [
+        'Tudo do Enterprise +',
+        '12 meses pelo preço de 10',
+        'Economia de R$ 199/ano',
+        'Consultoria estratégica',
+        'Treinamento da equipe',
+        'Suporte dedicado',
+        'Implementação personalizada',
+      ],
+      description: 'Para grandes empresas com economia anual',
+    },
   ];
 
-  const displayPlans = plans.length > 0 ? plans : defaultPlans;
+  // Filtrar planos baseado no toggle anual/mensal
+  const getDisplayPlans = () => {
+    const allPlans = plans.length > 0 ? plans : defaultPlans;
+    
+    if (isAnnual) {
+      // Mostrar apenas o plano Enterprise anual quando anual estiver selecionado
+      return allPlans.filter(plan => plan.id === 'enterprise-annual');
+    } else {
+      // Mostrar planos mensais (excluindo o anual)
+      return allPlans.filter(plan => plan.id !== 'enterprise-annual');
+    }
+  };
+
+  const displayPlans = getDisplayPlans();
 
   return (
     <div className="w-full max-w-6xl mx-auto p-6">
@@ -168,10 +201,34 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
         <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
           Escolha seu Plano
         </h2>
-        <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+        <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6">
           Encontre o plano perfeito para suas necessidades. Todos os planos incluem 
           atualizações gratuitas e suporte técnico.
         </p>
+        
+        {/* Toggle Mensal/Anual */}
+        <div className="flex items-center justify-center gap-4 mb-8">
+          <span className={`text-sm font-medium ${!isAnnual ? 'text-blue-600' : 'text-gray-500'}`}>
+            Mensal
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAnnual(!isAnnual)}
+            className={`relative w-16 h-8 rounded-full transition-all duration-200 ${
+              isAnnual ? 'bg-blue-600' : 'bg-gray-200'
+            }`}
+          >
+            <div
+              className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-200 ${
+                isAnnual ? 'translate-x-8' : 'translate-x-0'
+              }`}
+            />
+          </Button>
+          <span className={`text-sm font-medium ${isAnnual ? 'text-blue-600' : 'text-gray-500'}`}>
+            Anual
+          </span>
+        </div>
       </div>
 
       {/* Planos */}
