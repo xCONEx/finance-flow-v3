@@ -24,6 +24,7 @@ interface CompanyData {
   subscription?: string;
   userType?: string;
   agencyId?: string;
+  logoUrl?: string;
 }
 
 interface ClientData {
@@ -121,6 +122,92 @@ const getCompanyDisplayName = (companyData?: CompanyData): string => {
   return '';
 };
 
+// Função para verificar se o usuário pode usar logo (premium/enterprise)
+const canUseLogo = (companyData?: CompanyData): boolean => {
+  if (!companyData) return false;
+  
+  const subscription = companyData.subscription;
+  return subscription === 'premium' || subscription === 'enterprise' || subscription === 'enterprise-annual';
+};
+
+// Função para carregar e adicionar logo
+const addLogo = async (pdf: jsPDF, companyData?: CompanyData): Promise<number> => {
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 20;
+  const maxWidth = 30;
+  const maxHeight = 15;
+  const logoY = 5;
+
+  const insertLogo = async (base64: string) => {
+    try {
+      const { width, height } = pdf.getImageProperties(base64);
+
+      const widthRatio = maxWidth / width;
+      const heightRatio = maxHeight / height;
+      const ratio = Math.min(widthRatio, heightRatio, 1); // mantém proporção, sem ultrapassar o máximo
+
+      const finalWidth = width * ratio;
+      const finalHeight = height * ratio;
+
+      const logoX = pageWidth - margin - finalWidth;
+
+      pdf.addImage(base64, 'JPEG', logoX, logoY, finalWidth, finalHeight);
+      return logoX; // Retorna a posição X da logo para ajustar o texto
+    } catch (err) {
+      console.error('Erro ao inserir imagem:', err);
+      return pageWidth - margin; // Fallback se der erro
+    }
+  };
+
+  if (canUseLogo(companyData) && companyData?.logoUrl) {
+    try {
+      if (companyData.logoUrl.startsWith('data:')) {
+        return await insertLogo(companyData.logoUrl);
+      }
+
+      const response = await fetch(companyData.logoUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      return new Promise<number>((resolve) => {
+        reader.onload = async () => {
+          const base64 = reader.result as string;
+          const logoX = await insertLogo(base64);
+          resolve(logoX);
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Erro ao carregar logo:', error);
+    }
+  }
+
+  return pageWidth - margin; // Retorna posição padrão se não houver logo
+};
+
+// Função para adicionar header com logo
+const addHeader = async (pdf: jsPDF, companyData?: CompanyData): Promise<number> => {
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 20;
+  
+  // Cores
+  const primaryColor = [41, 128, 185]; // Azul
+  
+  // Background azul do header
+  pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  pdf.rect(0, 0, pageWidth, 30, 'F');
+
+  // Adicionar logo se disponível
+  const logoTextX = await addLogo(pdf, companyData);
+
+  // Título em branco
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(24);
+  pdf.setFont(undefined, 'bold');
+  pdf.text('ORÇAMENTO DE SERVIÇO', margin, 20);
+  
+  return 45; // Retorna a posição Y para continuar o conteúdo
+};
+
 export const generateJobPDF = async (
   job: JobData, 
   companyData?: CompanyData,
@@ -135,14 +222,9 @@ export const generateJobPDF = async (
   const lightGray = [236, 240, 241]; // Cinza claro
   
   try {
-    // Header - Título principal
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, 210, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.text('ORÇAMENTO DE SERVIÇO', 105, 20, { align: 'center' });
+    // Header com logo
+    yPosition = await addHeader(doc, companyData);
     
-    yPosition = 45;
     doc.setTextColor(0, 0, 0);
     
     // DADOS DA EMPRESA
@@ -639,7 +721,8 @@ export const prepareCompanyData = (profile: any, user: any) => {
     address: profile?.address,
     subscription: profile?.subscription,
     userType: profile?.user_type,
-    agencyId: profile?.agency_id
+    agencyId: profile?.agency_id,
+    logoUrl: profile?.logo_base64 // Incluir logo do perfil
   };
 };
 
