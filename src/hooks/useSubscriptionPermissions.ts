@@ -18,6 +18,7 @@ export interface SubscriptionLimits {
   canUse247Support: boolean;
   canUseTraining: boolean;
   canUseConsulting: boolean;
+  canUseCustomLogo: boolean;
 }
 
 export const useSubscriptionPermissions = () => {
@@ -42,6 +43,7 @@ export const useSubscriptionPermissions = () => {
           canUse247Support: false,
           canUseTraining: false,
           canUseConsulting: false,
+          canUseCustomLogo: false,
         };
       case 'premium':
         return {
@@ -58,6 +60,7 @@ export const useSubscriptionPermissions = () => {
           canUse247Support: false,
           canUseTraining: false,
           canUseConsulting: false,
+          canUseCustomLogo: true,
         };
       case 'enterprise':
       case 'enterprise-annual':
@@ -75,6 +78,7 @@ export const useSubscriptionPermissions = () => {
           canUse247Support: true,
           canUseTraining: subscription === 'enterprise-annual',
           canUseConsulting: subscription === 'enterprise-annual',
+          canUseCustomLogo: true,
         };
       default: // free
         return {
@@ -91,6 +95,7 @@ export const useSubscriptionPermissions = () => {
           canUse247Support: false,
           canUseTraining: false,
           canUseConsulting: false,
+          canUseCustomLogo: false,
         };
     }
   }, [subscription]);
