@@ -1,12 +1,12 @@
-const CACHE_NAME = 'financeflow-v1';
+const CACHE_NAME = 'financeflow-v2';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/icons/favicon.ico',
-  '/icons/web-app-manifest-192x192.png',
-  '/icons/web-app-manifest-512x512.png'
+  '/favicon.ico',
+  '/web-app-manifest-192x192.png',
+  '/web-app-manifest-512x512.png',
+  '/favicon-96x96.png',
+  '/apple-touch-icon.png'
 ];
 
 // Instalação do Service Worker
@@ -14,8 +14,12 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
+        console.log('🔔 Service Worker: Cache aberto');
+        return cache.addAll(urlsToCache).catch((error) => {
+          console.error('❌ Erro ao adicionar recursos ao cache:', error);
+          // Continua mesmo se alguns recursos falharem
+          return Promise.resolve();
+        });
       })
   );
 });
@@ -26,9 +30,15 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request)
       .then((response) => {
         // Retorna cache se encontrado, senão faz requisição
-        return response || fetch(event.request);
-      }
-    )
+        return response || fetch(event.request).catch((error) => {
+          console.error('❌ Erro na requisição:', error);
+          // Retorna uma resposta de fallback para páginas
+          if (event.request.destination === 'document') {
+            return caches.match('/');
+          }
+          return new Response('Erro de rede', { status: 503 });
+        });
+      })
   );
 });
 
@@ -55,8 +65,8 @@ self.addEventListener('push', (event) => {
   let notificationData = {
     title: 'FinanceFlow',
     body: 'Nova notificação',
-    icon: '/icons/web-app-manifest-192x192.png',
-    badge: '/icons/favicon-96x96.png',
+    icon: '/web-app-manifest-192x192.png',
+    badge: '/favicon-96x96.png',
     tag: 'financeflow-notification',
     data: {}
   };
@@ -85,12 +95,12 @@ self.addEventListener('push', (event) => {
       {
         action: 'open',
         title: 'Abrir',
-        icon: '/icons/favicon-96x96.png'
+        icon: '/favicon-96x96.png'
       },
       {
         action: 'close',
         title: 'Fechar',
-        icon: '/icons/favicon-96x96.png'
+        icon: '/favicon-96x96.png'
       }
     ]
   };
