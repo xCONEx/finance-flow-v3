@@ -8,12 +8,14 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
+import { useSubscription } from '../hooks/useSubscription';
 import NotificationSettings from './NotificationSettings';
 import CustomLogoManager from './CustomLogoManager';
 
 const Settings = () => {
   const { isDark, currentTheme, toggleDarkMode, changeTheme } = useTheme();
   const { user, profile } = useSupabaseAuth();
+  const { subscription, loading: subscriptionLoading } = useSubscription();
 
   const themes = [
     { id: 'purple-blue', name: 'Roxo & Azul', colors: 'from-purple-600 to-blue-600' },
@@ -22,6 +24,27 @@ const Settings = () => {
   ];
 
   const isCompanyUser = profile?.user_type === 'company_owner' || profile?.user_type === 'employee';
+  const hasPremiumOrEnterprise = ['premium', 'enterprise', 'enterprise-annual'].includes(subscription);
+
+  const getPlanName = () => {
+    switch (subscription) {
+      case 'basic': return 'Básico';
+      case 'premium': return 'Premium';
+      case 'enterprise': return 'Enterprise';
+      case 'enterprise-annual': return 'Enterprise Anual';
+      default: return 'Gratuito';
+    }
+  };
+
+  const getPlanBadgeVariant = () => {
+    switch (subscription) {
+      case 'basic': return 'default';
+      case 'premium': return 'default';
+      case 'enterprise':
+      case 'enterprise-annual': return 'default';
+      default: return 'outline';
+    }
+  };
 
   return (
     <div className="space-y-6 pb-20 md:pb-6 px-4 md:px-0">
@@ -212,7 +235,7 @@ const Settings = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6 pt-0">
-                {!isCompanyUser && (
+                {!hasPremiumOrEnterprise && !isCompanyUser && (
                   <div className="p-3 md:p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                     <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2 text-sm md:text-base">Empresa - Apenas Plano Pago</h4>
                     <p className="text-xs md:text-sm text-yellow-700 dark:text-yellow-300">
@@ -230,58 +253,62 @@ const Settings = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-4 md:gap-6">
-                  <div className="space-y-3 md:space-y-4">
-                    <h4 className={`font-semibold text-${currentTheme.accent} text-sm md:text-base`}>Recursos Premium:</h4>
-                    <ul className="space-y-2 text-xs md:text-sm">
-                      {[
-                        'Relatórios avançados com gráficos',
-                        'Geração de PDF com logo da empresa',
-                        'Importação de planilhas',
-                        'Gestão de equipe completa',
-                        'Kanban de projetos',
-                        'Backup automático em nuvem',
-                        'Suporte prioritário',
-                        'Templates personalizados'
-                      ].map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2">
-                          <div className={`w-2 h-2 bg-${currentTheme.accent} rounded-full`} />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                {!hasPremiumOrEnterprise && (
+                  <>
+                    <div className="grid grid-cols-1 gap-4 md:gap-6">
+                      <div className="space-y-3 md:space-y-4">
+                        <h4 className={`font-semibold text-${currentTheme.accent} text-sm md:text-base`}>Recursos Premium:</h4>
+                        <ul className="space-y-2 text-xs md:text-sm">
+                          {[
+                            'Relatórios avançados com gráficos',
+                            'Geração de PDF com logo da empresa',
+                            'Importação de planilhas',
+                            'Gestão de equipe completa',
+                            'Kanban de projetos',
+                            'Backup automático em nuvem',
+                            'Suporte prioritário',
+                            'Templates personalizados'
+                          ].map((feature, index) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <div className={`w-2 h-2 bg-${currentTheme.accent} rounded-full`} />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
 
-                  <div className="text-center space-y-3 md:space-y-4">
-                    <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg border">
-                      <div className={`text-2xl md:text-3xl font-bold text-${currentTheme.accent}`}>R$ 97</div>
-                      <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">/mês</div>
-                      <div className="text-xs text-gray-500 mt-1">ou R$ 970/ano (2 meses grátis)</div>
+                      <div className="text-center space-y-3 md:space-y-4">
+                        <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg border">
+                          <div className={`text-2xl md:text-3xl font-bold text-${currentTheme.accent}`}>R$ 97</div>
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">/mês</div>
+                          <div className="text-xs text-gray-500 mt-1">ou R$ 970/ano (2 meses grátis)</div>
+                        </div>
+                        
+                        <Button 
+                          className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 text-xs md:text-sm`}
+                          onClick={() => window.open('https://www.creatorlyhub.com.br/financeflow', '_blank')}
+                        >
+                          Entrar em Contato
+                        </Button>
+                        
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          14 dias grátis • Cancele quando quiser
+                        </p>
+                      </div>
                     </div>
-                    
-                    <Button 
-                      className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 text-xs md:text-sm`}
-                      onClick={() => window.open('https://www.creatorlyhub.com.br/financeflow', '_blank')}
-                    >
-                      Entrar em Contato
-                    </Button>
-                    
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      14 dias grátis • Cancele quando quiser
-                    </p>
-                  </div>
-                </div>
+                  </>
+                )}
 
                 <div className="p-3 md:p-4 bg-white dark:bg-gray-800 rounded-lg border">
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="font-medium text-sm md:text-base">Status da Assinatura</p>
                       <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                        {isCompanyUser ? 'Plano Empresarial' : 'Plano Gratuito'}
+                        {subscriptionLoading ? 'Carregando...' : getPlanName()}
                       </p>
                     </div>
-                    <Badge variant={isCompanyUser ? "default" : "outline"}>
-                      {isCompanyUser ? 'Premium' : 'Gratuito'}
+                    <Badge variant={getPlanBadgeVariant()}>
+                      {subscriptionLoading ? '...' : subscription === 'free' ? 'Gratuito' : subscription}
                     </Badge>
                   </div>
                 </div>
