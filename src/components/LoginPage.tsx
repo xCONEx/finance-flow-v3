@@ -202,7 +202,7 @@ const LoginPage = () => {
             <Button
               variant="outline"
               className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
-              onClick={() => window.open('https://lpfinanceflow.vercel.app', '_blank')}
+              onClick={() => window.open('https://www.creatorlyhub.com.br/financeflow', '_blank')}
             >
               Ver planos →
             </Button>
@@ -385,7 +385,7 @@ const LoginPage = () => {
                 <Button
                   variant="outline"
                   className="w-full h-10 border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20 rounded-xl font-medium text-sm"
-                  onClick={() => window.open('https://lpfinanceflow.vercel.app', '_blank')}
+                  onClick={() => window.open('https://www.creatorlyhub.com.br/financeflow', '_blank')}
                 >
                   Ver planos →
                 </Button>
