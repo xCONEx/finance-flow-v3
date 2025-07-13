@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Camera, User, Building2, Crown } from 'lucide-react';
+import { Camera, User, Building2, Crown, Upload, X } from 'lucide-react';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useAgency } from '../contexts/AgencyContext';
 import { supabase } from '../integrations/supabase/client';
@@ -16,6 +16,7 @@ const UserProfile = () => {
   const { agencies, currentContext } = useAgency();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: profile?.name || '',
@@ -159,6 +160,60 @@ const UserProfile = () => {
       toast({
         title: "Erro",
         description: "Erro ao processar imagem",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogoClick = () => {
+    logoInputRef.current?.click();
+  };
+
+  const handleLogoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Erro",
+        description: "A logo deve ter no máximo 2MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string;
+        
+        const { error } = await supabase
+          .from('profiles')
+          .update({ logo_base64: base64, updated_at: new Date().toISOString() })
+          .eq('id', user?.id);
+
+        if (error) {
+          toast({
+            title: "Erro",
+            description: "Erro ao atualizar logo da empresa",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Sucesso",
+            description: "Logo da empresa atualizada!"
+          });
+          window.location.reload();
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao processar logo",
         variant: "destructive"
       });
     } finally {
@@ -383,6 +438,66 @@ const UserProfile = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Logo da Empresa - Apenas para Premium/Enterprise */}
+                {hasPremiumPlan && (
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Upload className="h-4 w-4" />
+                      Logo da Empresa
+                    </Label>
+                    <div className="mt-2 p-4 border-2 border-dashed border-gray-300 rounded-lg">
+                      {profile?.logo_base64 ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <img 
+                              src={profile.logo_base64} 
+                              alt="Logo da empresa" 
+                              className="w-12 h-12 object-contain"
+                            />
+                            <span className="text-sm text-gray-600">Logo atual</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleLogoClick}
+                            disabled={loading}
+                          >
+                            <Camera className="h-4 w-4 mr-2" />
+                            Alterar
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <input
+                            ref={logoInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoChange}
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleLogoClick}
+                            disabled={loading}
+                            className="w-full"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            {loading ? 'Carregando...' : 'Upload da Logo'}
+                          </Button>
+                          <p className="text-xs text-gray-500 mt-2">
+                            PNG, JPG ou JPEG (máx. 2MB)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      A logo aparecerá nos PDFs de orçamento
+                    </p>
+                  </div>
+                )}
 
                 <Button
                   type="submit"
