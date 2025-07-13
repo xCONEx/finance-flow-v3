@@ -17,15 +17,18 @@ import { useApp } from '../contexts/AppContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { usePrivacy } from '../contexts/PrivacyContext';
 import JobEditor from './JobEditor';
+import JobDetailsModal from './JobDetailsModal';
 import { toast } from '@/hooks/use-toast';
 import { generateJobPDF, prepareCompanyData, prepareJobData } from '../utils/pdfGenerator';
 import { supabase } from '../integrations/supabase/client';
+import { Job } from '../types';
 
 const RecentJobs = () => {
   const { jobs, deleteJob } = useApp();
   const { user, profile } = useSupabaseAuth();
   const { formatValue } = usePrivacy();
   const [editingJob, setEditingJob] = useState<string | null>(null);
+  const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [sortOrder, setSortOrder] = useState<string>('recentes');
@@ -75,20 +78,25 @@ const RecentJobs = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'aprovado':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200';
       case 'pendente':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200';
       case 'cancelado':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-200';
     }
   };
 
   const handleEdit = (jobId: string) => {
     console.log('🔧 Editando job:', jobId);
     setHistoryOpen(false);
+    setViewingJob(null);
     setEditingJob(jobId);
+  };
+
+  const handleViewJob = (job: Job) => {
+    setViewingJob(job);
   };
 
   const handleDelete = async (jobId: string) => {
@@ -269,11 +277,14 @@ const RecentJobs = () => {
 
             <div className="space-y-4 p-2">
               {filteredJobs.map((job) => (
-                <div key={`history-${job.id}`} className="p-3 md:p-4 border rounded-lg space-y-3 bg-card text-foreground">
+                <div 
+                  key={`history-${job.id}`} 
+                  className="p-3 md:p-4 border rounded-lg space-y-3 bg-card text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => handleViewJob(job)}
+                >
                   <div className="flex flex-col md:flex-row md:items-center gap-2">
                     <h4 className="font-medium flex-1 text-foreground">{job.description}</h4>
                     <div className="flex items-center gap-2">
-                      {/* Removido: badge "Manual" pois campo isManual não existe na tabela jobs */}
                       <Badge className={getStatusColor(job.status) + ' border'}>
                         {job.status}
                       </Badge>
@@ -293,27 +304,24 @@ const RecentJobs = () => {
                     </span>
                   </div>
                   
-                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <div className="flex flex-wrap items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
                     <Button
                       onClick={() => handleEdit(job.id)}
-                      className="text-blue-600 hover:text-blue-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
-                      textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
+                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     >
                       <Edit className="h-3 w-3 mr-1" />
                       Editar
                     </Button>
                     <Button
                       onClick={() => handlePrintPDF(job.id)}
-                      className="text-green-600 hover:text-green-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
-                      textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
+                      className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm hover:bg-green-50 dark:hover:bg-green-900/20"
                     >
                       <FileText className="h-3 w-3 mr-1" />
                       PDF
                     </Button>
                     <Button
                       onClick={() => handleDelete(job.id)}
-                      className="text-red-600 hover:text-red-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
-                      textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
+                      className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
                       <Trash2 className="h-3 w-3 mr-1" />
                       Excluir
@@ -332,12 +340,16 @@ const RecentJobs = () => {
       </div>
 
       {recentJobs.map((job) => (
-        <div key={`recent-${job.id}`} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+        <div 
+          key={`recent-${job.id}`} 
+          className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+          onClick={() => handleViewJob(job)}
+        >
           <div className="flex justify-between items-start mb-3">
             <div className="space-y-1">
-              <h3 className="font-semibold text-gray-900">{job.description}</h3>
-              <p className="text-sm text-gray-600">{job.client || 'Cliente não informado'}</p>
-              <div className="flex items-center gap-4 text-xs text-gray-500">
+              <h3 className="font-semibold text-foreground">{job.description}</h3>
+              <p className="text-sm text-muted-foreground">{job.client || 'Cliente não informado'}</p>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   {new Date(job.eventDate).toLocaleDateString('pt-BR')}
@@ -353,27 +365,24 @@ const RecentJobs = () => {
             </Badge>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               onClick={() => handleEdit(job.id)}
-              className="text-blue-600 hover:text-blue-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
-              textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
+              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm hover:bg-blue-50 dark:hover:bg-blue-900/20"
             >
               <Edit className="h-3 w-3 mr-1" />
               Editar
             </Button>
             <Button
               onClick={() => handlePrintPDF(job.id)}
-              className="text-green-600 hover:text-green-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
-              textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
+              className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm hover:bg-green-50 dark:hover:bg-green-900/20"
             >
               <FileText className="h-3 w-3 mr-1" />
               PDF
             </Button>
             <Button
               onClick={() => handleDelete(job.id)}
-              className="text-red-600 hover:text-red-700 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm"
-              textShadow={'0 1px 4px rgba(0,0,0,0.10)'}
+              className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs bg-transparent border border-border px-2 py-1 rounded shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20"
             >
               <Trash2 className="h-3 w-3 mr-1" />
               Excluir
@@ -387,6 +396,17 @@ const RecentJobs = () => {
           jobId={editingJob}
           onClose={() => setEditingJob(null)}
           onSaved={handleJobSaved}
+        />
+      )}
+
+      {viewingJob && (
+        <JobDetailsModal
+          isOpen={!!viewingJob}
+          onClose={() => setViewingJob(null)}
+          job={viewingJob}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onPrintPDF={handlePrintPDF}
         />
       )}
     </div>
