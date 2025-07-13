@@ -12,19 +12,19 @@
   "categories": ["business", "finance", "productivity"],
   "icons": [
     {
-      "src": "/icons/web-app-manifest-192x192.png",
+      "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/icons/web-app-manifest-512x512.png",
+      "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/icons/favicon-96x96.png",
+      "src": "/favicon-96x96.png",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
@@ -38,7 +38,7 @@
       "url": "/",
       "icons": [
         {
-          "src": "/icons/favicon-96x96.png",
+          "src": "/favicon-96x96.png",
           "sizes": "96x96"
         }
       ]
@@ -50,7 +50,7 @@
       "url": "/?view=monthly-costs",
       "icons": [
         {
-          "src": "/icons/favicon-96x96.png",
+          "src": "/favicon-96x96.png",
           "sizes": "96x96"
         }
       ]
@@ -58,7 +58,7 @@
   ],
   "screenshots": [
     {
-      "src": "/icons/PSD-LOGO-01LOGO-2.png",
+      "src": "/PSD-LOGO-01LOGO-2.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide"
