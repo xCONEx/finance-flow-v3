@@ -223,7 +223,7 @@ const Settings = () => {
                       className="mt-3 text-xs md:text-sm" 
                       variant="outline" 
                       size="sm"
-                      onClick={() => window.open('https://lpfinanceflow.vercel.app', '_blank')}
+                      onClick={() => window.open('https://www.creatorlyhub.com.br/financeflow', '_blank')}
                     >
                       Entrar em Contato
                     </Button>
@@ -261,7 +261,7 @@ const Settings = () => {
                     
                     <Button 
                       className={`w-full bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 text-xs md:text-sm`}
-                      onClick={() => window.open('https://lpfinanceflow.vercel.app', '_blank')}
+                      onClick={() => window.open('https://www.creatorlyhub.com.br/financeflow', '_blank')}
                     >
                       Entrar em Contato
                     </Button>
