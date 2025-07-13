@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import NotificationSettings from './NotificationSettings';
+import CustomLogoManager from './CustomLogoManager';
 
 const Settings = () => {
   const { isDark, currentTheme, toggleDarkMode, changeTheme } = useTheme();
@@ -286,6 +287,9 @@ const Settings = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Logo Personalizada */}
+            <CustomLogoManager />
           </TabsContent>
         </Tabs>
       </div>
