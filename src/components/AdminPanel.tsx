@@ -94,13 +94,24 @@ const AdminPanel = () => {
   
   // Webhook test states
   const [webhookTestOpen, setWebhookTestOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'cakto' | 'kiwify'>('cakto');
+  const [selectedProvider, setSelectedProvider] = useState<'cakto' | 'kiwify' | 'stripe'>('cakto');
   const [selectedEvent, setSelectedEvent] = useState('payment.success');
   const [testEmail, setTestEmail] = useState('');
   const [testPlanId, setTestPlanId] = useState('yppzpjc');
   const [testAmount, setTestAmount] = useState('2990');
   const [webhookResponse, setWebhookResponse] = useState<any>(null);
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
+
+  // Atualizar plano padrão quando o provedor mudar
+  useEffect(() => {
+    if (selectedProvider === 'cakto') {
+      setTestPlanId('yppzpjc');
+    } else if (selectedProvider === 'kiwify') {
+      setTestPlanId('jtksckF');
+    } else if (selectedProvider === 'stripe') {
+      setTestPlanId('price_basic');
+    }
+  }, [selectedProvider]);
 
   const loadData = useCallback(async () => {
     if (!isAdmin) return;
@@ -410,33 +421,73 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
       const webhookUrl = getWebhookUrl(selectedProvider);
       const webhookKey = getWebhookKey(selectedProvider);
 
-      const testPayload = {
-        event: selectedEvent,
-        data: {
-          id: `test_${Date.now()}`,
-          status: 'success',
-          plan_id: testPlanId,
-          customer_email: testEmail,
-          amount: parseInt(testAmount),
-          currency: 'BRL',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      };
+      // Criar payload baseado no provedor
+      let testPayload: any;
+      
+      if (selectedProvider === 'stripe') {
+        // Payload específico para Stripe
+        testPayload = {
+          id: `evt_test_${Date.now()}`,
+          object: 'event',
+          api_version: '2025-06-30.basil',
+          created: Math.floor(Date.now() / 1000),
+          data: {
+            object: {
+              id: `pi_test_${Date.now()}`,
+              object: 'payment_intent',
+              amount: parseInt(testAmount),
+              currency: 'brl',
+              customer: 'cus_test_customer_123',
+              status: 'succeeded',
+              created: Math.floor(Date.now() / 1000)
+            }
+          },
+          livemode: false,
+          pending_webhooks: 1,
+          request: {
+            id: `req_test_${Date.now()}`,
+            idempotency_key: `test_key_${Date.now()}`
+          },
+          type: selectedEvent
+        };
+      } else {
+        // Payload para Cakto e Kiwify
+        testPayload = {
+          event: selectedEvent,
+          data: {
+            id: `test_${Date.now()}`,
+            status: 'success',
+            plan_id: testPlanId,
+            customer_email: testEmail,
+            amount: parseInt(testAmount),
+            currency: 'BRL',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          }
+        };
+      }
 
       console.log('🔗 Testando webhook:', webhookUrl);
       console.log('📦 Payload:', testPayload);
       console.log('🔑 Webhook Key:', webhookKey ? '***' + webhookKey.slice(-4) : 'NÃO CONFIGURADA');
       console.log('🔑 Supabase Key:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'CONFIGURADA' : 'NÃO CONFIGURADA');
 
+      // Configurar headers baseado no provedor
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      };
+
+      if (selectedProvider === 'stripe') {
+        headers['stripe-signature'] = `t=${Math.floor(Date.now() / 1000)},v1=test_signature_${Date.now()}`;
+      } else {
+        headers['x-webhook-key'] = webhookKey;
+      }
+
       const response = await fetch(webhookUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'x-webhook-key': webhookKey
-        },
+        headers,
         body: JSON.stringify(testPayload)
       });
 
@@ -487,7 +538,7 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
     }
   };
 
-  const getPlanMapping = (provider: 'cakto' | 'kiwify') => {
+  const getPlanMapping = (provider: 'cakto' | 'kiwify' | 'stripe') => {
     if (provider === 'cakto') {
       return {
         'yppzpjc': 'Basic (R$ 29,90)',
@@ -495,12 +546,20 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
         '34p727v': 'Enterprise (R$ 99,90)',
         'uoxtt9o': 'Enterprise Anual (R$ 1.990,00)'
       };
-    } else {
+    } else if (provider === 'kiwify') {
       return {
         'jtksckF': 'Basic (R$ 29,90)',
         'kTs280h': 'Premium (R$ 49,90)',
         'iuQVR8a': 'Enterprise (R$ 99,90)',
         'CjaLdBJ': 'Enterprise Anual (R$ 1.990,00)'
+      };
+    } else {
+      // Stripe - usar price_ids
+      return {
+        'price_basic': 'Basic (R$ 29,90)',
+        'price_premium': 'Premium (R$ 49,90)',
+        'price_enterprise': 'Enterprise (R$ 99,90)',
+        'price_enterprise_annual': 'Enterprise Anual (R$ 1.990,00)'
       };
     }
   };
@@ -977,13 +1036,14 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                       <div className="space-y-4">
                         <div>
                           <Label htmlFor="provider">Provedor de Pagamento</Label>
-                          <Select value={selectedProvider} onValueChange={(value: 'cakto' | 'kiwify') => setSelectedProvider(value)}>
+                          <Select value={selectedProvider} onValueChange={(value: 'cakto' | 'kiwify' | 'stripe') => setSelectedProvider(value)}>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="cakto">Cakto</SelectItem>
                               <SelectItem value="kiwify">Kiwify</SelectItem>
+                              <SelectItem value="stripe">Stripe</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -995,13 +1055,27 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="payment.success">Pagamento Sucesso</SelectItem>
-                              <SelectItem value="subscription.activated">Assinatura Ativada</SelectItem>
-                              <SelectItem value="subscription.renewed">Assinatura Renovada</SelectItem>
-                              <SelectItem value="payment.failed">Pagamento Falhou</SelectItem>
-                              <SelectItem value="subscription.cancelled">Assinatura Cancelada</SelectItem>
-                              <SelectItem value="subscription.expired">Assinatura Expirada</SelectItem>
-                              <SelectItem value="subscription.trial_started">Trial Iniciado</SelectItem>
+                              {selectedProvider === 'stripe' ? (
+                                <>
+                                  <SelectItem value="payment_intent.succeeded">Pagamento Sucesso</SelectItem>
+                                  <SelectItem value="payment_intent.payment_failed">Pagamento Falhou</SelectItem>
+                                  <SelectItem value="customer.subscription.created">Assinatura Criada</SelectItem>
+                                  <SelectItem value="customer.subscription.updated">Assinatura Atualizada</SelectItem>
+                                  <SelectItem value="customer.subscription.deleted">Assinatura Cancelada</SelectItem>
+                                  <SelectItem value="invoice.payment_succeeded">Fatura Paga</SelectItem>
+                                  <SelectItem value="invoice.payment_failed">Fatura Falhou</SelectItem>
+                                </>
+                              ) : (
+                                <>
+                                  <SelectItem value="payment.success">Pagamento Sucesso</SelectItem>
+                                  <SelectItem value="subscription.activated">Assinatura Ativada</SelectItem>
+                                  <SelectItem value="subscription.renewed">Assinatura Renovada</SelectItem>
+                                  <SelectItem value="payment.failed">Pagamento Falhou</SelectItem>
+                                  <SelectItem value="subscription.cancelled">Assinatura Cancelada</SelectItem>
+                                  <SelectItem value="subscription.expired">Assinatura Expirada</SelectItem>
+                                  <SelectItem value="subscription.trial_started">Trial Iniciado</SelectItem>
+                                </>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
@@ -1077,24 +1151,29 @@ Relatório gerado em: ${new Date().toLocaleString('pt-BR')}
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <h4 className="font-medium">URLs dos Webhooks:</h4>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline">Cakto</Badge>
-                              <code className="bg-muted px-2 py-1 rounded text-xs break-all">{import.meta.env.VITE_SUPABASE_URL}/functions/v1/cakto-webhook</code>
+                                                  <div className="space-y-2">
+                            <h4 className="font-medium">URLs dos Webhooks:</h4>
+                            <div className="space-y-1 text-sm">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline">Cakto</Badge>
+                                <code className="bg-muted px-2 py-1 rounded text-xs break-all">{import.meta.env.VITE_SUPABASE_URL}/functions/v1/cakto-webhook</code>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline">Kiwify</Badge>
+                                <code className="bg-muted px-2 py-1 rounded text-xs break-all">{import.meta.env.VITE_SUPABASE_URL}/functions/v1/kiwify-webhook</code>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline">Stripe</Badge>
+                                <code className="bg-muted px-2 py-1 rounded text-xs break-all">{import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-webhook</code>
+                              </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline">Kiwify</Badge>
-                              <code className="bg-muted px-2 py-1 rounded text-xs break-all">{import.meta.env.VITE_SUPABASE_URL}/functions/v1/kiwify-webhook</code>
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 break-words">
+                              <strong>⚠️ Importante:</strong> Certifique-se de que as Edge Functions estão deployadas no Supabase:<br />
+                              <code className="bg-yellow-100 px-1 rounded break-all">supabase functions deploy cakto-webhook</code><br />
+                              <code className="bg-yellow-100 px-1 rounded break-all">supabase functions deploy kiwify-webhook</code><br />
+                              <code className="bg-yellow-100 px-1 rounded break-all">supabase functions deploy stripe-webhook</code>
                             </div>
                           </div>
-                          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 break-words">
-                            <strong>⚠️ Importante:</strong> Certifique-se de que as Edge Functions estão deployadas no Supabase:<br />
-                            <code className="bg-yellow-100 px-1 rounded break-all">supabase functions deploy cakto-webhook</code><br />
-                            <code className="bg-yellow-100 px-1 rounded break-all">supabase functions deploy kiwify-webhook</code>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </CardContent>
