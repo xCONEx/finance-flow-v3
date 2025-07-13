@@ -40,7 +40,8 @@ const plans = [
       'Colaboração em tempo real',
       'Relatórios personalizados',
       'Customizações avançadas',
-      'Backup automático'
+      'Backup automático',
+      'Logo personalizada'
     ],
     caktoUrl: 'https://pay.cakto.com.br/kesq5cb',
     popular: true
@@ -60,7 +61,8 @@ const plans = [
       'Onboarding dedicado',
       'SLA garantido',
       'Customizações completas',
-      'Acesso ContratPro'
+      'Acesso ContratPro',
+      'Logo personalizada'
     ],
     caktoUrl: 'https://pay.cakto.com.br/34p727v',
     popular: false
@@ -79,7 +81,8 @@ const plans = [
       'Consultoria estratégica',
       'Treinamento da equipe',
       'Suporte dedicado',
-      'Implementação personalizada'
+      'Implementação personalizada',
+      'Logo personalizada'
     ],
     caktoUrl: 'https://pay.cakto.com.br/uoxtt9o',
     popular: false,
