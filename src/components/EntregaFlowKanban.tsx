@@ -228,6 +228,11 @@ const EntregaFlowKanban = () => {
 
     const { source, destination } = result;
     
+    if (window.innerWidth <= 768 && source.droppableId !== destination.droppableId) {
+      // Bloqueia movimentação horizontal no mobile
+      return;
+    }
+
     if (source.droppableId !== destination.droppableId) {
       const updatedProjects = projects.map(project => 
         project.id === result.draggableId 
@@ -510,7 +515,7 @@ const EntregaFlowKanban = () => {
         <p className="text-gray-600 mb-4">Arraste e solte os cards para atualizar o status dos projetos</p>
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid lg:grid-cols-4 gap-6">
+          <div className="grid lg:grid-cols-4 gap-6 overflow-x-hidden md:overflow-x-visible px-2 sm:px-0">
             {columns.map((column) => {
               const columnProjects = projects.filter(p => p.status === column.id);
               const IconComponent = column.icon;
@@ -541,17 +546,23 @@ const EntregaFlowKanban = () => {
                                 {...provided.dragHandleProps}
                               >
                                 <Card 
-                                  className={`cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 ${
+                                  className={`cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 rounded-lg md:rounded-lg p-2 sm:p-4 bg-white shadow-sm ${
                                     column.id === 'filmado' ? 'border-l-blue-500' : 
                                     column.id === 'edicao' ? 'border-l-orange-500' : 
                                     column.id === 'revisao' ? 'border-l-yellow-500' : 'border-l-green-500'
                                   } ${snapshot.isDragging ? 'rotate-2 shadow-xl' : ''}`}
+                                  style={{
+                                    margin: '0.5rem 0',
+                                    boxSizing: 'border-box',
+                                    maxWidth: '100%',
+                                    minWidth: 0
+                                  }}
                                   onClick={() => {
                                     setSelectedProject(project);
                                     setShowEditModal(true);
                                   }}
                                 >
-                                  <CardContent className="p-4">
+                                  <CardContent className="p-3 sm:p-4">
                                     <div className="space-y-3">
                                       {project.priority === 'alta' && (
                                         <Badge className="bg-red-500 text-white text-xs">
@@ -982,24 +993,11 @@ const EntregaFlowKanban = () => {
                       type="button"
                       onClick={() => {
                         if (newLink) {
-                          setEditFields(f => {
-                            return {
-                              id: f.id,
-                              title: f.title,
-                              client: f.client,
-                              dueDate: f.dueDate,
-                              status: f.status,
-                              description: f.description,
-                              links: [...(f.links || []), newLink],
-                              createdAt: f.createdAt,
-                              updatedAt: f.updatedAt,
-                              user_id: f.user_id,
-                              agency_id: f.agency_id,
-                              responsaveis: f.responsaveis,
-                              notificar_responsaveis: f.notificar_responsaveis,
-                              priority: sanitizePriority(f.priority),
-                            };
-                          });
+                          setEditFields(f => ({
+                            ...f,
+                            links: [...(f.links || []), newLink],
+                            priority: sanitizePriority(f.priority) as 'alta' | 'media' | 'baixa',
+                          }));
                           setNewLink('');
                         }
                       }}
