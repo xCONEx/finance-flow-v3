@@ -32,6 +32,15 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
 
+  // 1. Adicionar campo de etiquetas pré-definidas
+  const TAGS = [
+    { label: 'VIP', value: 'vip' },
+    { label: 'Recorrente', value: 'recorrente' },
+    { label: 'Potencial', value: 'potencial' },
+    { label: 'Novo', value: 'novo' },
+  ];
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -41,6 +50,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
       const { error } = await supabase.from('clients').insert([
         {
           ...formData,
+          tags: selectedTags,
           user_id: user.id,
           user_email: user.email,
           created_at: new Date().toISOString(),
@@ -87,7 +97,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] rounded-lg p-2 sm:p-6">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Cliente</DialogTitle>
         </DialogHeader>
@@ -162,6 +172,23 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
               placeholder="Informações adicionais sobre o cliente"
               rows={3}
             />
+          </div>
+
+          {/* 3. Adicionar UI para seleção de etiquetas antes dos botões */}
+          <div>
+            <Label>Etiquetas</Label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {TAGS.map(tag => (
+                <button
+                  type="button"
+                  key={tag.value}
+                  className={`px-3 py-1 rounded-full border text-xs transition-all ${selectedTags.includes(tag.value) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 border-gray-300'}`}
+                  onClick={() => setSelectedTags(tags => tags.includes(tag.value) ? tags.filter(t => t !== tag.value) : [...tags, tag.value])}
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
