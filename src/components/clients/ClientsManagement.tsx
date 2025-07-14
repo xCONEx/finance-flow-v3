@@ -202,7 +202,14 @@ const ClientsManagement = () => {
                   <TableBody>
                     {filteredClients.map((client) => (
                       <TableRow key={client.id}>
-                        <TableCell className="font-medium">{client.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {client.name}
+                            {client.tags && client.tags.length > 0 && client.tags.map((tag: string) => (
+                              <span key={tag} className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs ml-1">{tag.charAt(0).toUpperCase() + tag.slice(1)}</span>
+                            ))}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             {client.phone && (
@@ -272,16 +279,16 @@ const ClientsManagement = () => {
                 {filteredClients.map((client) => (
                   <Card key={client.id} className="p-4 rounded-lg">
                     <div className="flex justify-between items-start gap-2">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-medium text-lg flex items-center gap-2">{client.name}
                           {client.tags && client.tags.length > 0 && client.tags.map((tag: string) => (
                             <span key={tag} className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs ml-1">{tag.charAt(0).toUpperCase() + tag.slice(1)}</span>
                           ))}
                         </h3>
+                        {client.cnpj && (
+                          <Badge variant="outline" className="text-xs mt-1 mb-2 block w-fit">{client.cnpj}</Badge>
+                        )}
                       </div>
-                      {client.cnpj && (
-                        <Badge variant="outline" className="text-xs mt-1 mb-2 block">{client.cnpj}</Badge>
-                      )}
                     </div>
 
                     <div className="space-y-2">
