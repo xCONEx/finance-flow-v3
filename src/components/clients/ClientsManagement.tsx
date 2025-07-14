@@ -270,72 +270,72 @@ const ClientsManagement = () => {
               {/* Mobile Cards */}
               <div className="md:hidden space-y-4">
                 {filteredClients.map((client) => (
-                  <Card key={client.id} className="p-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium text-lg">{client.name}</h3>
+                  <Card key={client.id} className="p-4 rounded-lg">
+                    <div className="flex justify-between items-start gap-2">
+                      <div>
+                        <h3 className="font-medium text-lg flex items-center gap-2">{client.name}
+                          {client.tags && client.tags.length > 0 && client.tags.map((tag: string) => (
+                            <span key={tag} className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs ml-1">{tag.charAt(0).toUpperCase() + tag.slice(1)}</span>
+                          ))}
+                        </h3>
+                      </div>
+                      {client.cnpj && (
+                        <Badge variant="outline" className="text-xs mt-1 mb-2 block">{client.cnpj}</Badge>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      {client.phone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="w-4 h-4 text-gray-500" />
+                          {client.phone}
                         </div>
-                        {client.cnpj && (
-                          <Badge variant="outline" className="text-xs">
-                            {client.cnpj}
-                          </Badge>
-                        )}
-                      </div>
+                      )}
+                      {client.email && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail className="w-4 h-4 text-gray-500" />
+                          {client.email}
+                        </div>
+                      )}
+                    </div>
 
-                      <div className="space-y-2">
-                        {client.phone && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Phone className="w-4 h-4 text-gray-500" />
-                            {client.phone}
-                          </div>
-                        )}
-                        {client.email && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="w-4 h-4 text-gray-500" />
-                            {client.email}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-4 gap-1 pt-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewContracts(client)}
-                          className="flex flex-col items-center gap-1 p-2 h-auto"
-                        >
-                          <FileText className="w-4 h-4" />
-                          <span className="text-xs">Contratos</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(client)}
-                          className="flex flex-col items-center gap-1 p-2 h-auto"
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span className="text-xs">Detalhes</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(client)}
-                          className="flex flex-col items-center gap-1 p-2 h-auto"
-                        >
-                          <Edit className="w-4 h-4" />
-                          <span className="text-xs">Editar</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(client.id)}
-                          className="flex flex-col items-center gap-1 p-2 h-auto text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span className="text-xs">Excluir</span>
-                        </Button>
-                      </div>
+                    <div className="grid grid-cols-4 gap-1 pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewContracts(client)}
+                        className="flex flex-col items-center gap-1 p-2 h-auto"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span className="text-xs">Contratos</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewDetails(client)}
+                        className="flex flex-col items-center gap-1 p-2 h-auto"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span className="text-xs">Detalhes</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(client)}
+                        className="flex flex-col items-center gap-1 p-2 h-auto"
+                      >
+                        <Edit className="w-4 h-4" />
+                        <span className="text-xs">Editar</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(client.id)}
+                        className="flex flex-col items-center gap-1 p-2 h-auto text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span className="text-xs">Excluir</span>
+                      </Button>
                     </div>
                   </Card>
                 ))}
