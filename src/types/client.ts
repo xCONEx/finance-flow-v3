@@ -12,6 +12,7 @@ export interface Client {
   description?: string;
   created_at: string;
   updated_at: string;
+  tags?: string[]; // Etiquetas personalizáveis
 }
 
 export interface JobHistory {
