@@ -28,6 +28,15 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({ isOpen, onClos
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // 1. Adicionar campo de etiquetas pré-definidas
+  const TAGS = [
+    { label: 'VIP', value: 'vip' },
+    { label: 'Recorrente', value: 'recorrente' },
+    { label: 'Potencial', value: 'potencial' },
+    { label: 'Novo', value: 'novo' },
+  ];
+  const [selectedTags, setSelectedTags] = useState<string[]>(client.tags || []);
+
   useEffect(() => {
     if (client) {
       setFormData({
@@ -38,6 +47,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({ isOpen, onClos
         cnpj: client.cnpj || '',
         description: client.description || ''
       });
+      setSelectedTags(client.tags || []);
     }
   }, [client]);
 
@@ -64,6 +74,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({ isOpen, onClos
           address: formData.address || null,
           cnpj: formData.cnpj || null,
           description: formData.description || null,
+          tags: selectedTags,
         })
         .eq('id', client.id);
 
@@ -157,6 +168,23 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({ isOpen, onClos
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
             />
+          </div>
+
+          {/* 4. Adicionar UI para seleção de etiquetas antes dos botões */}
+          <div>
+            <Label>Etiquetas</Label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {TAGS.map(tag => (
+                <button
+                  type="button"
+                  key={tag.value}
+                  className={`px-3 py-1 rounded-full border text-xs transition-all ${selectedTags.includes(tag.value) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 border-gray-300'}`}
+                  onClick={() => setSelectedTags(tags => tags.includes(tag.value) ? tags.filter(t => t !== tag.value) : [...tags, tag.value])}
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex gap-2 pt-4">
