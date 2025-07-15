@@ -7,6 +7,7 @@ import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useSubscriptionPermissions } from '../hooks/useSubscriptionPermissions';
 import { supabase } from '../integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { caktoPaymentLinks } from '@/config/caktoPaymentLinks';
 
 const CustomLogoManager = () => {
   const { user, profile, updateProfile } = useSupabaseAuth();
@@ -151,7 +152,7 @@ const CustomLogoManager = () => {
             </Badge>
           </div>
           <Button 
-            onClick={() => window.open('https://pay.cakto.com.br/kesq5cb', '_blank')}
+            onClick={() => window.open(caktoPaymentLinks.premium, '_blank')}
             className="w-full"
           >
             Fazer Upgrade
