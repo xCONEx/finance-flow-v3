@@ -13,6 +13,10 @@ import { AddClientModal } from './AddClientModal';
 import { EditClientModal } from './EditClientModal';
 import { ClientDetailsModal } from './ClientDetailsModal';
 import { ClientContractsModal } from './ClientContractsModal';
+import { exportClientsToExcel, exportClientsToPDF } from '@/utils/exportClients';
+import * as XLSX from 'xlsx';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useMediaQuery } from 'react-responsive';
 
 const ClientsManagement = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -25,6 +29,13 @@ const ClientsManagement = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const { user, profile, agency } = useSupabaseAuth();
   const { toast } = useToast();
+  const [importedClients, setImportedClients] = useState<any[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importStep, setImportStep] = useState<'preview' | 'conflict' | 'done'>('preview');
+  const [conflicts, setConflicts] = useState<any[]>([]);
+  const [importAction, setImportAction] = useState<'overwrite' | 'ignore' | null>(null);
+  const isMobile = useMediaQuery({ maxWidth: 640 });
 
   const loadClients = async () => {
     if (!user) return;
@@ -135,6 +146,79 @@ const ClientsManagement = () => {
     setShowContractsModal(true);
   };
 
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      setImportedClients(json as any[]);
+      setShowImportModal(true);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const requiredFields = ['name', 'email'];
+
+  const validateImportedClients = (imported: any[]) => {
+    return imported.map((row, idx) => {
+      const missing = requiredFields.filter(f => !row[f] || String(row[f]).trim() === '');
+      return { ...row, _row: idx + 1, _missing: missing };
+    });
+  };
+
+  const checkConflicts = (imported: any[]) => {
+    const emails = imported.map(c => c.email?.toLowerCase()).filter(Boolean);
+    const existingEmails = clients.map(c => c.email?.toLowerCase()).filter(Boolean);
+    return imported.filter(c => c.email && existingEmails.includes(c.email.toLowerCase()));
+  };
+
+  const handlePreviewConfirm = () => {
+    const conflictsFound = checkConflicts(importedClients);
+    if (conflictsFound.length > 0) {
+      setConflicts(conflictsFound);
+      setImportStep('conflict');
+    } else {
+      handleImport('ignore');
+    }
+  };
+
+  const handleImport = async (action: 'overwrite' | 'ignore') => {
+    setImportAction(action);
+    // Filtra clientes válidos
+    const validated = validateImportedClients(importedClients);
+    let toImport = validated.filter(c => c._missing.length === 0);
+    if (action === 'ignore') {
+      // Remove duplicados
+      const existingEmails = clients.map(c => c.email?.toLowerCase());
+      toImport = toImport.filter(c => !existingEmails.includes(c.email.toLowerCase()));
+    }
+    // Se overwrite, mantém todos e sobrescreve duplicados
+    for (const client of toImport) {
+      // Se já existe, update; senão, insert
+      const existing = clients.find(c => c.email?.toLowerCase() === client.email.toLowerCase());
+      if (existing && action === 'overwrite') {
+        await supabase.from('clients').update({ ...client }).eq('id', existing.id);
+      } else if (!existing) {
+        await supabase.from('clients').insert([{ ...client, user_id: user.id, user_email: user.email }]);
+      }
+    }
+    setImportStep('done');
+    loadClients();
+  };
+
+  const closeImportModal = () => {
+    setShowImportModal(false);
+    setImportStep('preview');
+    setImportedClients([]);
+    setConflicts([]);
+    setImportAction(null);
+  };
+
   return (
     <div className="p-4 sm:p-6 space-y-6 pb-20 md:pb-6">
       {/* Header */}
@@ -164,14 +248,46 @@ const ClientsManagement = () => {
             <CardTitle className="text-lg sm:text-xl">
               Lista de Clientes ({filteredClients.length})
             </CardTitle>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Buscar por nome, email ou telefone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Buscar por nome, email ou telefone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-2 mt-2 sm:mt-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportClientsToExcel(filteredClients)}
+                >
+                  Exportar Excel
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportClientsToPDF(filteredClients)}
+                >
+                  Exportar PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Importar Excel
+                </Button>
+                <input
+                  type="file"
+                  accept=".xlsx"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleImportExcel}
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -396,6 +512,76 @@ const ClientsManagement = () => {
           />
         </>
       )}
+
+      {/* Modal de Importação */}
+      <Dialog open={showImportModal} onOpenChange={closeImportModal}>
+        <DialogContent className={isMobile ? 'w-full max-w-full p-2' : 'max-w-2xl'}>
+          <DialogHeader>
+            <DialogTitle>Pré-visualização da Importação</DialogTitle>
+          </DialogHeader>
+          {importStep === 'preview' && (
+            <div className="overflow-x-auto max-h-[60vh]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Linha</TableHead>
+                    {Object.keys(importedClients[0] || {}).map((key) => (
+                      <TableHead key={key}>{key}</TableHead>
+                    ))}
+                    <TableHead>Campos obrigatórios ausentes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {validateImportedClients(importedClients).map((row, idx) => (
+                    <TableRow key={idx} className={row._missing.length > 0 ? 'bg-red-50' : ''}>
+                      <TableCell>{row._row}</TableCell>
+                      {Object.keys(importedClients[0] || {}).map((key) => (
+                        <TableCell key={key}>{row[key]}</TableCell>
+                      ))}
+                      <TableCell>
+                        {row._missing.length > 0 ? row._missing.join(', ') : '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="text-xs text-gray-500 mt-2">Linhas em vermelho possuem campos obrigatórios ausentes e não serão importadas.</div>
+            </div>
+          )}
+          {importStep === 'conflict' && (
+            <div className="space-y-4">
+              <div className="text-sm text-yellow-700 bg-yellow-100 rounded p-2">
+                Existem clientes no arquivo com e-mail já cadastrado.<br />
+                O que deseja fazer?
+              </div>
+              <ul className="text-xs text-gray-700 mb-2">
+                {conflicts.map((c, i) => (
+                  <li key={i}>Linha: {i + 1} - Email: {c.email}</li>
+                ))}
+              </ul>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={() => handleImport('overwrite')} variant="destructive">Sobrescrever existentes</Button>
+                <Button onClick={() => handleImport('ignore')} variant="outline">Ignorar duplicados</Button>
+                <Button onClick={closeImportModal} variant="ghost">Cancelar</Button>
+              </div>
+            </div>
+          )}
+          {importStep === 'done' && (
+            <div className="text-green-700 bg-green-100 rounded p-4 text-center">
+              Importação concluída com sucesso!
+              <div className="mt-4">
+                <Button onClick={closeImportModal}>Fechar</Button>
+              </div>
+            </div>
+          )}
+          {importStep === 'preview' && (
+            <DialogFooter className="mt-4">
+              <Button onClick={handlePreviewConfirm} disabled={importedClients.length === 0}>Confirmar Importação</Button>
+              <Button onClick={closeImportModal} variant="ghost">Cancelar</Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
