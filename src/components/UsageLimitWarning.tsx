@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, Crown } from 'lucide-react';
 import { useSubscriptionPermissions } from '@/hooks/useSubscriptionPermissions';
+import { useNavigate } from 'react-router-dom';
 
 interface UsageLimitWarningProps {
   type: 'jobs' | 'projects';
@@ -23,6 +24,8 @@ export const UsageLimitWarning: React.FC<UsageLimitWarningProps> = ({
     getUsagePercentage,
     isFreePlan 
   } = useSubscriptionPermissions();
+
+  const navigate = useNavigate();
 
   const isJobsLimit = type === 'jobs';
   const currentCount = isJobsLimit ? currentUsage.jobsCount : currentUsage.projectsCount;
@@ -63,9 +66,7 @@ export const UsageLimitWarning: React.FC<UsageLimitWarningProps> = ({
             <Button 
               size="sm"
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90"
-              onClick={() => {
-                window.open('https://www.creatorlyhub.com.br/financeflow', '_blank');
-              }}
+              onClick={() => navigate('/subscription')}
             >
               <Crown className="h-4 w-4 mr-2" />
               Fazer Upgrade
