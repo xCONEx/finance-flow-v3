@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Crown, Zap, Building } from 'lucide-react';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { caktoPaymentLinks } from '@/config/caktoPaymentLinks';
 
 const plans = [
   {
@@ -24,7 +25,7 @@ const plans = [
       'Calculadora de preços',
       'Suporte prioritário'
     ],
-    caktoUrl: 'https://pay.cakto.com.br/yppzpjc',
+    caktoUrl: caktoPaymentLinks.basic,
     popular: false
   },
   {
@@ -43,7 +44,7 @@ const plans = [
       'Backup automático',
       'Logo personalizada'
     ],
-    caktoUrl: 'https://pay.cakto.com.br/kesq5cb',
+    caktoUrl: caktoPaymentLinks.premium,
     popular: true
   },
   {
@@ -64,7 +65,7 @@ const plans = [
       'Acesso ContratPro',
       'Logo personalizada'
     ],
-    caktoUrl: 'https://pay.cakto.com.br/34p727v',
+    caktoUrl: caktoPaymentLinks.enterprise,
     popular: false
   },
   {
@@ -84,7 +85,7 @@ const plans = [
       'Implementação personalizada',
       'Logo personalizada'
     ],
-    caktoUrl: 'https://pay.cakto.com.br/uoxtt9o',
+    caktoUrl: caktoPaymentLinks.enterpriseAnnual,
     popular: false,
     badge: 'MELHOR OFERTA'
   }
