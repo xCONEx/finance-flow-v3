@@ -154,9 +154,12 @@ const Header: React.FC<HeaderProps> = ({
                   </p>
                   <div className="mt-2">
                     <Badge className="text-xs">
-                      {profile?.subscription === 'enterprise-annual' ? 'Enterprise Anual' : 
+                      {profile?.subscription === 'enterprise-annual' ? 'Enterprise Anual' :
                        profile?.subscription === 'enterprise' ? 'Enterprise' :
-                       profile?.subscription === 'premium' ? 'Premium' : 'Free'}
+                       profile?.subscription === 'premium' ? 'Premium' :
+                       profile?.subscription === 'basic' ? 'Basic' :
+                       profile?.subscription === 'free' ? 'Free' :
+                       'Free'}
                     </Badge>
                   </div>
                 </div>
