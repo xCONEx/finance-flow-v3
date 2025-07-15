@@ -55,7 +55,7 @@ const Header: React.FC<HeaderProps> = ({
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'calculator', label: 'Calculadora', icon: Calculator },
-    ...(hasEnterprisePlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
+    ...(hasPremiumPlan ? [{ id: 'kanban', label: 'Projetos', icon: Video }] : []),
     ...(hasPremiumPlan ? [{ id: 'financial', label: 'Financeiro', icon: CreditCard }] : []),
     ...(hasPremiumPlan ? [{ id: 'clients', label: 'Clientes', icon: UserCheck }] : []),
     { id: 'management', label: 'Gerenciamento', icon: Building },
