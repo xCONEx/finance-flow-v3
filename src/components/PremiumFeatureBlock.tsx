@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Lock, Crown, Zap, Building } from 'lucide-react';
 import { useSubscriptionPermissions } from '@/hooks/useSubscriptionPermissions';
+import { useNavigate } from 'react-router-dom';
 
 interface PremiumFeatureBlockProps {
   feature: string;
@@ -38,6 +39,7 @@ export const PremiumFeatureBlock: React.FC<PremiumFeatureBlockProps> = ({
   className = '',
 }) => {
   const { subscription, isFreePlan } = useSubscriptionPermissions();
+  const navigate = useNavigate();
   
   const hasAccess = () => {
     if (requiredPlan === 'basic') {
@@ -84,10 +86,7 @@ export const PremiumFeatureBlock: React.FC<PremiumFeatureBlockProps> = ({
         
         <Button 
           className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90"
-          onClick={() => {
-            // Redirecionar para página de assinaturas
-            window.location.hash = '#/subscription';
-          }}
+          onClick={() => navigate('/subscription')}
         >
           <Crown className="h-4 w-4 mr-2" />
           Fazer Upgrade
