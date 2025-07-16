@@ -778,16 +778,16 @@ const EntregaFlowKanban = () => {
       {/* Modal de edição/detalhes do projeto - sempre visível */}
       {showEditModal && selectedProject && (
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-          <DialogContent className="p-0 sm:max-w-lg gap-0 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl">
-            <DialogHeader className="border-b px-6 py-4 pt-5 flex flex-row items-center justify-between">
+          <DialogContent className="p-0 max-w-full sm:max-w-lg gap-0 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl">
+            <DialogHeader className="border-b px-4 sm:px-6 py-4 pt-5 flex flex-row items-center justify-between">
               <DialogTitle className="text-xl font-semibold text-zinc-800 dark:text-zinc-100 tracking-tight">Editar Projeto</DialogTitle>
               <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}>
                 <span className="sr-only">Fechar</span>
                 <X className="w-5 h-5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200" />
               </Button>
             </DialogHeader>
-            <form className="space-y-6 p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form className="space-y-5 px-4 sm:px-6 py-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">Título</Label>
                   <Input id="title" placeholder="Ex: Vídeo institucional" value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} />
@@ -797,7 +797,7 @@ const EntregaFlowKanban = () => {
                   <Input id="client" placeholder="Nome do cliente" value={editFields.client} onChange={(e) => setEditFields({ ...editFields, client: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="dueDate">Prazo</Label>
                   <Input id="dueDate" type="date" value={editFields.dueDate} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value })} />
@@ -832,11 +832,13 @@ const EntregaFlowKanban = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="responsaveis">Responsáveis</Label>
-                <ResponsibleSelector
-                  agencyId={currentAgencyId || ''}
-                  selectedResponsibles={editFields.responsaveis || []}
-                  onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
-                />
+                <div className="[&_.placeholder\:text-muted-foreground]:text-muted-foreground">
+                  <ResponsibleSelector
+                    agencyId={currentAgencyId || ''}
+                    selectedResponsibles={editFields.responsaveis || []}
+                    onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
