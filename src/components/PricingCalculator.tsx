@@ -17,6 +17,7 @@ import { formatCurrency } from '../utils/formatters';
 import ManualValueModal from './ManualValueModal';
 import ClientSelector from './clients/ClientSelector';
 import { useUsageTracking } from '@/hooks/useUsageTracking';
+import UpgradePlanModal from './UpgradePlanModal';
 
 const PricingCalculator = () => {
   const { addJob, workRoutine, refreshJobs } = useApp();
@@ -25,6 +26,7 @@ const PricingCalculator = () => {
   const [showManualValue, setShowManualValue] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
   const [formData, setFormData] = useState({
     description: '',
@@ -226,13 +228,22 @@ const PricingCalculator = () => {
 
       console.log('✅ Job salvo e form resetado com sucesso');
 
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error?.message || '';
+      if (
+        msg.includes('Limite de jobs do plano atingido') ||
+        msg.includes('limit') ||
+        error.status === 403
+      ) {
+        setShowUpgradeModal(true);
+      } else {
+        toast({
+          title: "Erro ao Salvar",
+          description: "Ocorreu um erro ao salvar o job. Tente novamente.",
+          variant: "destructive"
+        });
+      }
       console.error('❌ Erro ao salvar job:', error);
-      toast({
-        title: "Erro ao Salvar",
-        description: "Ocorreu um erro ao salvar o job. Tente novamente.",
-        variant: "destructive"
-      });
     } finally {
       setIsSaving(false);
     }
@@ -480,6 +491,7 @@ const PricingCalculator = () => {
         open={showManualValue} 
         onOpenChange={setShowManualValue}
       />
+      <UpgradePlanModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} type="jobs" />
     </div>
   );
 };
