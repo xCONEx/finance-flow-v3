@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -775,116 +775,133 @@ const EntregaFlowKanban = () => {
       {/* Modal de edição/detalhes do projeto - sempre visível */}
       {showEditModal && selectedProject && (
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Editar Projeto: {selectedProject.title}</DialogTitle>
-              <DialogDescription>
-                Faça as alterações necessárias no projeto.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {/* Primeira linha */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-600 mb-1">Título</label>
-                  <Input value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-600 mb-1">Cliente</label>
-                  <Input value={editFields.client} onChange={(e) => setEditFields({ ...editFields, client: e.target.value })} />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-600 mb-1">Prazo</label>
-                  <Input type="date" value={editFields.dueDate} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value })} />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-600 mb-1">Prioridade</label>
-                  <Select onValueChange={(value) => setEditFields({ ...editFields, priority: sanitizePriority(value) })} value={editFields.priority}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Prioridade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="alta">Alta</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {/* Segunda linha */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-600 mb-1">Status</label>
-                  <Select onValueChange={(value) => setEditFields({ ...editFields, status: value })} value={editFields.status}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="filmado">Filmado</SelectItem>
-                      <SelectItem value="edicao">Em Edição</SelectItem>
-                      <SelectItem value="revisao">Revisão</SelectItem>
-                      <SelectItem value="entregue">Entregue</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-600 mb-1">Responsáveis</label>
-                  <ResponsibleSelector
-                    agencyId={currentAgencyId || ''}
-                    selectedResponsibles={editFields.responsaveis || []}
-                    onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
-                  />
-                </div>
-              </div>
-              {/* Terceira linha: Descrição */}
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Descrição</label>
-                <Textarea value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} />
-              </div>
-              {/* Quarta linha: Links */}
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-600 mb-1">Links (separados por vírgula)</label>
-                <Input
-                  value={Array.isArray(editFields.links) ? editFields.links.join(', ') : ''}
-                  onChange={(e) =>
-                    setEditFields({
-                      ...editFields,
-                      links: e.target.value
-                        ? e.target.value.split(',').map(link => link.trim())
-                        : [],
-                    })
-                  }
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancelar</Button>
-                <Button onClick={() => {
-                  const updatedProject = {
-                    ...selectedProject,
-                    ...editFields,
-                    updatedAt: new Date().toISOString()
-                  };
-                  supabaseKanbanService.saveProject(updatedProject).then(() => {
-                    toast({
-                      title: "Projeto Atualizado",
-                      description: `"${updatedProject.title}" foi atualizado com sucesso`
-                    });
-                    setShowEditModal(false);
-                    loadProjects(); // Atualizar a lista após a edição
-                  }).catch(error => {
-                    console.error('❌ [KANBAN] Erro ao salvar projeto:', error);
-                    toast({
-                      title: "Erro",
-                      description: "Erro ao salvar projeto",
-                      variant: "destructive"
-                    });
-                  });
-                }}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Salvar Alterações
-                </Button>
-              </div>
-            </div>
+          <DialogContent className="p-0 bg-white/90 dark:bg-zinc-900/90 shadow-2xl rounded-xl max-w-2xl">
+            <Card className="bg-transparent border-0 shadow-none">
+              <CardHeader className="pb-2 border-b border-gray-200 dark:border-zinc-700">
+                <CardTitle className="text-2xl font-bold text-gray-900 dark:text-zinc-100 flex items-center gap-2">
+                  Editar Projeto: <span className="truncate">{selectedProject.title}</span>
+                </CardTitle>
+                <CardDescription className="text-gray-500 dark:text-zinc-400">
+                  Faça as alterações necessárias no projeto.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 pb-0 px-6">
+                <form className="space-y-6">
+                  {/* Primeira linha */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Título</label>
+                      <Input value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Cliente</label>
+                      <Input value={editFields.client} onChange={(e) => setEditFields({ ...editFields, client: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Prazo</label>
+                      <Input type="date" value={editFields.dueDate} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Prioridade</label>
+                      <Select onValueChange={(value) => setEditFields({ ...editFields, priority: sanitizePriority(value) })} value={editFields.priority}>
+                        <SelectTrigger className="w-full bg-white dark:bg-zinc-800 dark:text-zinc-100" >
+                          <SelectValue placeholder="Prioridade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="alta">Alta</SelectItem>
+                          <SelectItem value="media">Média</SelectItem>
+                          <SelectItem value="baixa">Baixa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {/* Segunda linha */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200 flex items-center gap-2">Status
+                        {editFields.status && (
+                          <Badge className={
+                            editFields.status === 'filmado' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                            editFields.status === 'edicao' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                            editFields.status === 'revisao' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          }>
+                            {editFields.status.charAt(0).toUpperCase() + editFields.status.slice(1)}
+                          </Badge>
+                        )}
+                      </label>
+                      <Select onValueChange={(value) => setEditFields({ ...editFields, status: value })} value={editFields.status}>
+                        <SelectTrigger className="w-full bg-white dark:bg-zinc-800 dark:text-zinc-100" >
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="filmado">Filmado</SelectItem>
+                          <SelectItem value="edicao">Em Edição</SelectItem>
+                          <SelectItem value="revisao">Revisão</SelectItem>
+                          <SelectItem value="entregue">Entregue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Responsáveis</label>
+                      <ResponsibleSelector
+                        agencyId={currentAgencyId || ''}
+                        selectedResponsibles={editFields.responsaveis || []}
+                        onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
+                      />
+                    </div>
+                  </div>
+                  <hr className="my-2 border-gray-200 dark:border-zinc-700" />
+                  {/* Terceira linha: Descrição */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Descrição</label>
+                    <Textarea value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
+                  </div>
+                  {/* Quarta linha: Links */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Links (separados por vírgula)</label>
+                    <Input
+                      value={Array.isArray(editFields.links) ? editFields.links.join(', ') : ''}
+                      onChange={(e) =>
+                        setEditFields({
+                          ...editFields,
+                          links: e.target.value
+                            ? e.target.value.split(',').map(link => link.trim())
+                            : [],
+                        })
+                      }
+                      className="bg-white dark:bg-zinc-800 dark:text-zinc-100"
+                    />
+                  </div>
+                  <hr className="my-2 border-gray-200 dark:border-zinc-700" />
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" onClick={() => setShowEditModal(false)} className="min-w-[120px]">Cancelar</Button>
+                    <Button onClick={() => {
+                      const updatedProject = {
+                        ...selectedProject,
+                        ...editFields,
+                        updatedAt: new Date().toISOString()
+                      };
+                      supabaseKanbanService.saveProject(updatedProject).then(() => {
+                        toast({
+                          title: "Projeto Atualizado",
+                          description: `"${updatedProject.title}" foi atualizado com sucesso`
+                        });
+                        setShowEditModal(false);
+                        loadProjects(); // Atualizar a lista após a edição
+                      }).catch(error => {
+                        console.error('❌ [KANBAN] Erro ao salvar projeto:', error);
+                        toast({
+                          title: "Erro",
+                          description: "Erro ao salvar projeto",
+                          variant: "destructive"
+                        });
+                      });
+                    }} className="min-w-[160px] font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-white dark:from-blue-700 dark:to-purple-700 dark:text-zinc-100 shadow-md hover:opacity-90"> <Edit className="h-4 w-4 mr-2" />Salvar Alterações</Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
           </DialogContent>
         </Dialog>
       )}
