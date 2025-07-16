@@ -175,7 +175,7 @@ export const useApp = () => {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, user } = useSupabaseAuth();
+  const { isAuthenticated, user, session } = useSupabaseAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -635,24 +635,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
     if (!user) return;
 
-    // Chamar Supabase Function para criar job com validação de limite
+    // Pega o access_token do contexto de autenticação (session)
+    let accessToken = undefined;
+    if (session?.access_token) {
+      accessToken = session.access_token;
+    } else if ((window as any).supabase?.auth?.session()?.access_token) {
+      accessToken = (window as any).supabase.auth.session().access_token;
+    } else if ((window as any).supabase?.auth?.getSession) {
+      // Para supabase-js v2
+      const sess = await (window as any).supabase.auth.getSession();
+      accessToken = sess?.data?.session?.access_token;
+    }
+
+    if (!accessToken) {
+      throw new Error('Token de autenticação não encontrado. Faça login novamente.');
+    }
+
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-job-with-limit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ user_id: user.id, jobData })
     });
 
-    // Verificar se a resposta é JSON antes de fazer parse
+    let result: any = {};
     const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      throw new Error('Resposta inesperada do servidor');
+    if (contentType && contentType.includes('application/json')) {
+      result = await response.json();
     }
 
-    const result = await response.json();
     if (!response.ok) {
+      // Se vier erro de limite, lança a mensagem correta
       throw new Error(result.error || 'Erro ao criar job');
     }
     if (result.job) {
