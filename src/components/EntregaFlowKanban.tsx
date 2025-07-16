@@ -459,36 +459,85 @@ const EntregaFlowKanban = () => {
     return 'media';
   }
 
+  // Função para obter cor do status (igual ao Kanban)
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'filmado':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">Filmado</span>;
+      case 'edicao':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-800">Em Edição</span>;
+      case 'revisao':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Revisão</span>;
+      case 'entregue':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800">Entregue</span>;
+      default:
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800">{status}</span>;
+    }
+  };
+
+  // Função para cor da borda esquerda
+  function getStatusColor(status) {
+    switch (status) {
+      case 'filmado': return '#3B82F6'; // azul
+      case 'edicao': return '#F59E0B'; // laranja
+      case 'revisao': return '#EAB308'; // amarelo
+      case 'entregue': return '#10B981'; // verde
+      default: return '#D1D5DB'; // cinza
+    }
+  }
+
+  // Ordem dos status para a lista
+  const statusOrder = ['filmado', 'edicao', 'revisao', 'entregue'];
+
   // Componente de lista simples para projetos
-  const ProjectList = ({ projects }) => (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Título</th>
-            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Prazo</th>
-            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Criado em</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {projects.map((project) => (
-            <tr key={project.id} className="hover:bg-gray-100 transition">
-              <td className="px-4 py-2 whitespace-nowrap">{project.title}</td>
-              <td className="px-4 py-2 whitespace-nowrap">{project.client}</td>
-              <td className="px-4 py-2 whitespace-nowrap capitalize">{project.status}</td>
-              <td className="px-4 py-2 whitespace-nowrap">{project.dueDate ? new Date(project.dueDate).toLocaleDateString() : '-'}</td>
-              <td className="px-4 py-2 whitespace-nowrap">{project.createdAt ? new Date(project.createdAt).toLocaleDateString() : '-'}</td>
+  const ProjectList = ({ projects }) => {
+    // Ordenar projetos pela ordem dos status
+    const orderedProjects = [...projects].sort((a, b) => {
+      const aIdx = statusOrder.indexOf(a.status);
+      const bIdx = statusOrder.indexOf(b.status);
+      if (aIdx === bIdx) return 0;
+      if (aIdx === -1) return 1;
+      if (bIdx === -1) return -1;
+      return aIdx - bIdx;
+    });
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden shadow-sm bg-white">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Título</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Cliente</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Prazo</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Criado em</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      {projects.length === 0 && (
-        <div className="text-center text-gray-500 py-8">Nenhum projeto encontrado.</div>
-      )}
-    </div>
-  );
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-100">
+            {orderedProjects.map((project, idx) => (
+              <tr
+                key={project.id}
+                className={`transition hover:bg-blue-50 cursor-pointer ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                style={{borderLeft: '4px solid', borderColor: getStatusColor(project.status)}}
+                onClick={() => {
+                  setSelectedProject(project);
+                  setShowEditModal(true);
+                }}
+              >
+                <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{project.title}</td>
+                <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{project.client}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(project.status)}</td>
+                <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{project.dueDate ? new Date(project.dueDate).toLocaleDateString() : '-'}</td>
+                <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{project.createdAt ? new Date(project.createdAt).toLocaleDateString() : '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {projects.length === 0 && (
+          <div className="text-center text-gray-500 py-8">Nenhum projeto encontrado.</div>
+        )}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
