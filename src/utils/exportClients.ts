@@ -2,23 +2,30 @@ import { Client } from '@/types/client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// Campos relevantes e labels amigáveis
+const exportFields = [
+  'name', 'phone', 'email', 'address', 'cnpj', 'description', 'tags'
+];
+const fieldLabels: Record<string, string> = {
+  name: 'Nome',
+  phone: 'Telefone',
+  email: 'Email',
+  address: 'Endereço',
+  cnpj: 'CNPJ',
+  description: 'Descrição',
+  tags: 'Tags',
+};
+
 // Exporta clientes para Excel (.xlsx)
 export async function exportClientsToExcel(clients: Client[]) {
   try {
-    // Importação dinâmica da xlsx
     const XLSX = await import('xlsx');
-    
-    // Extrai todos os campos possíveis do modelo Client
-    const allFields = [
-      'id', 'user_id', 'user_email', 'company_id', 'name', 'phone', 'email', 'address', 'cnpj', 'description', 'created_at', 'updated_at', 'tags'
-    ];
-    // Garante que todos os campos estejam presentes em cada linha
     const data = clients.map(client => {
       const row: Record<string, any> = {};
-      allFields.forEach(field => {
+      exportFields.forEach(field => {
         let value = (client as any)[field];
         if (Array.isArray(value)) value = value.join(', ');
-        row[field] = value ?? '';
+        row[fieldLabels[field] || field] = value ?? '';
       });
       return row;
     });
@@ -32,40 +39,36 @@ export async function exportClientsToExcel(clients: Client[]) {
   }
 }
 
-// Exporta clientes para PDF
+// Exporta clientes para PDF (layout limpo, campos lado a lado)
 export function exportClientsToPDF(clients: Client[]) {
   const doc = new jsPDF();
-  const allFields = [
-    'id', 'user_id', 'user_email', 'company_id', 'name', 'phone', 'email', 'address', 'cnpj', 'description', 'created_at', 'updated_at', 'tags'
-  ];
-  const fieldLabels: Record<string, string> = {
-    id: 'ID',
-    user_id: 'Usuário',
-    user_email: 'Email do Usuário',
-    company_id: 'Empresa',
-    name: 'Nome',
-    phone: 'Telefone',
-    email: 'Email',
-    address: 'Endereço',
-    cnpj: 'CNPJ',
-    description: 'Descrição',
-    created_at: 'Criado em',
-    updated_at: 'Atualizado em',
-    tags: 'Tags',
-  };
-  const tableData = clients.map(client =>
-    allFields.map(field => {
-      let value = (client as any)[field];
-      if (Array.isArray(value)) value = value.join(', ');
-      return value ?? '';
-    })
-  );
-  autoTable(doc, {
-    head: [allFields.map(f => fieldLabels[f] || f)],
-    body: tableData,
-    styles: { fontSize: 8 },
-    headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-    margin: { top: 20 },
+  let y = 20;
+  doc.setFontSize(16);
+  doc.text('Lista de Clientes', 14, y);
+  y += 10;
+  doc.setFontSize(10);
+
+  clients.forEach((client, idx) => {
+    if (idx > 0) {
+      y += 6;
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setDrawColor(200);
+      doc.line(14, y, 196, y); // linha separadora
+      y += 4;
+    }
+    const rows = exportFields.map(field => [fieldLabels[field], Array.isArray((client as any)[field]) ? (client as any)[field].join(', ') : (client as any)[field] ?? '']);
+    autoTable(doc, {
+      startY: y,
+      head: [["Campo", "Valor"]],
+      body: rows,
+      theme: 'plain',
+      styles: { fontSize: 10, cellPadding: 2 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+      columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 140 } },
+      margin: { left: 14, right: 14 },
+      didDrawPage: (data) => { y = data.cursor.y; },
+    });
+    y = (doc as any).lastAutoTable?.finalY || y + 30;
   });
   doc.save(`clientes_${new Date().toISOString().slice(0,10)}.pdf`);
 } 
