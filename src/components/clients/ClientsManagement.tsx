@@ -16,7 +16,19 @@ import { ClientContractsModal } from './ClientContractsModal';
 import { exportClientsToExcel, exportClientsToPDF } from '@/utils/exportClients';
 import * as XLSX from 'xlsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useMediaQuery } from 'react-responsive';
+// Remover: import { useMediaQuery } from 'react-responsive';
+
+// Hook customizado para detectar mobile
+function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState(false);
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+}
 
 const ClientsManagement = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -35,7 +47,7 @@ const ClientsManagement = () => {
   const [importStep, setImportStep] = useState<'preview' | 'conflict' | 'done'>('preview');
   const [conflicts, setConflicts] = useState<any[]>([]);
   const [importAction, setImportAction] = useState<'overwrite' | 'ignore' | null>(null);
-  const isMobile = useMediaQuery({ maxWidth: 640 });
+  const isMobile = useIsMobile();
 
   const loadClients = async () => {
     if (!user) return;
