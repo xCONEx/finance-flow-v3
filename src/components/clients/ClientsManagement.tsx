@@ -16,6 +16,12 @@ import { ClientContractsModal } from './ClientContractsModal';
 import { exportClientsToExcel, exportClientsToPDF } from '@/utils/exportClients';
 import * as XLSX from 'xlsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from '@/components/ui/dropdown-menu';
 // Remover: import { useMediaQuery } from 'react-responsive';
 
 // Hook customizado para detectar mobile
@@ -284,34 +290,37 @@ const ClientsManagement = () => {
                 />
               </div>
               <div className="flex gap-2 mt-2 sm:mt-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await exportClientsToExcel(filteredClients);
-                      toast({
-                        title: "Sucesso",
-                        description: "Clientes exportados para Excel com sucesso!",
-                      });
-                    } catch (error) {
-                      toast({
-                        title: "Erro",
-                        description: "Erro ao exportar para Excel.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                >
-                  Exportar Excel
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => exportClientsToPDF(filteredClients)}
-                >
-                  Exportar PDF
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">Exportar</Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        try {
+                          await exportClientsToExcel(filteredClients);
+                          toast({
+                            title: "Sucesso",
+                            description: "Clientes exportados para Excel com sucesso!",
+                          });
+                        } catch (error) {
+                          toast({
+                            title: "Erro",
+                            description: "Erro ao exportar para Excel.",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => exportClientsToPDF(filteredClients)}
+                    >
+                      PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
                   variant="outline"
                   size="sm"
