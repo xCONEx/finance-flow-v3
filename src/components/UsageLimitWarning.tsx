@@ -10,11 +10,13 @@ import { useNavigate } from 'react-router-dom';
 interface UsageLimitWarningProps {
   type: 'jobs' | 'projects';
   className?: string;
+  onUpgradeClick?: () => void;
 }
 
 export const UsageLimitWarning: React.FC<UsageLimitWarningProps> = ({
   type,
   className = '',
+  onUpgradeClick,
 }) => {
   const { 
     limits, 
@@ -66,7 +68,13 @@ export const UsageLimitWarning: React.FC<UsageLimitWarningProps> = ({
             <Button 
               size="sm"
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90"
-              onClick={() => navigate('/subscription')}
+              onClick={() => {
+                if (typeof onUpgradeClick === 'function') {
+                  onUpgradeClick();
+                } else {
+                  navigate('/subscription');
+                }
+              }}
             >
               <Crown className="h-4 w-4 mr-2" />
               Fazer Upgrade
