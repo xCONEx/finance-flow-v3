@@ -783,7 +783,8 @@ const EntregaFlowKanban = () => {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
+              {/* Primeira linha */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="flex flex-col">
                   <label className="text-xs text-gray-600 mb-1">Título</label>
                   <Input value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} />
@@ -799,7 +800,7 @@ const EntregaFlowKanban = () => {
                 <div className="flex flex-col">
                   <label className="text-xs text-gray-600 mb-1">Prioridade</label>
                   <Select onValueChange={(value) => setEditFields({ ...editFields, priority: sanitizePriority(value) })} value={editFields.priority}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Prioridade" />
                     </SelectTrigger>
                     <SelectContent>
@@ -810,11 +811,12 @@ const EntregaFlowKanban = () => {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
+              {/* Segunda linha */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <label className="text-xs text-gray-600 mb-1">Status</label>
                   <Select onValueChange={(value) => setEditFields({ ...editFields, status: value })} value={editFields.status}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -826,24 +828,6 @@ const EntregaFlowKanban = () => {
                   </Select>
                 </div>
                 <div className="flex flex-col">
-                  <label className="text-xs text-gray-600 mb-1">Descrição</label>
-                  <Input value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-600 mb-1">Links (separados por vírgula)</label>
-                  <Input
-                    value={Array.isArray(editFields.links) ? editFields.links.join(', ') : ''}
-                    onChange={(e) =>
-                      setEditFields({
-                        ...editFields,
-                        links: e.target.value
-                          ? e.target.value.split(',').map(link => link.trim())
-                          : [],
-                      })
-                    }
-                  />
-                </div>
-                <div className="flex flex-col">
                   <label className="text-xs text-gray-600 mb-1">Responsáveis</label>
                   <ResponsibleSelector
                     agencyId={currentAgencyId || ''}
@@ -851,6 +835,26 @@ const EntregaFlowKanban = () => {
                     onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
                   />
                 </div>
+              </div>
+              {/* Terceira linha: Descrição */}
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600 mb-1">Descrição</label>
+                <Textarea value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} />
+              </div>
+              {/* Quarta linha: Links */}
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600 mb-1">Links (separados por vírgula)</label>
+                <Input
+                  value={Array.isArray(editFields.links) ? editFields.links.join(', ') : ''}
+                  onChange={(e) =>
+                    setEditFields({
+                      ...editFields,
+                      links: e.target.value
+                        ? e.target.value.split(',').map(link => link.trim())
+                        : [],
+                    })
+                  }
+                />
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancelar</Button>
