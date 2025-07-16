@@ -12,6 +12,7 @@ import { PercentageInput } from '@/components/ui/percentage-input';
 import { useApp } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
 import { useUsageTracking } from '@/hooks/useUsageTracking';
+import UpgradePlanModal from './UpgradePlanModal';
 
 interface JobEditorProps {
   jobId?: string;
@@ -39,6 +40,7 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
     valueWithDiscount: 0,
     profitMargin: 30
   });
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     if (jobId) {
@@ -98,13 +100,22 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
 
       onSaved?.();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error?.message || '';
+      if (
+        msg.includes('Limite de jobs do plano atingido') ||
+        msg.includes('limit') ||
+        error.status === 403
+      ) {
+        setShowUpgradeModal(true);
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao salvar job.",
+          variant: "destructive"
+        });
+      }
       console.error('Erro ao salvar job:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar job.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -261,6 +272,7 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
           </div>
         </CardContent>
       </Card>
+      <UpgradePlanModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} type="jobs" />
     </div>
   );
 };
