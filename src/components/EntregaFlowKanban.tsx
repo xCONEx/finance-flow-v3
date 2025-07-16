@@ -24,7 +24,11 @@ import {
   Building,
   Bell,
   BellOff,
-  Pencil
+  Pencil,
+  LayoutGrid,
+  List,
+  Filter,
+  Search
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
@@ -32,9 +36,6 @@ import { supabaseKanbanService, KanbanProject } from '../services/supabaseKanban
 import { useKanbanContext } from '../hooks/useKanbanContext';
 import { useAgency } from '../contexts/AgencyContext';
 import ContextSelector from './ContextSelector';
-import ResponsibleSelector from './ResponsibleSelector';
-import ProjectResponsibles from './ProjectResponsibles';
-import KanbanAnalytics from './KanbanAnalytics';
 
 interface Column {
   id: string;
@@ -58,9 +59,7 @@ const EntregaFlowKanban = () => {
     priority: 'media',
     status: 'filmado',
     description: '',
-    links: [],
-    responsaveis: [],
-    notificar_responsaveis: true
+    links: []
   });
   const [newLink, setNewLink] = useState('');
   const { toast } = useToast();
@@ -69,6 +68,12 @@ const EntregaFlowKanban = () => {
   const { currentContext, agencies } = useAgency();
   const [editFields, setEditFields] = useState<Omit<Partial<KanbanProject>, 'priority'> & { priority?: 'alta' | 'media' | 'baixa' }>({});
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Estados para visualização
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<string>('all');
 
   // Verificar se é owner da agência atual
   const isOwner = isAgencyMode && currentAgencyId && 
@@ -162,8 +167,6 @@ const EntregaFlowKanban = () => {
         status: selectedProject.status,
         description: selectedProject.description,
         links: selectedProject.links ? [...selectedProject.links] : [],
-        responsaveis: selectedProject.responsaveis ? [...selectedProject.responsaveis] : [],
-        notificar_responsaveis: selectedProject.notificar_responsaveis ?? true,
       });
       setNewLink('');
     }
@@ -253,14 +256,7 @@ const EntregaFlowKanban = () => {
           });
           await supabaseKanbanService.saveProject(updatedProject);
           
-          // Notificar responsáveis se for projeto de agência
-          if (updatedProject.agency_id && updatedProject.notificar_responsaveis && updatedProject.responsaveis?.length > 0) {
-            try {
-              await supabaseKanbanService.notifyProjectResponsibles(updatedProject.id, 'move');
-            } catch (notificationError) {
-              console.warn('⚠️ [KANBAN] Erro ao notificar responsáveis:', notificationError);
-            }
-          }
+          // Funcionalidade de notificação será implementada futuramente
         } catch (error) {
           console.error('❌ [KANBAN] Erro ao salvar status do projeto:', error);
           toast({
@@ -303,8 +299,6 @@ const EntregaFlowKanban = () => {
         status: newProject.status || 'filmado',
         description: newProject.description || '',
         links: newProject.links || [],
-        responsaveis: newProject.responsaveis || [],
-        notificar_responsaveis: newProject.notificar_responsaveis ?? true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         user_id: currentUserId || '',
@@ -314,7 +308,6 @@ const EntregaFlowKanban = () => {
       console.log('💾 [KANBAN] Criando novo projeto:', {
         title: project.title,
         agencyId: project.agency_id,
-        responsaveis: project.responsaveis?.length || 0,
         isAgencyMode,
         currentAgencyId,
         finalAgencyId,
@@ -333,9 +326,7 @@ const EntregaFlowKanban = () => {
         priority: 'media',
         status: 'filmado',
         description: '',
-        links: [],
-        responsaveis: [],
-        notificar_responsaveis: true
+        links: []
       });
       setShowAddModal(false);
 
@@ -453,6 +444,110 @@ const EntregaFlowKanban = () => {
     return 'media';
   }
 
+  // Função para filtrar projetos
+  const filteredProjects = projects.filter(project => {
+    const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project.client.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || project.status === filterStatus;
+    const matchesPriority = filterPriority === 'all' || project.priority === filterPriority;
+    
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
+  // Componente de visualização em lista
+  const ListView = () => (
+    <div className="space-y-4">
+      <div className="bg-card rounded-lg border">
+        <div className="grid grid-cols-12 gap-4 p-4 border-b font-semibold text-sm text-muted-foreground">
+          <div className="col-span-3">Projeto</div>
+          <div className="col-span-2">Cliente</div>
+          <div className="col-span-2">Status</div>
+          <div className="col-span-2">Prazo</div>
+          <div className="col-span-1">Prioridade</div>
+          <div className="col-span-2">Ações</div>
+        </div>
+        <div className="divide-y">
+          {filteredProjects.map((project) => (
+            <div key={project.id} className="grid grid-cols-12 gap-4 p-4 hover:bg-muted/50 transition-colors">
+              <div className="col-span-3">
+                <h4 className="font-medium line-clamp-1">{project.title}</h4>
+                {project.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{project.description}</p>
+                )}
+                {project.links.length > 0 && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <ExternalLink className="h-3 w-3 text-blue-500" />
+                    <span className="text-xs text-blue-600">{project.links.length} link(s)</span>
+                  </div>
+                )}
+              </div>
+              <div className="col-span-2 flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{project.client}</span>
+              </div>
+              <div className="col-span-2">
+                <Badge 
+                  className={`${
+                    project.status === 'filmado' ? 'bg-blue-100 text-blue-800' :
+                    project.status === 'edicao' ? 'bg-orange-100 text-orange-800' :
+                    project.status === 'revisao' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}
+                >
+                  {project.status === 'filmado' ? 'Filmado' :
+                   project.status === 'edicao' ? 'Em Edição' :
+                   project.status === 'revisao' ? 'Revisão' : 'Entregue'}
+                </Badge>
+              </div>
+              <div className="col-span-2 flex items-center gap-2">
+                {project.dueDate ? (
+                  <>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className={`text-sm ${
+                      isOverdue(project.dueDate) ? 'text-red-600 font-medium' : 'text-muted-foreground'
+                    }`}>
+                      {new Date(project.dueDate).toLocaleDateString('pt-BR')}
+                    </span>
+                    {isOverdue(project.dueDate) && project.status !== 'entregue' && (
+                      <Badge className="bg-red-500 text-white text-xs ml-1">
+                        {getDaysOverdue(project.dueDate)}d atrasado
+                      </Badge>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Sem prazo</span>
+                )}
+              </div>
+              <div className="col-span-1">
+                <Badge className={getPriorityColor(project.priority)}>
+                  {project.priority.charAt(0).toUpperCase() + project.priority.slice(1)}
+                </Badge>
+              </div>
+              <div className="col-span-2 flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedProject(project);
+                    setShowEditModal(true);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {filteredProjects.length === 0 && (
+        <div className="text-center py-12 text-muted-foreground">
+          <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>Nenhum projeto encontrado com os filtros aplicados</p>
+        </div>
+      )}
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="space-y-6 pb-20 md:pb-6">
@@ -493,174 +588,268 @@ const EntregaFlowKanban = () => {
           <p className="text-gray-600">Gerencie seus projetos audiovisuais de forma simples e eficiente</p>
         </div>
 
-        <Button 
-          onClick={() => setShowAddModal(true)}
-          className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Projeto
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button 
+            onClick={() => setShowAddModal(true)}
+            className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Projeto
+          </Button>
+          
+          {/* Toggle de visualização */}
+          <div className="flex rounded-lg border bg-muted p-1">
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              className="h-8"
+            >
+              <LayoutGrid className="h-4 w-4 mr-2" />
+              Kanban
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="h-8"
+            >
+              <List className="h-4 w-4 mr-2" />
+              Lista
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Analytics */}
-      <KanbanAnalytics 
-        projects={projects}
-        isAgencyMode={isAgencyMode}
-        isOwner={isOwner || false}
-      />
+      {/* Analytics Card - Resumo rápido */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-sm text-muted-foreground">Ativos</span>
+            </div>
+            <p className="text-2xl font-bold mt-2">{activeProjects}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-muted-foreground">Concluídos</span>
+            </div>
+            <p className="text-2xl font-bold mt-2">{completedProjects}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-orange-500" />
+              <span className="text-sm text-muted-foreground">Prazos Urgentes</span>
+            </div>
+            <p className="text-2xl font-bold mt-2">{urgentDeadlines}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-500" />
+              <span className="text-sm text-muted-foreground">Atrasados</span>
+            </div>
+            <p className="text-2xl font-bold mt-2">
+              {projects.filter(p => isOverdue(p.dueDate) && p.status !== 'entregue').length}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filtros */}
+      {viewMode === 'list' && (
+        <div className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/50 rounded-lg">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar projetos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Status</SelectItem>
+              <SelectItem value="filmado">Filmado</SelectItem>
+              <SelectItem value="edicao">Em Edição</SelectItem>
+              <SelectItem value="revisao">Revisão</SelectItem>
+              <SelectItem value="entregue">Entregue</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterPriority} onValueChange={setFilterPriority}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue placeholder="Prioridade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="alta">Alta</SelectItem>
+              <SelectItem value="media">Média</SelectItem>
+              <SelectItem value="baixa">Baixa</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Pipeline Section */}
       <div>
-        <h3 className="text-xl font-semibold mb-2">Pipeline de Projetos</h3>
-        <p className="text-gray-600 mb-4">Arraste e solte os cards para atualizar o status dos projetos</p>
+        <h3 className="text-xl font-semibold mb-2">
+          {viewMode === 'kanban' ? 'Pipeline de Projetos' : 'Lista de Projetos'}
+        </h3>
+        <p className="text-gray-600 mb-4">
+          {viewMode === 'kanban' 
+            ? 'Arraste e solte os cards para atualizar o status dos projetos'
+            : 'Visualize e gerencie todos os projetos em formato de lista'
+          }
+        </p>
 
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid lg:grid-cols-4 gap-6 overflow-x-hidden md:overflow-x-visible px-2 sm:px-0">
-            {columns.map((column) => {
-              const columnProjects = projects.filter(p => p.status === column.id);
-              const IconComponent = column.icon;
-              
-              return (
-                <div key={column.id}>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className={`w-3 h-3 rounded-full ${column.id === 'filmado' ? 'bg-blue-500' : column.id === 'edicao' ? 'bg-orange-500' : column.id === 'revisao' ? 'bg-yellow-500' : 'bg-green-500'}`} />
-                    <h4 className="font-semibold">{column.title}</h4>
-                    <Badge className="bg-gray-100 text-gray-800">{column.count}</Badge>
-                  </div>
+        {viewMode === 'kanban' ? (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="grid lg:grid-cols-4 gap-6 overflow-x-hidden md:overflow-x-visible px-2 sm:px-0">
+              {columns.map((column) => {
+                const columnProjects = projects.filter(p => p.status === column.id);
+                const IconComponent = column.icon;
+                
+                return (
+                  <div key={column.id}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className={`w-3 h-3 rounded-full ${column.id === 'filmado' ? 'bg-blue-500' : column.id === 'edicao' ? 'bg-orange-500' : column.id === 'revisao' ? 'bg-yellow-500' : 'bg-green-500'}`} />
+                      <h4 className="font-semibold">{column.title}</h4>
+                      <Badge className="bg-gray-100 text-gray-800">{column.count}</Badge>
+                    </div>
 
-                  <Droppable droppableId={column.id}>
-                    {(provided, snapshot) => (
-                      <div
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        className={`space-y-4 min-h-[400px] ${
-                          snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg p-2' : ''
-                        }`}
-                      >
-                        {columnProjects.map((project, index) => (
-                          <Draggable key={project.id} draggableId={project.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                              >
-                                <Card 
-                                  className={`cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 rounded-lg md:rounded-lg p-2 sm:p-4 bg-white shadow-sm ${
-                                    column.id === 'filmado' ? 'border-l-blue-500' : 
-                                    column.id === 'edicao' ? 'border-l-orange-500' : 
-                                    column.id === 'revisao' ? 'border-l-yellow-500' : 'border-l-green-500'
-                                  } ${snapshot.isDragging ? 'rotate-2 shadow-xl' : ''}`}
-                                  style={{
-                                    margin: '0.5rem 0',
-                                    boxSizing: 'border-box',
-                                    maxWidth: '100%',
-                                    minWidth: 0
-                                  }}
+                    <Droppable droppableId={column.id}>
+                      {(provided, snapshot) => (
+                        <div
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                          className={`space-y-4 min-h-[400px] ${
+                            snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg p-2' : ''
+                          }`}
+                        >
+                          {columnProjects.map((project, index) => (
+                            <Draggable key={project.id} draggableId={project.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                >
+                                  <Card 
+                                    className={`cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 rounded-lg md:rounded-lg p-2 sm:p-4 bg-white shadow-sm ${
+                                      column.id === 'filmado' ? 'border-l-blue-500' : 
+                                      column.id === 'edicao' ? 'border-l-orange-500' : 
+                                      column.id === 'revisao' ? 'border-l-yellow-500' : 'border-l-green-500'
+                                    } ${snapshot.isDragging ? 'rotate-2 shadow-xl' : ''}`}
+                                    style={{
+                                      margin: '0.5rem 0',
+                                      boxSizing: 'border-box',
+                                      maxWidth: '100%',
+                                      minWidth: 0
+                                    }}
+                                    onClick={() => {
+                                      setSelectedProject(project);
+                                      setShowEditModal(true);
+                                    }}
+                                  >
+                                    <CardContent className="p-3 sm:p-4">
+                                      <div className="space-y-3">
+                                        {project.priority === 'alta' && (
+                                          <Badge className="bg-red-500 text-white text-xs">
+                                            {project.priority.charAt(0).toUpperCase() + project.priority.slice(1)}
+                                          </Badge>
+                                        )}
+
+                                        <h4 className="font-semibold text-sm line-clamp-2">
+                                          {project.title}
+                                        </h4>
+
+                                        <div className="flex items-center gap-2">
+                                          <User className="h-3 w-3 text-gray-500" />
+                                          <span className="text-xs text-gray-600">{project.client}</span>
+                                        </div>
+
+                                        {project.dueDate && (
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="h-3 w-3 text-gray-500" />
+                                            <span className={`text-xs ${
+                                              isOverdue(project.dueDate) ? 'text-red-600 font-medium' : 'text-gray-600'
+                                            }`}>
+                                              {new Date(project.dueDate).toLocaleDateString('pt-BR')}
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {isOverdue(project.dueDate) && project.status !== 'entregue' && (
+                                          <Badge className="bg-red-500 text-white text-xs">
+                                            {getDaysOverdue(project.dueDate)} dias atrasado
+                                          </Badge>
+                                        )}
+
+                                        {project.links.length > 0 && (
+                                          <div className="flex items-center gap-2">
+                                            <ExternalLink className="h-3 w-3 text-blue-500" />
+                                            <span className="text-xs text-blue-600">
+                                              Link {project.links.length > 1 ? `${project.links.length}` : '1'}
+                                            </span>
+                                          </div>
+                                        )}
+
+                                      {/* Indicador de empresa */}
+                                      {isAgencyMode && project.agency_id && (
+                                        <div className="flex items-center gap-1">
+                                          <Building className="h-3 w-3 text-purple-500" />
+                                          <span className="text-xs text-purple-600">Projeto da Empresa</span>
+                                        </div>
+                                      )}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+
+                          {columnProjects.length === 0 && (
+                            <Card className="border-dashed border-2 border-gray-300">
+                              <CardContent className="p-6 text-center">
+                                <Button
+                                  className="text-gray-500 bg-transparent hover:bg-gray-50"
                                   onClick={() => {
-                                    setSelectedProject(project);
-                                    setShowEditModal(true);
+                                    setNewProject({ ...newProject, status: column.id as KanbanProject['status'] });
+                                    setShowAddModal(true);
                                   }}
                                 >
-                                  <CardContent className="p-3 sm:p-4">
-                                    <div className="space-y-3">
-                                      {project.priority === 'alta' && (
-                                        <Badge className="bg-red-500 text-white text-xs">
-                                          {project.priority.charAt(0).toUpperCase() + project.priority.slice(1)}
-                                        </Badge>
-                                      )}
-
-                                      <h4 className="font-semibold text-sm line-clamp-2">
-                                        {project.title}
-                                      </h4>
-
-                                      <div className="flex items-center gap-2">
-                                        <User className="h-3 w-3 text-gray-500" />
-                                        <span className="text-xs text-gray-600">{project.client}</span>
-                                      </div>
-
-                                      {project.dueDate && (
-                                        <div className="flex items-center gap-2">
-                                          <Calendar className="h-3 w-3 text-gray-500" />
-                                          <span className={`text-xs ${
-                                            isOverdue(project.dueDate) ? 'text-red-600 font-medium' : 'text-gray-600'
-                                          }`}>
-                                            {new Date(project.dueDate).toLocaleDateString('pt-BR')}
-                                          </span>
-                                        </div>
-                                      )}
-
-                                      {isOverdue(project.dueDate) && project.status !== 'entregue' && (
-                                        <Badge className="bg-red-500 text-white text-xs">
-                                          {getDaysOverdue(project.dueDate)} dias atrasado
-                                        </Badge>
-                                      )}
-
-                                      {project.links.length > 0 && (
-                                        <div className="flex items-center gap-2">
-                                          <ExternalLink className="h-3 w-3 text-blue-500" />
-                                          <span className="text-xs text-blue-600">
-                                            Link {project.links.length > 1 ? `${project.links.length}` : '1'}
-                                          </span>
-                                        </div>
-                                      )}
-
-                                      {/* Responsáveis do projeto */}
-                                      {isAgencyMode && project.responsaveis && project.responsaveis.length > 0 && (
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-1">
-                                            <Building className="h-3 w-3 text-purple-500" />
-                                            <span className="text-xs text-purple-600">Empresa</span>
-                                          </div>
-                                          <ProjectResponsibles 
-                                            projectId={project.id}
-                                            responsaveis={project.responsaveis}
-                                            maxVisible={2}
-                                            size="sm"
-                                          />
-                                        </div>
-                                      )}
-
-                                      {/* Indicador de notificação */}
-                                      {isAgencyMode && project.notificar_responsaveis && project.responsaveis && project.responsaveis.length > 0 && (
-                                        <div className="flex items-center gap-1">
-                                          <Bell className="h-3 w-3 text-green-500" />
-                                          <span className="text-xs text-green-600">Notificações ativas</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-
-                        {columnProjects.length === 0 && (
-                          <Card className="border-dashed border-2 border-gray-300">
-                            <CardContent className="p-6 text-center">
-                              <Button
-                                className="text-gray-500 bg-transparent hover:bg-gray-50"
-                                onClick={() => {
-                                  setNewProject({ ...newProject, status: column.id as KanbanProject['status'] });
-                                  setShowAddModal(true);
-                                }}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Adicionar Projeto
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </div>
-                    )}
-                  </Droppable>
-                </div>
-              );
-            })}
-          </div>
-        </DragDropContext>
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Adicionar Projeto
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
+                      )}
+                    </Droppable>
+                  </div>
+                );
+              })}
+            </div>
+          </DragDropContext>
+        ) : (
+          <ListView />
+        )}
       </div>
 
       {/* Modal de Novo Projeto */}
@@ -733,34 +922,7 @@ const EntregaFlowKanban = () => {
               />
             </div>
 
-            {/* Seleção de Responsáveis (apenas para agências) */}
-            {isAgencyMode && currentAgencyId && (
-              <div>
-                <label className="text-sm font-medium mb-2 block">Responsáveis</label>
-                <ResponsibleSelector
-                  agencyId={currentAgencyId}
-                  selectedResponsibles={newProject.responsaveis || []}
-                  onResponsiblesChange={(responsaveis) => setNewProject({...newProject, responsaveis})}
-                  placeholder="Selecionar responsáveis..."
-                />
-              </div>
-            )}
-
-            {/* Opção de Notificação (apenas para agências) */}
-            {isAgencyMode && currentAgencyId && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="notificar_responsaveis"
-                  checked={newProject.notificar_responsaveis}
-                  onChange={(e) => setNewProject({...newProject, notificar_responsaveis: e.target.checked})}
-                  className="rounded border-gray-300"
-                />
-                <label htmlFor="notificar_responsaveis" className="text-sm text-gray-700">
-                  Notificar responsáveis sobre mudanças
-                </label>
-              </div>
-            )}
+            {/* Funcionalidades avançadas para agências serão implementadas futuramente */}
 
             <div>
               <label className="text-sm font-medium mb-2 block">Links de Entrega</label>
@@ -831,239 +993,311 @@ const EntregaFlowKanban = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Edição */}
+      {/* Modal de Edição Melhorado */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl px-2 sm:px-8">
-          <DialogHeader>
-            <div className="flex items-center justify-between gap-2">
-              <DialogTitle className="flex items-center gap-2">
-                Editar Projeto
-                {selectedProject?.priority === 'alta' && (
-                  <Badge className="bg-red-500 text-white">Alta</Badge>
-                )}
-                <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{selectedProject?.status}</Badge>
-                {selectedProject?.agency_id && (
-                  <Badge className="bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700">
-                    <Building className="h-3 w-3" />
-                    Empresa
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
+          <DialogHeader className="pb-4 border-b">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    selectedProject?.status === 'filmado' ? 'bg-blue-500' :
+                    selectedProject?.status === 'edicao' ? 'bg-orange-500' :
+                    selectedProject?.status === 'revisao' ? 'bg-yellow-500' : 'bg-green-500'
+                  }`} />
+                  {isEditing ? 'Editando Projeto' : 'Detalhes do Projeto'}
+                </DialogTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedProject?.priority === 'alta' && (
+                    <Badge variant="destructive">Prioridade Alta</Badge>
+                  )}
+                  <Badge variant="outline" className="capitalize">
+                    {selectedProject?.status === 'filmado' ? 'Filmado' :
+                     selectedProject?.status === 'edicao' ? 'Em Edição' :
+                     selectedProject?.status === 'revisao' ? 'Revisão' : 'Entregue'}
                   </Badge>
-                )}
-              </DialogTitle>
+                  {selectedProject?.agency_id && (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <Building className="h-3 w-3" />
+                      Projeto da Empresa
+                    </Badge>
+                  )}
+                  {isOverdue(selectedProject?.dueDate || '') && selectedProject?.status !== 'entregue' && (
+                    <Badge variant="destructive">
+                      {getDaysOverdue(selectedProject?.dueDate || '')} dias atrasado
+                    </Badge>
+                  )}
+                </div>
+              </div>
               {!isEditing && (
                 <Button
-                  type="button"
-                  variant="ghost"
-                  className="p-2 ml-2 sm:ml-2 ml-8 text-gray-500 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setIsEditing(true)}
-                  aria-label="Editar"
+                  className="shrink-0"
                 >
-                  <Pencil className="h-5 w-5" />
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Editar
                 </Button>
               )}
             </div>
           </DialogHeader>
           {selectedProject && (
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                // Salvar alterações
-                const updatedProject = {
-                  ...selectedProject,
-                  ...editFields,
-                  updatedAt: new Date().toISOString(),
-                };
-                await supabaseKanbanService.saveProject(updatedProject);
-                setSelectedProject(updatedProject);
-                setProjects(projects.map(p => p.id === updatedProject.id ? updatedProject : p));
-                setShowEditModal(false);
-                toast({
-                  title: "Projeto Atualizado",
-                  description: `Projeto atualizado com sucesso!`,
-                });
-              }}
-            >
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Título do Projeto</label>
-                    <Input
-                      value={editFields.title || ''}
-                      onChange={e => setEditFields(f => ({ ...f, title: e.target.value }))}
-                      required
-                      readOnly={!isEditing}
-                      disabled={!isEditing}
-                      className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                    />
+            <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    setIsEditing(false);
+                    const updatedProject = {
+                      ...selectedProject,
+                      ...editFields,
+                      updatedAt: new Date().toISOString(),
+                    };
+                    await supabaseKanbanService.saveProject(updatedProject);
+                    setSelectedProject(updatedProject);
+                    setProjects(projects.map(p => p.id === updatedProject.id ? updatedProject : p));
+                    toast({
+                      title: "Projeto Atualizado",
+                      description: `"${updatedProject.title}" foi atualizado com sucesso!`,
+                    });
+                  } catch (error) {
+                    console.error('Erro ao salvar projeto:', error);
+                    toast({
+                      title: "Erro",
+                      description: "Erro ao salvar as alterações",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+                className="space-y-6 p-6"
+              >
+                {/* Informações principais em grid responsivo */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-muted-foreground">Título do Projeto</label>
+                      {isEditing ? (
+                        <Input
+                          value={editFields.title || ''}
+                          onChange={e => setEditFields(f => ({ ...f, title: e.target.value }))}
+                          required
+                          className="text-lg font-semibold"
+                          placeholder="Nome do projeto"
+                        />
+                      ) : (
+                        <h3 className="text-lg font-semibold p-3 bg-muted rounded-md">{selectedProject.title}</h3>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-muted-foreground">Cliente</label>
+                      {isEditing ? (
+                        <Input
+                          value={editFields.client || ''}
+                          onChange={e => setEditFields(f => ({ ...f, client: e.target.value }))}
+                          required
+                          placeholder="Nome do cliente"
+                        />
+                      ) : (
+                        <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span>{selectedProject.client}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block text-muted-foreground">Data de Entrega</label>
+                        {isEditing ? (
+                          <Input
+                            type="date"
+                            value={editFields.dueDate || ''}
+                            onChange={e => setEditFields(f => ({ ...f, dueDate: e.target.value }))}
+                          />
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className={isOverdue(selectedProject.dueDate) && selectedProject.status !== 'entregue' ? 'text-red-600 font-medium' : ''}>
+                              {selectedProject.dueDate ? new Date(selectedProject.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo definido'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium mb-2 block text-muted-foreground">Prioridade</label>
+                        {isEditing ? (
+                          <Select
+                            value={editFields.priority || 'media'}
+                            onValueChange={value => setEditFields(f => ({ ...f, priority: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="alta">Alta</SelectItem>
+                              <SelectItem value="media">Média</SelectItem>
+                              <SelectItem value="baixa">Baixa</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="p-3 bg-muted rounded-md">
+                            <Badge className={getPriorityColor(selectedProject.priority)}>
+                              {selectedProject.priority.charAt(0).toUpperCase() + selectedProject.priority.slice(1)}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Cliente</label>
-                    <Input
-                      value={editFields.client || ''}
-                      onChange={e => setEditFields(f => ({ ...f, client: e.target.value }))}
-                      required
-                      readOnly={!isEditing}
-                      disabled={!isEditing}
-                      className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                    />
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-muted-foreground">Descrição</label>
+                      {isEditing ? (
+                        <Textarea
+                          value={editFields.description || ''}
+                          onChange={e => setEditFields(f => ({ ...f, description: e.target.value }))}
+                          rows={4}
+                          placeholder="Detalhes sobre o projeto..."
+                        />
+                      ) : (
+                        <div className="p-3 bg-muted rounded-md min-h-[100px]">
+                          <p className="text-sm leading-relaxed">
+                            {selectedProject.description || 'Sem descrição'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Status atual do projeto */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-muted-foreground">Status Atual</label>
+                      <div className="p-3 bg-muted rounded-md">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full ${
+                            selectedProject.status === 'filmado' ? 'bg-blue-500' :
+                            selectedProject.status === 'edicao' ? 'bg-orange-500' :
+                            selectedProject.status === 'revisao' ? 'bg-yellow-500' : 'bg-green-500'
+                          }`} />
+                          <span className="font-medium capitalize">
+                            {selectedProject.status === 'filmado' ? 'Filmado' :
+                             selectedProject.status === 'edicao' ? 'Em Edição' :
+                             selectedProject.status === 'revisao' ? 'Revisão' : 'Entregue'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+
+                {/* Informações da empresa (se aplicável) */}
+                {isAgencyMode && selectedProject.agency_id && (
                   <div>
-                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Data de Entrega</label>
-                    <Input
-                      type="date"
-                      value={editFields.dueDate || ''}
-                      onChange={e => setEditFields(f => ({ ...f, dueDate: e.target.value }))}
-                      readOnly={!isEditing}
-                      disabled={!isEditing}
-                      className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Prioridade</label>
-                    <Select
-                      value={editFields.priority || 'media'}
-                      onValueChange={value => setEditFields(f => ({ ...f, priority: value }))}
-                      disabled={!isEditing}
-                    >
-                      <SelectTrigger className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="alta">Alta</SelectItem>
-                        <SelectItem value="media">Média</SelectItem>
-                        <SelectItem value="baixa">Baixa</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Descrição</label>
-                  <Textarea
-                    value={editFields.description || ''}
-                    onChange={e => setEditFields(f => ({ ...f, description: e.target.value }))}
-                    rows={3}
-                    readOnly={!isEditing}
-                    disabled={!isEditing}
-                    className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                  />
-                </div>
-                {/* Responsáveis (apenas para agências) */}
-                {isAgencyMode && currentAgencyId && selectedProject.agency_id && (
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Responsáveis</label>
-                    <ResponsibleSelector
-                      agencyId={currentAgencyId}
-                      selectedResponsibles={editFields.responsaveis || []}
-                      onResponsiblesChange={responsaveis => setEditFields(f => ({ ...f, responsaveis }))}
-                      placeholder="Selecionar responsáveis..."
-                      disabled={!isEditing}
-                    />
+                    <label className="text-sm font-medium mb-2 block text-muted-foreground">Tipo de Projeto</label>
+                    <div className="p-3 bg-muted rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4 text-purple-500" />
+                        <span className="text-sm">Projeto da Empresa</span>
+                      </div>
+                    </div>
                   </div>
                 )}
-                {/* Notificação de responsáveis (apenas para agências) */}
-                {isAgencyMode && currentAgencyId && selectedProject.agency_id && (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="notificar_responsaveis_edit"
-                      checked={editFields.notificar_responsaveis}
-                      onChange={e => setEditFields(f => ({ ...f, notificar_responsaveis: e.target.checked }))}
-                      className="rounded border-gray-300"
-                      disabled={!isEditing}
-                    />
-                    <label htmlFor="notificar_responsaveis_edit" className="text-sm text-gray-700">
-                      Notificar responsáveis sobre mudanças
-                    </label>
-                  </div>
-                )}
+
                 {/* Links de Entrega */}
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Links de Entrega</label>
-                  <div className="flex gap-2 mb-2">
-                    <Input
-                      placeholder="Cole o link aqui"
-                      value={newLink}
-                      onChange={e => setNewLink(e.target.value)}
-                      className="w-64 border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                      readOnly={!isEditing}
-                      disabled={!isEditing}
-                    />
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        if (newLink) {
-                          setEditFields(f => ({
-                            ...f,
-                            links: [...(f.links || []), newLink],
-                            priority: sanitizePriority(f.priority) as 'alta' | 'media' | 'baixa',
-                          }));
-                          setNewLink('');
-                        }
-                      }}
-                      className="bg-black text-white"
-                      disabled={!isEditing}
-                    >
-                      Adicionar
-                    </Button>
-                  </div>
+                  <label className="text-sm font-medium mb-2 block text-muted-foreground">Links de Entrega</label>
+                  {isEditing && (
+                    <div className="flex gap-2 mb-4">
+                      <Input
+                        placeholder="Cole o link aqui"
+                        value={newLink}
+                        onChange={e => setNewLink(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          if (newLink.trim()) {
+                            setEditFields(f => ({
+                              ...f,
+                              links: [...(f.links || []), newLink.trim()],
+                            }));
+                            setNewLink('');
+                          }
+                        }}
+                        disabled={!newLink.trim()}
+                      >
+                        Adicionar
+                      </Button>
+                    </div>
+                  )}
+                  
                   <div className="space-y-2">
-                    {(!editFields.links || editFields.links.length === 0) ? (
-                      <p className="text-sm text-gray-500 italic">Nenhum link adicionado</p>
+                    {(!editFields.links || editFields.links.length === 0) && (!selectedProject.links || selectedProject.links.length === 0) ? (
+                      <div className="p-4 bg-muted rounded-md text-center text-muted-foreground">
+                        <ExternalLink className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>Nenhum link de entrega adicionado</p>
+                      </div>
                     ) : (
-                      editFields.links.map((link, index) => (
-                        <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                          <ExternalLink className="h-4 w-4 text-blue-500" />
-                          <span className="text-sm text-gray-700 flex-1">{link}</span>
-                          <Button
-                            type="button"
-                            className="bg-gray-100 text-gray-800 hover:bg-gray-200"
-                            onClick={() => setEditFields(f => {
-                              return {
-                                id: f.id,
-                                title: f.title,
-                                client: f.client,
-                                dueDate: f.dueDate,
-                                status: f.status,
-                                description: f.description,
-                                links: f.links ? f.links.filter((_, i) => i !== index) : [],
-                                createdAt: f.createdAt,
-                                updatedAt: f.updatedAt,
-                                user_id: f.user_id,
-                                agency_id: f.agency_id,
-                                responsaveis: f.responsaveis,
-                                notificar_responsaveis: f.notificar_responsaveis,
-                                priority: sanitizePriority(f.priority),
-                              };
-                            })}
-                            disabled={!isEditing}
+                      (isEditing ? editFields.links : selectedProject.links)?.map((link, index) => (
+                        <div key={index} className="flex items-center gap-3 p-3 bg-card border rounded-md">
+                          <ExternalLink className="h-4 w-4 text-blue-500 shrink-0" />
+                          <a 
+                            href={link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 flex-1 truncate underline"
                           >
-                            Remover
-                          </Button>
+                            {link}
+                          </a>
+                          {isEditing && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditFields(f => ({
+                                ...f,
+                                links: f.links ? f.links.filter((_, i) => i !== index) : [],
+                              }))}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       ))
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2 pt-4">
+
+                {/* Botões de ação */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
                   <Button
                     type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="flex-1 bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                    variant="outline"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setIsEditing(false);
+                    }}
+                    className="flex-1"
                   >
-                    Fechar
+                    {isEditing ? 'Cancelar' : 'Fechar'}
                   </Button>
+                  
                   {isEditing ? (
                     <Button
                       type="submit"
-                      className="flex-1 bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                      className="flex-1"
                     >
+                      <CheckCircle className="h-4 w-4 mr-2" />
                       Salvar Alterações
                     </Button>
                   ) : (
                     <Button
                       type="button"
-                      className="flex-1 bg-red-500 text-white hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800"
+                      variant="destructive"
                       onClick={async () => {
                         if (selectedProject) {
                           if (window.confirm('Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.')) {
@@ -1071,13 +1305,15 @@ const EntregaFlowKanban = () => {
                           }
                         }
                       }}
+                      className="flex-1"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" /> Deletar
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Projeto
                     </Button>
                   )}
                 </div>
-              </div>
-            </form>
+              </form>
+            </div>
           )}
         </DialogContent>
       </Dialog>
