@@ -775,34 +775,36 @@ const EntregaFlowKanban = () => {
       {/* Modal de edição/detalhes do projeto - sempre visível */}
       {showEditModal && selectedProject && (
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-          <DialogContent className="p-0 bg-white/90 dark:bg-zinc-900/90 shadow-2xl rounded-xl max-w-2xl">
+          <DialogContent className="p-0 bg-white dark:bg-zinc-900 shadow-2xl rounded-xl max-w-2xl">
             <Card className="bg-transparent border-0 shadow-none">
-              <CardHeader className="pb-2 border-b border-gray-200 dark:border-zinc-700">
-                <CardTitle className="text-2xl font-bold text-gray-900 dark:text-zinc-100 flex items-center gap-2">
-                  Editar Projeto: <span className="truncate">{selectedProject.title}</span>
+              <CardHeader className="flex flex-row items-center justify-between pb-0">
+                <CardTitle className="text-2xl font-bold text-gray-900 dark:text-zinc-100">
+                  Editar Projeto
                 </CardTitle>
-                <CardDescription className="text-gray-500 dark:text-zinc-400">
-                  Faça as alterações necessárias no projeto.
-                </CardDescription>
+                <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}>
+                  <span className="sr-only">Fechar</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </Button>
               </CardHeader>
               <CardContent className="pt-4 pb-0 px-6">
                 <form className="space-y-6">
-                  {/* Primeira linha */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Título</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Título</label>
                       <Input value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Cliente</label>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Cliente</label>
                       <Input value={editFields.client} onChange={(e) => setEditFields({ ...editFields, client: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Prazo</label>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Prazo</label>
                       <Input type="date" value={editFields.dueDate} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Prioridade</label>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Prioridade</label>
                       <Select onValueChange={(value) => setEditFields({ ...editFields, priority: sanitizePriority(value) })} value={editFields.priority}>
                         <SelectTrigger className="w-full bg-white dark:bg-zinc-800 dark:text-zinc-100" >
                           <SelectValue placeholder="Prioridade" />
@@ -814,22 +816,8 @@ const EntregaFlowKanban = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  {/* Segunda linha */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200 flex items-center gap-2">Status
-                        {editFields.status && (
-                          <Badge className={
-                            editFields.status === 'filmado' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                            editFields.status === 'edicao' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                            editFields.status === 'revisao' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          }>
-                            {editFields.status.charAt(0).toUpperCase() + editFields.status.slice(1)}
-                          </Badge>
-                        )}
-                      </label>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Status</label>
                       <Select onValueChange={(value) => setEditFields({ ...editFields, status: value })} value={editFields.status}>
                         <SelectTrigger className="w-full bg-white dark:bg-zinc-800 dark:text-zinc-100" >
                           <SelectValue placeholder="Status" />
@@ -842,8 +830,8 @@ const EntregaFlowKanban = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Responsáveis</label>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Responsáveis</label>
                       <ResponsibleSelector
                         agencyId={currentAgencyId || ''}
                         selectedResponsibles={editFields.responsaveis || []}
@@ -851,15 +839,12 @@ const EntregaFlowKanban = () => {
                       />
                     </div>
                   </div>
-                  <hr className="my-2 border-gray-200 dark:border-zinc-700" />
-                  {/* Terceira linha: Descrição */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Descrição</label>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Descrição</label>
                     <Textarea value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
                   </div>
-                  {/* Quarta linha: Links */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold text-gray-700 dark:text-zinc-200">Links (separados por vírgula)</label>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Links (separados por vírgula)</label>
                     <Input
                       value={Array.isArray(editFields.links) ? editFields.links.join(', ') : ''}
                       onChange={(e) =>
@@ -873,7 +858,6 @@ const EntregaFlowKanban = () => {
                       className="bg-white dark:bg-zinc-800 dark:text-zinc-100"
                     />
                   </div>
-                  <hr className="my-2 border-gray-200 dark:border-zinc-700" />
                   <div className="flex justify-end gap-2 pt-2">
                     <Button variant="outline" onClick={() => setShowEditModal(false)} className="min-w-[120px]">Cancelar</Button>
                     <Button onClick={() => {
