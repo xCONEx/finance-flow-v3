@@ -146,20 +146,33 @@ const ClientsManagement = () => {
     setShowContractsModal(true);
   };
 
-  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-      setImportedClients(json as any[]);
-      setShowImportModal(true);
-    };
-    reader.readAsArrayBuffer(file);
+    
+    try {
+      // Importação dinâmica da xlsx
+      const XLSX = await import('xlsx');
+      
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        setImportedClients(json as any[]);
+        setShowImportModal(true);
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error('Erro ao importar arquivo Excel:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao processar arquivo Excel.",
+        variant: "destructive",
+      });
+    }
   };
 
   const requiredFields = ['name', 'email'];
@@ -262,7 +275,21 @@ const ClientsManagement = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => exportClientsToExcel(filteredClients)}
+                  onClick={async () => {
+                    try {
+                      await exportClientsToExcel(filteredClients);
+                      toast({
+                        title: "Sucesso",
+                        description: "Clientes exportados para Excel com sucesso!",
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "Erro",
+                        description: "Erro ao exportar para Excel.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
                 >
                   Exportar Excel
                 </Button>
