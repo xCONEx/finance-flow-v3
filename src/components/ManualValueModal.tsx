@@ -16,6 +16,7 @@ import { toast } from '@/hooks/use-toast';
 import { useApp } from '../contexts/AppContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { useUsageTracking } from '@/hooks/useUsageTracking';
+import UpgradePlanModal from './UpgradePlanModal';
 
 interface ManualValueModalProps {
   open: boolean;
@@ -34,6 +35,8 @@ const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
     category: '',
     totalValue: 0
   });
+
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const jobCategories = [
     "Filmagem de Casamento",
@@ -110,13 +113,22 @@ const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
       });
       onOpenChange(false);
 
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error?.message || '';
+      if (
+        msg.includes('Limite de jobs do plano atingido') ||
+        msg.includes('limit') ||
+        error.status === 403
+      ) {
+        setShowUpgradeModal(true);
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao salvar job manual.",
+          variant: "destructive"
+        });
+      }
       console.error('❌ Erro ao salvar job manual:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar job manual.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -197,6 +209,7 @@ const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
           </div>
         </div>
       </DialogContent>
+      <UpgradePlanModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} type="jobs" />
     </Dialog>
   );
 };
