@@ -1,28 +1,35 @@
 import { Client } from '@/types/client';
-import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 // Exporta clientes para Excel (.xlsx)
-export function exportClientsToExcel(clients: Client[]) {
-  // Extrai todos os campos possíveis do modelo Client
-  const allFields = [
-    'id', 'user_id', 'user_email', 'company_id', 'name', 'phone', 'email', 'address', 'cnpj', 'description', 'created_at', 'updated_at', 'tags'
-  ];
-  // Garante que todos os campos estejam presentes em cada linha
-  const data = clients.map(client => {
-    const row: Record<string, any> = {};
-    allFields.forEach(field => {
-      let value = (client as any)[field];
-      if (Array.isArray(value)) value = value.join(', ');
-      row[field] = value ?? '';
+export async function exportClientsToExcel(clients: Client[]) {
+  try {
+    // Importação dinâmica da xlsx
+    const XLSX = await import('xlsx');
+    
+    // Extrai todos os campos possíveis do modelo Client
+    const allFields = [
+      'id', 'user_id', 'user_email', 'company_id', 'name', 'phone', 'email', 'address', 'cnpj', 'description', 'created_at', 'updated_at', 'tags'
+    ];
+    // Garante que todos os campos estejam presentes em cada linha
+    const data = clients.map(client => {
+      const row: Record<string, any> = {};
+      allFields.forEach(field => {
+        let value = (client as any)[field];
+        if (Array.isArray(value)) value = value.join(', ');
+        row[field] = value ?? '';
+      });
+      return row;
     });
-    return row;
-  });
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
-  XLSX.writeFile(workbook, `clientes_${new Date().toISOString().slice(0,10)}.xlsx`);
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
+    XLSX.writeFile(workbook, `clientes_${new Date().toISOString().slice(0,10)}.xlsx`);
+  } catch (error) {
+    console.error('Erro ao exportar para Excel:', error);
+    throw new Error('Erro ao exportar para Excel');
+  }
 }
 
 // Exporta clientes para PDF
