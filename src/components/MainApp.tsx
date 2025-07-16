@@ -35,7 +35,7 @@ const MainApp = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onUpgradeClick={() => setActiveTab('subscription')} />;
       case 'calculator':
         return <PricingCalculator />;
       case 'kanban':
