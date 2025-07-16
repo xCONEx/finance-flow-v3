@@ -132,7 +132,10 @@ const ResponsibleSelector: React.FC<ResponsibleSelectorProps> = ({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            className="w-full justify-between border border-gray-300 bg-white hover:bg-gray-50"
+            className={cn(
+              "w-full justify-between border border-gray-300 bg-white hover:bg-gray-50",
+              (!agencyId || agencyId.length !== 36 || (!loading && selectedResponsibles.length === 0)) && "text-muted-foreground"
+            )}
             disabled={disabled || loading || !agencyId || agencyId.length !== 36}
           >
             <div className="flex items-center gap-2">
