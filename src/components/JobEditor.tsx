@@ -11,6 +11,7 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { PercentageInput } from '@/components/ui/percentage-input';
 import { useApp } from '../contexts/AppContext';
 import { toast } from '@/hooks/use-toast';
+import { useUsageTracking } from '@/hooks/useUsageTracking';
 
 interface JobEditorProps {
   jobId?: string;
@@ -20,6 +21,7 @@ interface JobEditorProps {
 
 const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
   const { jobs, addJob, updateJob } = useApp();
+  const { incrementJobUsage } = useUsageTracking();
   const [formData, setFormData] = useState({
     description: '',
     client: '',
@@ -87,6 +89,7 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
         });
       } else {
         await addJob(jobData);
+        await incrementJobUsage();
         toast({
           title: "Job Criado",
           description: "O job foi criado com sucesso.",
