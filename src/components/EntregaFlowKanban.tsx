@@ -788,6 +788,7 @@ const EntregaFlowKanban = () => {
               </CardHeader>
               <CardContent className="pt-4 pb-0 px-6">
                 <form className="space-y-6">
+                  {/* Primeira linha: Título e Cliente */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Título</label>
@@ -798,7 +799,8 @@ const EntregaFlowKanban = () => {
                       <Input value={editFields.client} onChange={(e) => setEditFields({ ...editFields, client: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Segunda linha: Prazo, Prioridade, Status */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Prazo</label>
                       <Input type="date" value={editFields.dueDate} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
@@ -830,19 +832,22 @@ const EntregaFlowKanban = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Responsáveis</label>
-                      <ResponsibleSelector
-                        agencyId={currentAgencyId || ''}
-                        selectedResponsibles={editFields.responsaveis || []}
-                        onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
-                      />
-                    </div>
                   </div>
+                  {/* Terceira linha: Responsáveis */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Responsáveis</label>
+                    <ResponsibleSelector
+                      agencyId={currentAgencyId || ''}
+                      selectedResponsibles={editFields.responsaveis || []}
+                      onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
+                    />
+                  </div>
+                  {/* Quarta linha: Descrição */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Descrição</label>
                     <Textarea value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} className="bg-white dark:bg-zinc-800 dark:text-zinc-100" />
                   </div>
+                  {/* Quinta linha: Links */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-zinc-200">Links (separados por vírgula)</label>
                     <Input
@@ -858,30 +863,39 @@ const EntregaFlowKanban = () => {
                       className="bg-white dark:bg-zinc-800 dark:text-zinc-100"
                     />
                   </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="outline" onClick={() => setShowEditModal(false)} className="min-w-[120px]">Cancelar</Button>
-                    <Button onClick={() => {
-                      const updatedProject = {
-                        ...selectedProject,
-                        ...editFields,
-                        updatedAt: new Date().toISOString()
-                      };
-                      supabaseKanbanService.saveProject(updatedProject).then(() => {
-                        toast({
-                          title: "Projeto Atualizado",
-                          description: `"${updatedProject.title}" foi atualizado com sucesso`
+                  {/* Rodapé: Lixeira à esquerda, botões à direita */}
+                  <div className="flex items-center justify-between pt-4 gap-2">
+                    <Button type="button" variant="destructive" className="flex items-center gap-2" onClick={async () => {
+                      await handleDeleteProject(selectedProject.id);
+                      setShowEditModal(false);
+                    }}>
+                      <Trash2 className="h-4 w-4" /> Deletar Projeto
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setShowEditModal(false)} className="min-w-[120px]">Cancelar</Button>
+                      <Button onClick={() => {
+                        const updatedProject = {
+                          ...selectedProject,
+                          ...editFields,
+                          updatedAt: new Date().toISOString()
+                        };
+                        supabaseKanbanService.saveProject(updatedProject).then(() => {
+                          toast({
+                            title: "Projeto Atualizado",
+                            description: `"${updatedProject.title}" foi atualizado com sucesso`
+                          });
+                          setShowEditModal(false);
+                          loadProjects(); // Atualizar a lista após a edição
+                        }).catch(error => {
+                          console.error('❌ [KANBAN] Erro ao salvar projeto:', error);
+                          toast({
+                            title: "Erro",
+                            description: "Erro ao salvar projeto",
+                            variant: "destructive"
+                          });
                         });
-                        setShowEditModal(false);
-                        loadProjects(); // Atualizar a lista após a edição
-                      }).catch(error => {
-                        console.error('❌ [KANBAN] Erro ao salvar projeto:', error);
-                        toast({
-                          title: "Erro",
-                          description: "Erro ao salvar projeto",
-                          variant: "destructive"
-                        });
-                      });
-                    }} className="min-w-[160px] font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-white dark:from-blue-700 dark:to-purple-700 dark:text-zinc-100 shadow-md hover:opacity-90"> <Edit className="h-4 w-4 mr-2" />Salvar Alterações</Button>
+                      }} className="min-w-[160px] font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-white dark:from-blue-700 dark:to-purple-700 dark:text-zinc-100 shadow-md hover:opacity-90"> <Edit className="h-4 w-4 mr-2" />Salvar Alterações</Button>
+                    </div>
                   </div>
                 </form>
               </CardContent>
