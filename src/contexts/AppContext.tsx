@@ -680,14 +680,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     let result: any = {};
+    let errorText = '';
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      result = await response.json();
+      try {
+        result = await response.json();
+      } catch (e) {
+        console.error('Erro ao fazer parse do JSON de erro:', e);
+      }
+    } else {
+      try {
+        errorText = await response.text();
+      } catch (e) {
+        console.error('Erro ao ler texto do erro:', e);
+      }
     }
 
     if (!response.ok) {
-      // Se vier erro de limite, lança a mensagem correta
-      throw new Error(result.error || 'Erro ao criar job');
+      // Log detalhado para debug
+      console.error('Erro ao criar job:', {
+        status: response.status,
+        result,
+        errorText
+      });
+      // Sempre propaga a mensagem do backend, se existir
+      throw new Error(result.error || errorText || 'Erro ao criar job');
     }
     if (result.job) {
       const data = result.job;
