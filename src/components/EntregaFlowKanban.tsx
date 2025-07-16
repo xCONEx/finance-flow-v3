@@ -784,42 +784,73 @@ const EntregaFlowKanban = () => {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Input label="Título" value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} />
-                <Input label="Cliente" value={editFields.client} onChange={(e) => setEditFields({ ...editFields, client: e.target.value })} />
-                <Input label="Prazo" type="date" value={editFields.dueDate} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value })} />
-                <Select onValueChange={(value) => setEditFields({ ...editFields, priority: sanitizePriority(value) })} value={editFields.priority}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Prioridade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="alta">Alta</SelectItem>
-                    <SelectItem value="media">Média</SelectItem>
-                    <SelectItem value="baixa">Baixa</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-600 mb-1">Título</label>
+                  <Input value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-600 mb-1">Cliente</label>
+                  <Input value={editFields.client} onChange={(e) => setEditFields({ ...editFields, client: e.target.value })} />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-600 mb-1">Prazo</label>
+                  <Input type="date" value={editFields.dueDate} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value })} />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-600 mb-1">Prioridade</label>
+                  <Select onValueChange={(value) => setEditFields({ ...editFields, priority: sanitizePriority(value) })} value={editFields.priority}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Prioridade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alta">Alta</SelectItem>
+                      <SelectItem value="media">Média</SelectItem>
+                      <SelectItem value="baixa">Baixa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Select onValueChange={(value) => setEditFields({ ...editFields, status: value })} value={editFields.status}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="filmado">Filmado</SelectItem>
-                    <SelectItem value="edicao">Em Edição</SelectItem>
-                    <SelectItem value="revisao">Revisão</SelectItem>
-                    <SelectItem value="entregue">Entregue</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input label="Descrição" value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} />
-                <Input label="Links (separados por vírgula)" value={editFields.links.join(', ')} onChange={(e) => setEditFields({ ...editFields, links: e.target.value.split(',').map(link => link.trim()) })} />
-                <ResponsibleSelector
-                  projectId={selectedProject.id}
-                  responsaveis={editFields.responsaveis}
-                  onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
-                  isAgencyMode={isAgencyMode}
-                  currentAgencyId={currentAgencyId}
-                  agencies={agencies}
-                />
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-600 mb-1">Status</label>
+                  <Select onValueChange={(value) => setEditFields({ ...editFields, status: value })} value={editFields.status}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="filmado">Filmado</SelectItem>
+                      <SelectItem value="edicao">Em Edição</SelectItem>
+                      <SelectItem value="revisao">Revisão</SelectItem>
+                      <SelectItem value="entregue">Entregue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-600 mb-1">Descrição</label>
+                  <Input value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-600 mb-1">Links (separados por vírgula)</label>
+                  <Input
+                    value={Array.isArray(editFields.links) ? editFields.links.join(', ') : ''}
+                    onChange={(e) =>
+                      setEditFields({
+                        ...editFields,
+                        links: e.target.value
+                          ? e.target.value.split(',').map(link => link.trim())
+                          : [],
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-gray-600 mb-1">Responsáveis</label>
+                  <ResponsibleSelector
+                    agencyId={currentAgencyId || ''}
+                    selectedResponsibles={editFields.responsaveis || []}
+                    onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
+                  />
+                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancelar</Button>
