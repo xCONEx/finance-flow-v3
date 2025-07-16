@@ -465,7 +465,7 @@ const EntregaFlowKanban = () => {
           <div className="col-span-2">Cliente</div>
           <div className="col-span-2">Status</div>
           <div className="col-span-2">Prazo</div>
-          <div className="col-span-1 flex justify-end pr-6">Prioridade</div>
+          <div className="col-span-1 flex justify-end pr-10">Prioridade</div>
           <div className="col-span-2 flex justify-end pr-2">Ações</div>
         </div>
         <div className="divide-y">
@@ -520,7 +520,7 @@ const EntregaFlowKanban = () => {
                   <span className="text-sm text-muted-foreground">Sem prazo</span>
                 )}
               </div>
-              <div className="col-span-1 flex justify-end pr-6">
+              <div className="col-span-1 flex justify-end pr-10">
                 <Badge className={getPriorityColor(project.priority)}>
                   {project.priority.charAt(0).toUpperCase() + project.priority.slice(1)}
                 </Badge>
@@ -811,6 +811,13 @@ const EntregaFlowKanban = () => {
                                         <div className="flex items-center gap-1">
                                           <Building className="h-3 w-3 text-purple-500" />
                                           <span className="text-xs text-purple-600">Projeto da Empresa</span>
+                                        </div>
+                                      )}
+                                      {project.responsaveis && project.responsaveis.length > 0 && (
+                                        <div className="absolute bottom-2 right-3">
+                                          <div className="h-6 w-6 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-bold border border-gray-200 shadow-sm">
+                                            {project.responsaveis[0][0]?.toUpperCase()}
+                                          </div>
                                         </div>
                                       )}
                                       </div>
@@ -1198,15 +1205,24 @@ const EntregaFlowKanban = () => {
                     <div>
                       <label className="text-sm font-medium mb-2 block text-muted-foreground">Responsáveis</label>
                       {isEditing ? (
-                        <ResponsibleSelector
-                          agencyId={selectedProject.agency_id}
-                          selectedResponsibles={editFields.responsaveis || []}
-                          onResponsiblesChange={responsaveis => setEditFields(f => ({ ...f, responsaveis }))}
-                          placeholder="Adicionar responsáveis..."
-                        />
+                        <>
+                          {/* Mostrar responsáveis já designados acima do seletor */}
+                          <div className="mb-2 flex items-center gap-2 flex-wrap min-h-[32px]">
+                            <ProjectResponsibles projectId={selectedProject.id} responsaveis={editFields.responsaveis || []} maxVisible={6} size="md" />
+                            {(!editFields.responsaveis || editFields.responsaveis.length === 0) && (
+                              <span className="text-xs text-muted-foreground">Nenhum responsável atribuído</span>
+                            )}
+                          </div>
+                          <ResponsibleSelector
+                            agencyId={selectedProject.agency_id}
+                            selectedResponsibles={editFields.responsaveis || []}
+                            onResponsiblesChange={responsaveis => setEditFields(f => ({ ...f, responsaveis }))}
+                            placeholder="Adicionar responsáveis..."
+                          />
+                        </>
                       ) : (
                         <div className="p-3 bg-muted rounded-md flex items-center gap-2 flex-wrap min-h-[48px]">
-                          <ProjectResponsibles projectId={selectedProject.id} responsaveis={selectedProject.responsaveis || []} maxVisible={4} size="md" />
+                          <ProjectResponsibles projectId={selectedProject.id} responsaveis={selectedProject.responsaveis || []} maxVisible={6} size="md" />
                           {(!selectedProject.responsaveis || selectedProject.responsaveis.length === 0) && (
                             <span className="text-xs text-muted-foreground">Nenhum responsável atribuído</span>
                           )}
