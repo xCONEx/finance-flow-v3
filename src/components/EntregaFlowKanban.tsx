@@ -26,7 +26,8 @@ import {
   BellOff,
   Pencil,
   List as ListIcon,
-  Columns
+  Columns,
+  X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
@@ -38,6 +39,7 @@ import ResponsibleSelector from './ResponsibleSelector';
 import ProjectResponsibles from './ProjectResponsibles';
 import KanbanAnalytics from './KanbanAnalytics';
 import { useUsageTracking } from '@/hooks/useUsageTracking';
+import { Label } from '@/components/ui/label';
 
 interface Column {
   id: string;
@@ -776,136 +778,135 @@ const EntregaFlowKanban = () => {
       {showEditModal && selectedProject && (
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
           <DialogContent className="bg-white dark:bg-zinc-900 shadow-2xl rounded-2xl max-w-2xl px-6 py-8 sm:px-8 sm:py-10">
-  <Card className="bg-transparent border-0 shadow-none">
-    <CardHeader className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
-      <CardTitle className="text-xl font-semibold text-zinc-800 dark:text-zinc-100 tracking-tight">
-        Editar Projeto
-      </CardTitle>
-      <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}>
-        <span className="sr-only">Fechar</span>
-        <X className="w-5 h-5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200" />
-      </Button>
-    </CardHeader>
+            <Card className="bg-transparent border-0 shadow-none">
+              <CardHeader className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
+                <CardTitle className="text-xl font-semibold text-zinc-800 dark:text-zinc-100 tracking-tight">
+                  Editar Projeto
+                </CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}>
+                  <span className="sr-only">Fechar</span>
+                  <X className="w-5 h-5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200" />
+                </Button>
+              </CardHeader>
 
-    <CardContent className="space-y-6 mt-6">
-      <form className="space-y-6">
+              <CardContent className="space-y-6 mt-6">
+                <form className="space-y-6">
+                  {/* Título & Cliente */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1.5">
+                      <Label>Título</Label>
+                      <Input value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Cliente</Label>
+                      <Input value={editFields.client} onChange={(e) => setEditFields({ ...editFields, client: e.target.value })} />
+                    </div>
+                  </div>
 
-        {/* Título & Cliente */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-1.5">
-            <Label>Título</Label>
-            <Input value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Cliente</Label>
-            <Input value={editFields.client} onChange={(e) => setEditFields({ ...editFields, client: e.target.value })} />
-          </div>
-        </div>
+                  {/* Prazo, Prioridade, Status */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-1.5">
+                      <Label>Prazo</Label>
+                      <Input type="date" value={editFields.dueDate} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Prioridade</Label>
+                      <Select value={editFields.priority} onValueChange={(value) => setEditFields({ ...editFields, priority: sanitizePriority(value) })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Prioridade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="alta">Alta</SelectItem>
+                          <SelectItem value="media">Média</SelectItem>
+                          <SelectItem value="baixa">Baixa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Status</Label>
+                      <Select value={editFields.status} onValueChange={(value) => setEditFields({ ...editFields, status: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="filmado">Filmado</SelectItem>
+                          <SelectItem value="edicao">Em Edição</SelectItem>
+                          <SelectItem value="revisao">Revisão</SelectItem>
+                          <SelectItem value="entregue">Entregue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-        {/* Prazo, Prioridade, Status */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-1.5">
-            <Label>Prazo</Label>
-            <Input type="date" value={editFields.dueDate} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Prioridade</Label>
-            <Select value={editFields.priority} onValueChange={(value) => setEditFields({ ...editFields, priority: sanitizePriority(value) })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Prioridade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="alta">Alta</SelectItem>
-                <SelectItem value="media">Média</SelectItem>
-                <SelectItem value="baixa">Baixa</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Status</Label>
-            <Select value={editFields.status} onValueChange={(value) => setEditFields({ ...editFields, status: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="filmado">Filmado</SelectItem>
-                <SelectItem value="edicao">Em Edição</SelectItem>
-                <SelectItem value="revisao">Revisão</SelectItem>
-                <SelectItem value="entregue">Entregue</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+                  {/* Responsáveis */}
+                  <div className="space-y-1.5">
+                    <Label>Responsáveis</Label>
+                    <ResponsibleSelector
+                      agencyId={currentAgencyId || ''}
+                      selectedResponsibles={editFields.responsaveis || []}
+                      onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
+                    />
+                  </div>
 
-        {/* Responsáveis */}
-        <div className="space-y-1.5">
-          <Label>Responsáveis</Label>
-          <ResponsibleSelector
-            agencyId={currentAgencyId || ''}
-            selectedResponsibles={editFields.responsaveis || []}
-            onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
-          />
-        </div>
+                  {/* Descrição */}
+                  <div className="space-y-1.5">
+                    <Label>Descrição</Label>
+                    <Textarea value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} />
+                  </div>
 
-        {/* Descrição */}
-        <div className="space-y-1.5">
-          <Label>Descrição</Label>
-          <Textarea value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} />
-        </div>
+                  {/* Links */}
+                  <div className="space-y-1.5">
+                    <Label>Links (separados por vírgula)</Label>
+                    <Input
+                      value={Array.isArray(editFields.links) ? editFields.links.join(', ') : ''}
+                      onChange={(e) =>
+                        setEditFields({
+                          ...editFields,
+                          links: e.target.value
+                            ? e.target.value.split(',').map(link => link.trim())
+                            : [],
+                        })
+                      }
+                    />
+                  </div>
 
-        {/* Links */}
-        <div className="space-y-1.5">
-          <Label>Links (separados por vírgula)</Label>
-          <Input
-            value={Array.isArray(editFields.links) ? editFields.links.join(', ') : ''}
-            onChange={(e) =>
-              setEditFields({
-                ...editFields,
-                links: e.target.value
-                  ? e.target.value.split(',').map(link => link.trim())
-                  : [],
-              })
-            }
-          />
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-6 border-t border-zinc-200 dark:border-zinc-800">
-          <Button type="button" variant="destructive" onClick={async () => {
-            await handleDeleteProject(selectedProject.id);
-            setShowEditModal(false);
-          }}>
-            <Trash2 className="w-4 h-4 mr-2" /> Deletar Projeto
-          </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancelar</Button>
-            <Button
-              onClick={() => {
-                const updatedProject = {
-                  ...selectedProject,
-                  ...editFields,
-                  updatedAt: new Date().toISOString()
-                };
-                supabaseKanbanService.saveProject(updatedProject).then(() => {
-                  toast({
-                    title: "Projeto Atualizado",
-                    description: `"${updatedProject.title}" foi atualizado com sucesso`
-                  });
-                  setShowEditModal(false);
-                  loadProjects();
-                }).catch(error => {
-                  toast({
-                    title: "Erro",
-                    description: "Erro ao salvar projeto",
-                    variant: "destructive"
-                  });
-                });
-              }}
-              className="font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
-            >
-              <Edit className="w-4 h-4 mr-2" /> Salvar Alterações
-            </Button>
-          </div>
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                    <Button type="button" variant="destructive" onClick={async () => {
+                      await handleDeleteProject(selectedProject.id);
+                      setShowEditModal(false);
+                    }}>
+                      <Trash2 className="w-4 h-4 mr-2" /> Deletar Projeto
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancelar</Button>
+                      <Button
+                        onClick={() => {
+                          const updatedProject = {
+                            ...selectedProject,
+                            ...editFields,
+                            updatedAt: new Date().toISOString()
+                          };
+                          supabaseKanbanService.saveProject(updatedProject).then(() => {
+                            toast({
+                              title: "Projeto Atualizado",
+                              description: `"${updatedProject.title}" foi atualizado com sucesso`
+                            });
+                            setShowEditModal(false);
+                            loadProjects();
+                          }).catch(error => {
+                            toast({
+                              title: "Erro",
+                              description: "Erro ao salvar projeto",
+                              variant: "destructive"
+                            });
+                          });
+                        }}
+                        className="font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                      >
+                        <Edit className="w-4 h-4 mr-2" /> Salvar Alterações
+                      </Button>
+                    </div>
                   </div>
                 </form>
               </CardContent>
