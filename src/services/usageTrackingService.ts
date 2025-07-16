@@ -46,11 +46,16 @@ export const usageTrackingService = {
         .eq('usage_type', usageType)
         .eq('reset_date', currentMonth)
         .single();
-      console.log('[USAGE] Resultado busca registro existente:', { existing, fetchError });
-      if (fetchError && fetchError.code !== 'PGRST116') {
+      const isStatus406 = fetchError && 'status' in fetchError && fetchError.status === 406;
+      if (fetchError && fetchError.code !== 'PGRST116' && !isStatus406) {
         console.error('[USAGE] Erro ao buscar registro existente:', fetchError);
         throw fetchError;
       }
+      if (fetchError && (fetchError.code === 'PGRST116' || isStatus406)) {
+        // Registro não encontrado, situação esperada
+        console.log('[USAGE] Nenhum registro existente encontrado (primeiro uso do mês).');
+      }
+      console.log('[USAGE] Resultado busca registro existente:', { existing, fetchError });
       if (existing) {
         // Atualiza o contador existente
         console.log('[USAGE] Atualizando contador existente:', { id: existing.id, count: existing.count });
