@@ -22,7 +22,7 @@ const UpgradePlanModal: React.FC<UpgradePlanModalProps> = ({ open, onClose, type
 
   const handleUpgrade = () => {
     onClose();
-    navigate('/subscription?tab=plans');
+    navigate('/subscription');
   };
 
   return (
