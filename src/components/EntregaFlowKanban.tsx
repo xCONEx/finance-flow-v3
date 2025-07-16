@@ -37,6 +37,7 @@ import { useKanbanContext } from '../hooks/useKanbanContext';
 import { useAgency } from '../contexts/AgencyContext';
 import ContextSelector from './ContextSelector';
 import ProjectResponsibles from './ProjectResponsibles';
+import ResponsibleSelector from './ResponsibleSelector';
 
 interface Column {
   id: string;
@@ -1194,14 +1195,24 @@ const EntregaFlowKanban = () => {
                 {/* Informações da empresa (se aplicável) */}
                 {isAgencyMode && selectedProject.agency_id && (
                   <>
-                    {selectedProject.responsaveis && selectedProject.responsaveis.length > 0 && (
-                      <div>
-                        <label className="text-sm font-medium mb-2 block text-muted-foreground">Responsáveis</label>
-                        <div className="p-3 bg-muted rounded-md flex items-center gap-2">
-                          <ProjectResponsibles projectId={selectedProject.id} responsaveis={selectedProject.responsaveis} maxVisible={4} size="md" />
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-muted-foreground">Responsáveis</label>
+                      {isEditing ? (
+                        <ResponsibleSelector
+                          agencyId={selectedProject.agency_id}
+                          selectedResponsibles={editFields.responsaveis || []}
+                          onResponsiblesChange={responsaveis => setEditFields(f => ({ ...f, responsaveis }))}
+                          placeholder="Adicionar responsáveis..."
+                        />
+                      ) : (
+                        <div className="p-3 bg-muted rounded-md flex items-center gap-2 flex-wrap min-h-[48px]">
+                          <ProjectResponsibles projectId={selectedProject.id} responsaveis={selectedProject.responsaveis || []} maxVisible={4} size="md" />
+                          {(!selectedProject.responsaveis || selectedProject.responsaveis.length === 0) && (
+                            <span className="text-xs text-muted-foreground">Nenhum responsável atribuído</span>
+                          )}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                     <div>
                       <label className="text-sm font-medium mb-2 block text-muted-foreground">Tipo de Projeto</label>
                       <div className="p-3 bg-muted rounded-md">
