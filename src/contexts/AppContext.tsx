@@ -607,15 +607,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshWorkRoutine = async () => {
     if (!user) return;
-    
     try {
-      const { data: routineData } = await supabase
-        .from('work_routine')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (routineData) {
+      // Pega o access_token do contexto de autenticação (session)
+      let accessToken = undefined;
+      if (session?.access_token) {
+        accessToken = session.access_token;
+      } else if ((window as any).supabase?.auth?.session()?.access_token) {
+        accessToken = (window as any).supabase.auth.session().access_token;
+      } else if ((window as any).supabase?.auth?.getSession) {
+        const sess = await (window as any).supabase.auth.getSession();
+        accessToken = sess?.data?.session?.access_token;
+      }
+      if (!accessToken) {
+        throw new Error('Token de autenticação não encontrado. Faça login novamente.');
+      }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/work_routine?select=*&user_id=eq.${user.id}`, {
+        method: 'GET',
+        headers: {
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (response.status === 406) {
+        throw new Error('Não autorizado a acessar rotina de trabalho. Verifique as permissões ou políticas de RLS.');
+      }
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const routineData = data[0];
         setWorkRoutine({
           id: routineData.id,
           workHoursPerDay: routineData.work_hours_per_day || 8,
