@@ -1205,21 +1205,12 @@ const EntregaFlowKanban = () => {
                     <div>
                       <label className="text-sm font-medium mb-2 block text-muted-foreground">Responsáveis</label>
                       {isEditing ? (
-                        <>
-                          {/* Mostrar responsáveis já designados acima do seletor */}
-                          <div className="mb-2 flex items-center gap-2 flex-wrap min-h-[32px]">
-                            <ProjectResponsibles projectId={selectedProject.id} responsaveis={editFields.responsaveis || []} maxVisible={6} size="md" />
-                            {(!editFields.responsaveis || editFields.responsaveis.length === 0) && (
-                              <span className="text-xs text-muted-foreground">Nenhum responsável atribuído</span>
-                            )}
-                          </div>
-                          <ResponsibleSelector
-                            agencyId={selectedProject.agency_id}
-                            selectedResponsibles={editFields.responsaveis || []}
-                            onResponsiblesChange={responsaveis => setEditFields(f => ({ ...f, responsaveis }))}
-                            placeholder="Adicionar responsáveis..."
-                          />
-                        </>
+                        <ResponsibleSelector
+                          agencyId={selectedProject.agency_id}
+                          selectedResponsibles={editFields.responsaveis || []}
+                          onResponsiblesChange={responsaveis => setEditFields(f => ({ ...f, responsaveis }))}
+                          placeholder="Adicionar responsáveis..."
+                        />
                       ) : (
                         <div className="p-3 bg-muted rounded-md flex items-center gap-2 flex-wrap min-h-[48px]">
                           <ProjectResponsibles projectId={selectedProject.id} responsaveis={selectedProject.responsaveis || []} maxVisible={6} size="md" />
