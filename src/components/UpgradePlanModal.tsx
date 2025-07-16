@@ -15,14 +15,19 @@ interface UpgradePlanModalProps {
   open: boolean;
   onClose: () => void;
   type?: 'jobs' | 'projects';
+  onUpgradeClick?: () => void;
 }
 
-const UpgradePlanModal: React.FC<UpgradePlanModalProps> = ({ open, onClose, type = 'jobs' }) => {
+const UpgradePlanModal: React.FC<UpgradePlanModalProps> = ({ open, onClose, type = 'jobs', onUpgradeClick }) => {
   const navigate = useNavigate();
 
   const handleUpgrade = () => {
     onClose();
-    navigate('/subscription');
+    if (typeof onUpgradeClick === 'function') {
+      onUpgradeClick();
+    } else {
+      navigate('/subscription');
+    }
   };
 
   return (
