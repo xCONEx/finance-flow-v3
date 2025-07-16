@@ -22,12 +22,12 @@ const UpgradePlanModal: React.FC<UpgradePlanModalProps> = ({ open, onClose, type
   const navigate = useNavigate();
 
   const handleUpgrade = () => {
-    onClose();
     if (typeof onUpgradeClick === 'function') {
       onUpgradeClick();
     } else {
       navigate('/subscription');
     }
+    onClose();
   };
 
   return (
@@ -47,9 +47,20 @@ const UpgradePlanModal: React.FC<UpgradePlanModalProps> = ({ open, onClose, type
           <Button variant="outline" onClick={onClose}>
             Fechar
           </Button>
-          <Button className="bg-gradient-to-r from-purple-600 to-blue-600 text-white" onClick={handleUpgrade}>
+          <Button 
+            size="sm"
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90"
+            onClick={() => {
+              if (typeof onUpgradeClick === 'function') {
+                onUpgradeClick();
+              } else {
+                navigate('/subscription');
+              }
+              onClose();
+            }}
+          >
             <Crown className="h-4 w-4 mr-2" />
-            Ver Planos
+            Fazer Upgrade
           </Button>
         </DialogFooter>
       </DialogContent>
