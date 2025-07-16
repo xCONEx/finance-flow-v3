@@ -37,7 +37,7 @@ export const usageTrackingService = {
   async incrementUsage(userId: string, usageType: 'job' | 'project'): Promise<void> {
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
-      
+      console.log(`[USAGE] Iniciando incremento: userId=${userId}, usageType=${usageType}, currentMonth=${currentMonth}`);
       // Primeiro, tenta buscar o registro existente
       const { data: existing, error: fetchError } = await supabase
         .from('user_usage_tracking')
@@ -46,36 +46,45 @@ export const usageTrackingService = {
         .eq('usage_type', usageType)
         .eq('reset_date', currentMonth)
         .single();
-
+      console.log('[USAGE] Resultado busca registro existente:', { existing, fetchError });
       if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('[USAGE] Erro ao buscar registro existente:', fetchError);
         throw fetchError;
       }
-
       if (existing) {
         // Atualiza o contador existente
-        const { error: updateError } = await supabase
+        console.log('[USAGE] Atualizando contador existente:', { id: existing.id, count: existing.count });
+        const { error: updateError, data: updateData } = await supabase
           .from('user_usage_tracking')
           .update({ 
             count: existing.count + 1,
             updated_at: new Date().toISOString()
           })
-          .eq('id', existing.id);
-
-        if (updateError) throw updateError;
+          .eq('id', existing.id)
+          .select();
+        console.log('[USAGE] Resultado update:', { updateData, updateError });
+        if (updateError) {
+          console.error('[USAGE] Erro ao atualizar contador:', updateError);
+          throw updateError;
+        }
       } else {
         // Cria um novo registro
-        const { error: insertError } = await supabase
+        console.log('[USAGE] Criando novo registro de uso');
+        const { error: insertError, data: insertData } = await supabase
           .from('user_usage_tracking')
           .insert({
             user_id: userId,
             usage_type: usageType,
             count: 1,
             reset_date: currentMonth
-          });
-
-        if (insertError) throw insertError;
+          })
+          .select();
+        console.log('[USAGE] Resultado insert:', { insertData, insertError });
+        if (insertError) {
+          console.error('[USAGE] Erro ao criar novo registro:', insertError);
+          throw insertError;
+        }
       }
-
       console.log(`✅ Incrementado uso de ${usageType} para usuário ${userId}`);
     } catch (error) {
       console.error(`❌ Erro ao incrementar uso de ${usageType}:`, error);
