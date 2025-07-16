@@ -35,6 +35,7 @@ import ContextSelector from './ContextSelector';
 import ResponsibleSelector from './ResponsibleSelector';
 import ProjectResponsibles from './ProjectResponsibles';
 import KanbanAnalytics from './KanbanAnalytics';
+import { useUsageTracking } from '@/hooks/useUsageTracking';
 
 interface Column {
   id: string;
@@ -69,6 +70,7 @@ const EntregaFlowKanban = () => {
   const { currentContext, agencies } = useAgency();
   const [editFields, setEditFields] = useState<Omit<Partial<KanbanProject>, 'priority'> & { priority?: 'alta' | 'media' | 'baixa' }>({});
   const [isEditing, setIsEditing] = useState(false);
+  const { incrementProjectUsage } = useUsageTracking();
 
   // Verificar se é owner da agência atual
   const isOwner = isAgencyMode && currentAgencyId && 
@@ -322,6 +324,7 @@ const EntregaFlowKanban = () => {
       });
 
       await supabaseKanbanService.saveProject(project);
+      await incrementProjectUsage();
       
       const updatedProjects = [...projects, project];
       setProjects(updatedProjects);
