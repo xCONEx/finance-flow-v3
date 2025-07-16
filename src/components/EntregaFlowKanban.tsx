@@ -26,7 +26,7 @@ import {
   BellOff,
   Pencil,
   List as ListIcon,
-  LayoutKanban
+  Columns
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
@@ -508,7 +508,7 @@ const EntregaFlowKanban = () => {
           className={`flex items-center gap-1 px-3 py-1 rounded-md border text-sm ${viewMode === 'kanban' ? 'bg-blue-100 border-blue-400 text-blue-800' : 'bg-white border-gray-300 text-gray-600'}`}
           onClick={() => setViewMode('kanban')}
         >
-          <LayoutKanban className="h-4 w-4" /> Kanban
+          <Columns className="h-4 w-4" /> Kanban
         </button>
         <button
           className={`flex items-center gap-1 px-3 py-1 rounded-md border text-sm ${viewMode === 'list' ? 'bg-blue-100 border-blue-400 text-blue-800' : 'bg-white border-gray-300 text-gray-600'}`}
