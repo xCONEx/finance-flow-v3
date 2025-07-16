@@ -36,6 +36,7 @@ import { supabaseKanbanService, KanbanProject } from '../services/supabaseKanban
 import { useKanbanContext } from '../hooks/useKanbanContext';
 import { useAgency } from '../contexts/AgencyContext';
 import ContextSelector from './ContextSelector';
+import ProjectResponsibles from './ProjectResponsibles';
 
 interface Column {
   id: string;
@@ -463,12 +464,12 @@ const EntregaFlowKanban = () => {
           <div className="col-span-2">Cliente</div>
           <div className="col-span-2">Status</div>
           <div className="col-span-2">Prazo</div>
-          <div className="col-span-1">Prioridade</div>
-          <div className="col-span-2">Ações</div>
+          <div className="col-span-1 flex justify-end pr-6">Prioridade</div>
+          <div className="col-span-2 flex justify-end pr-2">Ações</div>
         </div>
         <div className="divide-y">
           {filteredProjects.map((project) => (
-            <div key={project.id} className="grid grid-cols-12 gap-4 p-4 hover:bg-muted/50 transition-colors">
+            <div key={project.id} className="grid grid-cols-12 gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => { setSelectedProject(project); setShowEditModal(true); }}>
               <div className="col-span-3">
                 <h4 className="font-medium line-clamp-1">{project.title}</h4>
                 {project.description && (
@@ -518,19 +519,16 @@ const EntregaFlowKanban = () => {
                   <span className="text-sm text-muted-foreground">Sem prazo</span>
                 )}
               </div>
-              <div className="col-span-1">
+              <div className="col-span-1 flex justify-end pr-6">
                 <Badge className={getPriorityColor(project.priority)}>
                   {project.priority.charAt(0).toUpperCase() + project.priority.slice(1)}
                 </Badge>
               </div>
-              <div className="col-span-2 flex items-center gap-2">
+              <div className="col-span-2 flex items-center gap-2 justify-end pr-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setSelectedProject(project);
-                    setShowEditModal(true);
-                  }}
+                  onClick={e => { e.stopPropagation(); setSelectedProject(project); setShowEditModal(true); }}
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -995,7 +993,7 @@ const EntregaFlowKanban = () => {
 
       {/* Modal de Edição Melhorado */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden px-2 sm:px-4">
           <DialogHeader className="pb-4 border-b">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -1034,7 +1032,7 @@ const EntregaFlowKanban = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsEditing(true)}
-                  className="shrink-0"
+                  className="shrink-0 ml-[-5px]"
                 >
                   <Pencil className="h-4 w-4 mr-2" />
                   Editar
@@ -1131,7 +1129,7 @@ const EntregaFlowKanban = () => {
                         {isEditing ? (
                           <Select
                             value={editFields.priority || 'media'}
-                            onValueChange={value => setEditFields(f => ({ ...f, priority: value }))}
+                            onValueChange={value => setEditFields(f => ({ ...f, priority: sanitizePriority(value) }))}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -1195,15 +1193,25 @@ const EntregaFlowKanban = () => {
 
                 {/* Informações da empresa (se aplicável) */}
                 {isAgencyMode && selectedProject.agency_id && (
-                  <div>
-                    <label className="text-sm font-medium mb-2 block text-muted-foreground">Tipo de Projeto</label>
-                    <div className="p-3 bg-muted rounded-md">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4 text-purple-500" />
-                        <span className="text-sm">Projeto da Empresa</span>
+                  <>
+                    {selectedProject.responsaveis && selectedProject.responsaveis.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium mb-2 block text-muted-foreground">Responsáveis</label>
+                        <div className="p-3 bg-muted rounded-md flex items-center gap-2">
+                          <ProjectResponsibles projectId={selectedProject.id} responsaveis={selectedProject.responsaveis} maxVisible={4} size="md" />
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-muted-foreground">Tipo de Projeto</label>
+                      <div className="p-3 bg-muted rounded-md">
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4 text-purple-500" />
+                          <span className="text-sm">Projeto da Empresa</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
 
                 {/* Links de Entrega */}
@@ -1224,6 +1232,7 @@ const EntregaFlowKanban = () => {
                             setEditFields(f => ({
                               ...f,
                               links: [...(f.links || []), newLink.trim()],
+                              priority: sanitizePriority(f.priority)
                             }));
                             setNewLink('');
                           }
@@ -1261,6 +1270,7 @@ const EntregaFlowKanban = () => {
                               onClick={() => setEditFields(f => ({
                                 ...f,
                                 links: f.links ? f.links.filter((_, i) => i !== index) : [],
+                                priority: sanitizePriority(f.priority)
                               }))}
                             >
                               <Trash2 className="h-4 w-4" />
