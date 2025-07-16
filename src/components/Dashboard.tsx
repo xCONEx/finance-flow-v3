@@ -19,7 +19,7 @@ import PremiumFeatureBlock from './PremiumFeatureBlock';
 import { UsageStatus } from './UsageStatus';
 import ContextIndicator from './ContextIndicator';
 
-const Dashboard = () => {
+const Dashboard = ({ onUpgradeClick }: { onUpgradeClick?: () => void }) => {
   const { user, profile, agency } = useSupabaseAuth();
   const { currentTheme } = useTheme();
   const { formatValue } = usePrivacy();
@@ -214,7 +214,7 @@ const Dashboard = () => {
 
       {/* Avisos de limite de uso */}
       <div className="space-y-4">
-        <UsageLimitWarning type="jobs" />
+        <UsageLimitWarning type="jobs" onUpgradeClick={onUpgradeClick} />
         <UsageLimitWarning type="projects" />
       </div>
 
@@ -286,6 +286,7 @@ const Dashboard = () => {
           <PremiumFeatureBlock
             feature="Gráfico de Distribuição de Custos"
             requiredPlan="basic"
+            onUpgradeClick={onUpgradeClick}
             className="lg:col-span-1"
           />
         )}
