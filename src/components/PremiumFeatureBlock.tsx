@@ -12,6 +12,7 @@ interface PremiumFeatureBlockProps {
   requiredPlan: 'basic' | 'premium' | 'enterprise';
   children?: React.ReactNode;
   className?: string;
+  onUpgradeClick?: () => void;
 }
 
 const planIcons = {
@@ -37,6 +38,7 @@ export const PremiumFeatureBlock: React.FC<PremiumFeatureBlockProps> = ({
   requiredPlan,
   children,
   className = '',
+  onUpgradeClick,
 }) => {
   const { subscription, isFreePlan } = useSubscriptionPermissions();
   const navigate = useNavigate();
@@ -86,7 +88,13 @@ export const PremiumFeatureBlock: React.FC<PremiumFeatureBlockProps> = ({
         
         <Button 
           className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90"
-          onClick={() => navigate('/subscription')}
+          onClick={() => {
+            if (typeof onUpgradeClick === 'function') {
+              onUpgradeClick();
+            } else {
+              navigate('/subscription');
+            }
+          }}
         >
           <Crown className="h-4 w-4 mr-2" />
           Fazer Upgrade
