@@ -38,7 +38,6 @@ import ResponsibleSelector from './ResponsibleSelector';
 import ProjectResponsibles from './ProjectResponsibles';
 import KanbanAnalytics from './KanbanAnalytics';
 import { useUsageTracking } from '@/hooks/useUsageTracking';
-import ProjectEditModal from './ProjectEditModal'; // Adicionado import para o modal de edição
 
 interface Column {
   id: string;
@@ -775,11 +774,84 @@ const EntregaFlowKanban = () => {
 
       {/* Modal de edição/detalhes do projeto - sempre visível */}
       {showEditModal && selectedProject && (
-        <ProjectEditModal
-          project={selectedProject}
-          onClose={() => setShowEditModal(false)}
-          onSave={handleUpdateProject}
-        />
+        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Projeto: {selectedProject.title}</DialogTitle>
+              <DialogDescription>
+                Faça as alterações necessárias no projeto.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Input label="Título" value={editFields.title} onChange={(e) => setEditFields({ ...editFields, title: e.target.value })} />
+                <Input label="Cliente" value={editFields.client} onChange={(e) => setEditFields({ ...editFields, client: e.target.value })} />
+                <Input label="Prazo" type="date" value={editFields.dueDate} onChange={(e) => setEditFields({ ...editFields, dueDate: e.target.value })} />
+                <Select onValueChange={(value) => setEditFields({ ...editFields, priority: sanitizePriority(value) })} value={editFields.priority}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Prioridade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Select onValueChange={(value) => setEditFields({ ...editFields, status: value })} value={editFields.status}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="filmado">Filmado</SelectItem>
+                    <SelectItem value="edicao">Em Edição</SelectItem>
+                    <SelectItem value="revisao">Revisão</SelectItem>
+                    <SelectItem value="entregue">Entregue</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input label="Descrição" value={editFields.description} onChange={(e) => setEditFields({ ...editFields, description: e.target.value })} />
+                <Input label="Links (separados por vírgula)" value={editFields.links.join(', ')} onChange={(e) => setEditFields({ ...editFields, links: e.target.value.split(',').map(link => link.trim()) })} />
+                <ResponsibleSelector
+                  projectId={selectedProject.id}
+                  responsaveis={editFields.responsaveis}
+                  onResponsiblesChange={(responsaveis) => setEditFields({ ...editFields, responsaveis })}
+                  isAgencyMode={isAgencyMode}
+                  currentAgencyId={currentAgencyId}
+                  agencies={agencies}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancelar</Button>
+                <Button onClick={() => {
+                  const updatedProject = {
+                    ...selectedProject,
+                    ...editFields,
+                    updatedAt: new Date().toISOString()
+                  };
+                  supabaseKanbanService.saveProject(updatedProject).then(() => {
+                    toast({
+                      title: "Projeto Atualizado",
+                      description: `"${updatedProject.title}" foi atualizado com sucesso`
+                    });
+                    setShowEditModal(false);
+                    loadProjects(); // Atualizar a lista após a edição
+                  }).catch(error => {
+                    console.error('❌ [KANBAN] Erro ao salvar projeto:', error);
+                    toast({
+                      title: "Erro",
+                      description: "Erro ao salvar projeto",
+                      variant: "destructive"
+                    });
+                  });
+                }}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Salvar Alterações
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
