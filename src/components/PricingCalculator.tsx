@@ -58,6 +58,8 @@ const PricingCalculator = () => {
     "Motion Graphics"
   ];
 
+  const { incrementJobUsage } = useUsageTracking();
+
   // Atualiza o campo client quando um cliente é selecionado
   useEffect(() => {
     if (selectedClient) {
