@@ -38,6 +38,7 @@ import ResponsibleSelector from './ResponsibleSelector';
 import ProjectResponsibles from './ProjectResponsibles';
 import KanbanAnalytics from './KanbanAnalytics';
 import { useUsageTracking } from '@/hooks/useUsageTracking';
+import ProjectEditModal from './ProjectEditModal'; // Adicionado import para o modal de edição
 
 interface Column {
   id: string;
@@ -566,53 +567,54 @@ const EntregaFlowKanban = () => {
           <ListIcon className="h-4 w-4" /> Lista
         </button>
       </div>
-      {/* Renderização condicional */}
+
+      {/* Header com ContextSelector integrado, cards de resumo, botão Novo Projeto, etc - sempre visível */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <div className={`w-10 h-10 bg-gradient-to-r ${currentTheme.primary} rounded-lg flex items-center justify-center`}>
+              <Video className="text-white font-bold text-2xl"/>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-2xl font-bold">Projetos Audiovisuais</h1>
+                {/* ContextSelector integrado aqui */}
+                <ContextSelector />
+              </div>
+              <p className="text-sm text-gray-600">
+                {isAgencyMode && currentAgencyId ? 
+                  `Gerenciando projetos da empresa ${contextLabel}` : 
+                  'Seus projetos pessoais'
+                }
+              </p>
+              <p className="text-xs text-gray-500">
+                {projects.length} projeto{projects.length !== 1 ? 's' : ''} carregado{projects.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+          <h2 className="text-xl font-semibold">Bem-vindo ao EntregaFlow! 🎬</h2>
+          <p className="text-gray-600">Gerencie seus projetos audiovisuais de forma simples e eficiente</p>
+        </div>
+
+        <Button 
+          onClick={() => setShowAddModal(true)}
+          className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Projeto
+        </Button>
+      </div>
+
+      {/* Analytics */}
+      <KanbanAnalytics 
+        projects={projects}
+        isAgencyMode={isAgencyMode}
+        isOwner={isOwner || false}
+      />
+
+      {/* Pipeline de Projetos: alterna entre Kanban e Lista */}
       {viewMode === 'kanban' ? (
         <>
-          {/* Header com ContextSelector integrado */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className={`w-10 h-10 bg-gradient-to-r ${currentTheme.primary} rounded-lg flex items-center justify-center`}>
-                  <Video className="text-white font-bold text-2xl"/>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h1 className="text-2xl font-bold">Projetos Audiovisuais</h1>
-                    {/* ContextSelector integrado aqui */}
-                    <ContextSelector />
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    {isAgencyMode && currentAgencyId ? 
-                      `Gerenciando projetos da empresa ${contextLabel}` : 
-                      'Seus projetos pessoais'
-                    }
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {projects.length} projeto{projects.length !== 1 ? 's' : ''} carregado{projects.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-              <h2 className="text-xl font-semibold">Bem-vindo ao EntregaFlow! 🎬</h2>
-              <p className="text-gray-600">Gerencie seus projetos audiovisuais de forma simples e eficiente</p>
-            </div>
-
-            <Button 
-              onClick={() => setShowAddModal(true)}
-              className={`bg-gradient-to-r ${currentTheme.primary} hover:opacity-90 transition-all duration-300 hover:scale-105`}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Projeto
-            </Button>
-          </div>
-
-          {/* Analytics */}
-          <KanbanAnalytics 
-            projects={projects}
-            isAgencyMode={isAgencyMode}
-            isOwner={isOwner || false}
-          />
-
           {/* Pipeline Section */}
           <div>
             <h3 className="text-xl font-semibold mb-2">Pipeline de Projetos</h3>
@@ -766,428 +768,18 @@ const EntregaFlowKanban = () => {
               </div>
             </DragDropContext>
           </div>
-
-          {/* Modal de Novo Projeto */}
-          <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>
-                  Novo Projeto
-                  {isAgencyMode && currentAgencyId && (
-                    <Badge className="ml-2 bg-blue-100 text-blue-800 border border-blue-200">
-                      <Building className="h-3 w-3 mr-1" />
-                      {contextLabel}
-                    </Badge>
-                  )}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Título do Projeto</label>
-                  <Input
-                    placeholder="Ex: Comercial - Café Premium"
-                    value={newProject.title || ''}
-                    onChange={(e) => setNewProject({...newProject, title: e.target.value})}
-                    className="border-orange-200 focus:border-orange-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Cliente</label>
-                  <Input
-                    placeholder="Nome do cliente"
-                    value={newProject.client || ''}
-                    onChange={(e) => setNewProject({...newProject, client: e.target.value})}
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Data de Entrega</label>
-                  <Input
-                    type="date"
-                    value={newProject.dueDate || ''}
-                    onChange={(e) => setNewProject({...newProject, dueDate: e.target.value})}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Prioridade</label>
-                  <Select 
-                    value={newProject.priority || 'media'} 
-                    onValueChange={(value: 'alta' | 'media' | 'baixa') => setNewProject({...newProject, priority: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="alta">Alta</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Descrição</label>
-                  <Textarea
-                    placeholder="Detalhes sobre o projeto..."
-                    value={newProject.description || ''}
-                    onChange={(e) => setNewProject({...newProject, description: e.target.value})}
-                    rows={3}
-                  />
-                </div>
-
-                {/* Seleção de Responsáveis (apenas para agências) */}
-                {isAgencyMode && currentAgencyId && (
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Responsáveis</label>
-                    <ResponsibleSelector
-                      agencyId={currentAgencyId}
-                      selectedResponsibles={newProject.responsaveis || []}
-                      onResponsiblesChange={(responsaveis) => setNewProject({...newProject, responsaveis})}
-                      placeholder="Selecionar responsáveis..."
-                    />
-                  </div>
-                )}
-
-                {/* Opção de Notificação (apenas para agências) */}
-                {isAgencyMode && currentAgencyId && (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="notificar_responsaveis"
-                      checked={newProject.notificar_responsaveis}
-                      onChange={(e) => setNewProject({...newProject, notificar_responsaveis: e.target.checked})}
-                      className="rounded border-gray-300"
-                    />
-                    <label htmlFor="notificar_responsaveis" className="text-sm text-gray-700">
-                      Notificar responsáveis sobre mudanças
-                    </label>
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Links de Entrega</label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Cole o link aqui"
-                      value={newLink}
-                      onChange={(e) => setNewLink(e.target.value)}
-                    />
-                    <Button 
-                      onClick={() => {
-                        if (newLink) {
-                          setNewProject({
-                            ...newProject,
-                            links: [...(newProject.links || []), newLink],
-                            priority: sanitizePriority(newProject.priority) as 'alta' | 'media' | 'baixa',
-                          });
-                          setNewLink('');
-                        }
-                      }}
-                      className="bg-gray-100 text-gray-800 hover:bg-gray-200"
-                    >
-                      Adicionar
-                    </Button>
-                  </div>
-                  {newProject.links && newProject.links.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {newProject.links.map((link, index) => (
-                        <div key={index} className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                          {link}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-sm text-gray-600">
-                    {isAgencyMode && currentAgencyId ? (
-                      <>
-                        <Building className="h-4 w-4 inline mr-1" />
-                        Este projeto será criado para a empresa: <strong>{contextLabel}</strong>
-                      </>
-                    ) : (
-                      <>
-                        <User className="h-4 w-4 inline mr-1" />
-                        Este projeto será criado como <strong>projeto pessoal</strong>
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button 
-                  onClick={() => setShowAddModal(false)} 
-                  className="flex-1 bg-gray-100 text-gray-800 hover:bg-gray-200"
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleAddProject} 
-                  className="flex-1 bg-black text-white hover:bg-gray-800"
-                >
-                  Salvar Projeto
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Modal de Edição */}
-          <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl px-2 sm:px-8">
-              <DialogHeader>
-                <div className="flex items-center justify-between gap-2">
-                  <DialogTitle className="flex items-center gap-2">
-                    Editar Projeto
-                    {selectedProject?.priority === 'alta' && (
-                      <Badge className="bg-red-500 text-white">Alta</Badge>
-                    )}
-                    <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{selectedProject?.status}</Badge>
-                    {selectedProject?.agency_id && (
-                      <Badge className="bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700">
-                        <Building className="h-3 w-3" />
-                        Empresa
-                      </Badge>
-                    )}
-                  </DialogTitle>
-                  {!isEditing && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="p-2 ml-2 sm:ml-2 ml-8 text-gray-500 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
-                      onClick={() => setIsEditing(true)}
-                      aria-label="Editar"
-                    >
-                      <Pencil className="h-5 w-5" />
-                    </Button>
-                  )}
-                </div>
-              </DialogHeader>
-              {selectedProject && (
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    // Salvar alterações
-                    const updatedProject = {
-                      ...selectedProject,
-                      ...editFields,
-                      updatedAt: new Date().toISOString(),
-                    };
-                    await supabaseKanbanService.saveProject(updatedProject);
-                    setSelectedProject(updatedProject);
-                    setProjects(projects.map(p => p.id === updatedProject.id ? updatedProject : p));
-                    setShowEditModal(false);
-                    toast({
-                      title: "Projeto Atualizado",
-                      description: `Projeto atualizado com sucesso!`,
-                    });
-                  }}
-                >
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Título do Projeto</label>
-                        <Input
-                          value={editFields.title || ''}
-                          onChange={e => setEditFields(f => ({ ...f, title: e.target.value }))}
-                          required
-                          readOnly={!isEditing}
-                          disabled={!isEditing}
-                          className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Cliente</label>
-                        <Input
-                          value={editFields.client || ''}
-                          onChange={e => setEditFields(f => ({ ...f, client: e.target.value }))}
-                          required
-                          readOnly={!isEditing}
-                          disabled={!isEditing}
-                          className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Data de Entrega</label>
-                        <Input
-                          type="date"
-                          value={editFields.dueDate || ''}
-                          onChange={e => setEditFields(f => ({ ...f, dueDate: e.target.value }))}
-                          readOnly={!isEditing}
-                          disabled={!isEditing}
-                          className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Prioridade</label>
-                        <Select
-                          value={editFields.priority || 'media'}
-                          onValueChange={value => setEditFields(f => ({ ...f, priority: value }))}
-                          disabled={!isEditing}
-                        >
-                          <SelectTrigger className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="alta">Alta</SelectItem>
-                            <SelectItem value="media">Média</SelectItem>
-                            <SelectItem value="baixa">Baixa</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Descrição</label>
-                      <Textarea
-                        value={editFields.description || ''}
-                        onChange={e => setEditFields(f => ({ ...f, description: e.target.value }))}
-                        rows={3}
-                        readOnly={!isEditing}
-                        disabled={!isEditing}
-                        className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                      />
-                    </div>
-                    {/* Responsáveis (apenas para agências) */}
-                    {isAgencyMode && currentAgencyId && selectedProject.agency_id && (
-                      <div>
-                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Responsáveis</label>
-                        <ResponsibleSelector
-                          agencyId={currentAgencyId}
-                          selectedResponsibles={editFields.responsaveis || []}
-                          onResponsiblesChange={responsaveis => setEditFields(f => ({ ...f, responsaveis }))}
-                          placeholder="Selecionar responsáveis..."
-                          disabled={!isEditing}
-                        />
-                      </div>
-                    )}
-                    {/* Notificação de responsáveis (apenas para agências) */}
-                    {isAgencyMode && currentAgencyId && selectedProject.agency_id && (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="notificar_responsaveis_edit"
-                          checked={editFields.notificar_responsaveis}
-                          onChange={e => setEditFields(f => ({ ...f, notificar_responsaveis: e.target.checked }))}
-                          className="rounded border-gray-300"
-                          disabled={!isEditing}
-                        />
-                        <label htmlFor="notificar_responsaveis_edit" className="text-sm text-gray-700">
-                          Notificar responsáveis sobre mudanças
-                        </label>
-                      </div>
-                    )}
-                    {/* Links de Entrega */}
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 block">Links de Entrega</label>
-                      <div className="flex gap-2 mb-2">
-                        <Input
-                          placeholder="Cole o link aqui"
-                          value={newLink}
-                          onChange={e => setNewLink(e.target.value)}
-                          className="w-64 border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                          readOnly={!isEditing}
-                          disabled={!isEditing}
-                        />
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            if (newLink) {
-                              setEditFields(f => ({
-                                ...f,
-                                links: [...(f.links || []), newLink],
-                                priority: sanitizePriority(f.priority) as 'alta' | 'media' | 'baixa',
-                              }));
-                              setNewLink('');
-                            }
-                          }}
-                          className="bg-black text-white"
-                          disabled={!isEditing}
-                        >
-                          Adicionar
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        {(!editFields.links || editFields.links.length === 0) ? (
-                          <p className="text-sm text-gray-500 italic">Nenhum link adicionado</p>
-                        ) : (
-                          editFields.links.map((link, index) => (
-                            <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                              <ExternalLink className="h-4 w-4 text-blue-500" />
-                              <span className="text-sm text-gray-700 flex-1">{link}</span>
-                              <Button
-                                type="button"
-                                className="bg-gray-100 text-gray-800 hover:bg-gray-200"
-                                onClick={() => setEditFields(f => {
-                                  return {
-                                    id: f.id,
-                                    title: f.title,
-                                    client: f.client,
-                                    dueDate: f.dueDate,
-                                    status: f.status,
-                                    description: f.description,
-                                    links: f.links ? f.links.filter((_, i) => i !== index) : [],
-                                    createdAt: f.createdAt,
-                                    updatedAt: f.updatedAt,
-                                    user_id: f.user_id,
-                                    agency_id: f.agency_id,
-                                    responsaveis: f.responsaveis,
-                                    notificar_responsaveis: f.notificar_responsaveis,
-                                    priority: sanitizePriority(f.priority),
-                                  };
-                                })}
-                                disabled={!isEditing}
-                              >
-                                Remover
-                              </Button>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2 pt-4">
-                      <Button
-                        type="button"
-                        onClick={() => setShowEditModal(false)}
-                        className="flex-1 bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                      >
-                        Fechar
-                      </Button>
-                      {isEditing ? (
-                        <Button
-                          type="submit"
-                          className="flex-1 bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-                        >
-                          Salvar Alterações
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          className="flex-1 bg-red-500 text-white hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800"
-                          onClick={async () => {
-                            if (selectedProject) {
-                              if (window.confirm('Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.')) {
-                                await handleDeleteProject(selectedProject.id);
-                              }
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" /> Deletar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </form>
-              )}
-            </DialogContent>
-          </Dialog>
         </>
       ) : (
         <ProjectList projects={projects} />
+      )}
+
+      {/* Modal de edição/detalhes do projeto - sempre visível */}
+      {showEditModal && selectedProject && (
+        <ProjectEditModal
+          project={selectedProject}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleUpdateProject}
+        />
       )}
     </div>
   );
