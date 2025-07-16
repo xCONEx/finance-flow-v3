@@ -703,8 +703,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         result,
         errorText
       });
-      // Sempre propaga a mensagem do backend, se existir
-      throw new Error(result.error || errorText || 'Erro ao criar job');
+      // Se errorText for um JSON stringificado, tenta fazer o parse e pegar a mensagem
+      let errorMsg = result.error || '';
+      if (!errorMsg && errorText) {
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed && parsed.error) errorMsg = parsed.error;
+        } catch {
+          errorMsg = errorText;
+        }
+      }
+      throw new Error(errorMsg || 'Erro ao criar job');
     }
     if (result.job) {
       const data = result.job;
