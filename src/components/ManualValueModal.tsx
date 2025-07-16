@@ -15,6 +15,7 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { toast } from '@/hooks/use-toast';
 import { useApp } from '../contexts/AppContext';
 import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
+import { useUsageTracking } from '@/hooks/useUsageTracking';
 
 interface ManualValueModalProps {
   open: boolean;
@@ -24,6 +25,7 @@ interface ManualValueModalProps {
 const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
   const { addJob } = useApp();
   const { user } = useSupabaseAuth();
+  const { incrementJobUsage } = useUsageTracking();
   
   const [formData, setFormData] = useState({
     description: '',
@@ -91,6 +93,7 @@ const ManualValueModal = ({ open, onOpenChange }: ManualValueModalProps) => {
     try {
       // Adicionar ao estado local usando o método do contexto
       await addJob(newJob);
+      await incrementJobUsage();
 
       toast({
         title: "Job Manual Salvo!",
