@@ -16,6 +16,7 @@ import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { formatCurrency } from '../utils/formatters';
 import ManualValueModal from './ManualValueModal';
 import ClientSelector from './clients/ClientSelector';
+import { useUsageTracking } from '@/hooks/useUsageTracking';
 
 const PricingCalculator = () => {
   const { addJob, workRoutine, refreshJobs } = useApp();
@@ -187,6 +188,7 @@ const PricingCalculator = () => {
       
       // Adicionar ao estado local usando o método do contexto
       await addJob(newJob);
+      await incrementJobUsage();
       
       // Forçar atualização da lista de jobs
       await refreshJobs();
