@@ -208,6 +208,12 @@ const addHeader = async (pdf: jsPDF, companyData?: CompanyData): Promise<number>
   return 45; // Retorna a posição Y para continuar o conteúdo
 };
 
+// Função utilitária para detectar mobile
+const isMobile = () => {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
 export const generateJobPDF = async (
   job: JobData, 
   companyData?: CompanyData,
@@ -464,6 +470,10 @@ export const generateJobPDF = async (
     doc.text(`Orçamento gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, yPosition + 10);
     
     // Gerar PDF
+    if (isMobile()) {
+      doc.save('orcamento.pdf');
+      return;
+    }
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     
@@ -588,6 +598,10 @@ export const generateExpensesPDF = async (expenses: ExpenseData[], companyData?:
     });
     
     // Gerar PDF
+    if (isMobile()) {
+      doc.save('despesas.pdf');
+      return;
+    }
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     
@@ -692,6 +706,10 @@ export const generateWorkItemsPDF = async (workItems: WorkItemData[], companyDat
     });
     
     // Gerar PDF
+    if (isMobile()) {
+      doc.save('itens_trabalho.pdf');
+      return;
+    }
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     
