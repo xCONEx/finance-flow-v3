@@ -42,6 +42,23 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
   });
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
+  // Função para recalcular valores quando custos são alterados
+  const recalculateValues = (updatedFormData: typeof formData) => {
+    const totalCosts = (updatedFormData.logistics || 0) + 
+                      (updatedFormData.equipment || 0) + 
+                      (updatedFormData.assistance || 0);
+    
+    const serviceValue = totalCosts * (1 + (updatedFormData.profitMargin || 30) / 100);
+    const valueWithDiscount = serviceValue - (updatedFormData.discountValue || 0);
+    
+    return {
+      ...updatedFormData,
+      totalCosts,
+      serviceValue,
+      valueWithDiscount: Math.max(0, valueWithDiscount)
+    };
+  };
+
   useEffect(() => {
     if (jobId) {
       const job = jobs.find(j => j.id === jobId);
@@ -83,15 +100,21 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
         eventDate: new Date(formData.eventDate + 'T00:00:00').toISOString(),
       };
 
+      console.log('💾 Salvando job com dados:', jobData);
+
       if (jobId) {
+        console.log('🔄 Atualizando job existente:', jobId);
         await updateJob(jobId, jobData);
+        console.log('✅ Job atualizado com sucesso');
         toast({
           title: "Job Atualizado",
           description: "O job foi atualizado com sucesso.",
         });
       } else {
+        console.log('🆕 Criando novo job');
         await addJob(jobData);
         await incrementJobUsage();
+        console.log('✅ Job criado com sucesso');
         toast({
           title: "Job Criado",
           description: "O job foi criado com sucesso.",
@@ -101,6 +124,7 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
       onSaved?.();
       onClose();
     } catch (error: any) {
+      console.error('❌ Erro ao salvar job:', error);
       const msg = error?.message || '';
       if (
         msg.includes('Limite de jobs do plano atingido') ||
@@ -115,7 +139,6 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
           variant: "destructive"
         });
       }
-      console.error('Erro ao salvar job:', error);
     }
   };
 
@@ -192,7 +215,7 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
               <CurrencyInput
                 id="logistics"
                 value={formData.logistics}
-                onChange={(value) => setFormData({...formData, logistics: value})}
+                onChange={(value) => setFormData(recalculateValues({...formData, logistics: value}))}
                 placeholder="0,00"
               />
             </div>
@@ -201,7 +224,7 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
               <CurrencyInput
                 id="equipment"
                 value={formData.equipment}
-                onChange={(value) => setFormData({...formData, equipment: value})}
+                onChange={(value) => setFormData(recalculateValues({...formData, equipment: value}))}
                 placeholder="0,00"
               />
             </div>
@@ -210,13 +233,26 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
               <CurrencyInput
                 id="assistance"
                 value={formData.assistance}
-                onChange={(value) => setFormData({...formData, assistance: value})}
+                onChange={(value) => setFormData(recalculateValues({...formData, assistance: value}))}
                 placeholder="0,00"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="totalCosts">Total de Custos (R$)</Label>
+              <Input
+                id="totalCosts"
+                value={new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                }).format(formData.totalCosts || 0)}
+                placeholder="0,00"
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as 'pendente' | 'aprovado'})}>
@@ -229,6 +265,9 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Categoria</Label>
               <Input
@@ -255,8 +294,33 @@ const JobEditor = ({ jobId, onClose, onSaved }: JobEditorProps) => {
               <CurrencyInput
                 id="discountValue"
                 value={formData.discountValue}
-                onChange={(value) => setFormData({...formData, discountValue: value})}
+                onChange={(value) => setFormData(recalculateValues({...formData, discountValue: value}))}
                 placeholder="0,00"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="profitMargin">Margem de Lucro (%)</Label>
+              <PercentageInput
+                id="profitMargin"
+                value={formData.profitMargin}
+                onChange={(value) => setFormData(recalculateValues({...formData, profitMargin: value}))}
+                placeholder="30"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="valueWithDiscount">Valor Final (R$)</Label>
+              <Input
+                id="valueWithDiscount"
+                value={new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                }).format(formData.valueWithDiscount || 0)}
+                placeholder="0,00"
+                disabled
+                className="bg-gray-50"
               />
             </div>
           </div>
