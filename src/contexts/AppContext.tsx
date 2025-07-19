@@ -571,13 +571,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) return;
     
     try {
+      console.log('🔄 refreshJobs - Carregando jobs do banco...');
       const { data: jobsData } = await supabase
         .from('jobs')
         .select('*')
         .eq('user_id', user.id);
       
+      console.log('📊 refreshJobs - Dados brutos do banco:', jobsData);
+      
       if (jobsData) {
-        setJobs(jobsData.map(job => ({
+        const mappedJobs = jobsData.map(job => ({
           id: job.id,
           description: job.description,
           client: job.client,
@@ -598,10 +601,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           updatedAt: job.updated_at,
           userId: job.user_id,
           companyId: job.agency_id || null
-        })));
+        }));
+        
+        console.log('📊 refreshJobs - Jobs mapeados:', mappedJobs);
+        setJobs(mappedJobs);
       }
     } catch (error) {
-      console.error('Erro ao carregar jobs:', error);
+      console.error('❌ Erro ao carregar jobs:', error);
     }
   };
 
@@ -744,6 +750,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateJob = async (id: string, updates: Partial<Job>) => {
+    console.log('📝 updateJob - ID:', id);
+    console.log('📝 updateJob - Dados sendo salvos:', updates);
+    
     const { error } = await supabase
       .from('jobs')
       .update({
@@ -766,10 +775,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Erro ao atualizar job:', error);
+      throw error;
+    }
+    
+    console.log('✅ Job atualizado no banco com sucesso');
+    
     setJobs(prev => prev.map(job => 
       job.id === id ? { ...job, ...updates, updatedAt: new Date().toISOString() } : job
     ));
+    
+    console.log('✅ Estado local atualizado');
   };
 
   const deleteJob = async (id: string) => {
