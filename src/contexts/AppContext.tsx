@@ -744,53 +744,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateJob = async (id: string, updates: Partial<Job>) => {
-    console.log('📝 Atualizando job:', id, updates);
-    
-    try {
-      const { error } = await supabase
-        .from('jobs')
-        .update({
-          agency_id: updates.companyId || null,
-          description: updates.description,
-          client: updates.client,
-          event_date: updates.eventDate || null,
-          estimated_hours: updates.estimatedHours,
-          difficulty_level: updates.difficultyLevel,
-          logistics: updates.logistics,
-          equipment: updates.equipment,
-          assistance: updates.assistance,
-          status: updates.status,
-          category: updates.category,
-          discount_value: updates.discountValue,
-          total_costs: updates.totalCosts,
-          service_value: updates.serviceValue,
-          value_with_discount: updates.valueWithDiscount,
-          profit_margin: updates.profitMargin,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
+    const { error } = await supabase
+      .from('jobs')
+      .update({
+        agency_id: updates.companyId || null,
+        description: updates.description,
+        client: updates.client,
+        event_date: updates.eventDate || null,
+        estimated_hours: updates.estimatedHours,
+        difficulty_level: updates.difficultyLevel,
+        logistics: updates.logistics,
+        equipment: updates.equipment,
+        assistance: updates.assistance,
+        status: updates.status,
+        category: updates.category,
+        discount_value: updates.discountValue,
+        total_costs: updates.totalCosts,
+        service_value: updates.serviceValue,
+        value_with_discount: updates.valueWithDiscount,
+        profit_margin: updates.profitMargin
+      })
+      .eq('id', id);
 
-      if (error) {
-        console.error('❌ Erro ao atualizar job no banco:', error);
-        throw error;
-      }
-
-      console.log('✅ Job atualizado no banco com sucesso');
-
-      // Atualizar estado local
-      setJobs(prev => prev.map(job => 
-        job.id === id ? { 
-          ...job, 
-          ...updates, 
-          updatedAt: new Date().toISOString() 
-        } : job
-      ));
-
-      console.log('✅ Estado local atualizado com sucesso');
-    } catch (error) {
-      console.error('❌ Erro completo ao atualizar job:', error);
-      throw error;
-    }
+    if (error) throw error;
+    setJobs(prev => prev.map(job => 
+      job.id === id ? { ...job, ...updates, updatedAt: new Date().toISOString() } : job
+    ));
   };
 
   const deleteJob = async (id: string) => {
