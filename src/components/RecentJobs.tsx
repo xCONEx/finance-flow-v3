@@ -201,7 +201,8 @@ const RecentJobs = () => {
     console.log('🔍 getSafeJobValue - serviceValue:', job?.serviceValue);
     console.log('🔍 getSafeJobValue - totalCosts:', job?.totalCosts);
     
-    const value = job?.valueWithDiscount || job?.serviceValue || 0;
+    // Priorizar serviceValue em vez de valueWithDiscount para evitar valores incorretos
+    const value = job?.serviceValue || job?.valueWithDiscount || 0;
     console.log('💰 getSafeJobValue para job:', job.id, 'valor final:', value);
     return Number(value) || 0;
   };
