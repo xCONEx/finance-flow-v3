@@ -660,6 +660,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
     if (!user) return;
 
+    console.log('💾 addJob - Dados recebidos:', jobData);
+    console.log('💾 addJob - serviceValue:', jobData.serviceValue);
+    console.log('💾 addJob - valueWithDiscount:', jobData.valueWithDiscount);
+    console.log('💾 addJob - totalCosts:', jobData.totalCosts);
+
     // Pega o access_token do contexto de autenticação (session)
     let accessToken = undefined;
     if (session?.access_token) {
@@ -723,6 +728,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (result.job) {
       const data = result.job;
+      console.log('💾 addJob - Dados retornados do banco:', data);
+      console.log('💾 addJob - service_value do banco:', data.service_value);
+      console.log('💾 addJob - value_with_discount do banco:', data.value_with_discount);
+      console.log('💾 addJob - total_costs do banco:', data.total_costs);
+      
       const newJob: Job = {
         id: data.id,
         description: data.description,
@@ -745,6 +755,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         userId: data.user_id,
         companyId: data.agency_id || null
       };
+      
+      console.log('💾 addJob - Job final criado:', newJob);
       setJobs(prev => [...prev, newJob]);
     }
   };
