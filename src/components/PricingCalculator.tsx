@@ -93,11 +93,17 @@ const PricingCalculator = () => {
       return;
     }
 
+    console.log('🧮 calculatePrice - Iniciando cálculo...');
+    console.log('🧮 calculatePrice - workRoutine:', workRoutine);
+    console.log('🧮 calculatePrice - formData:', formData);
+
     // Valor base por hora (E36 na planilha)
     const baseHourlyRate = workRoutine.valuePerHour;
+    console.log('🧮 calculatePrice - baseHourlyRate:', baseHourlyRate);
     
     // Horas estimadas (C11 na planilha)
     const estimatedHours = formData.estimatedHours;
+    console.log('🧮 calculatePrice - estimatedHours:', estimatedHours);
 
     // Cálculo conforme a planilha Excel
     let serviceValue = 0;
@@ -118,24 +124,36 @@ const PricingCalculator = () => {
       default:
         serviceValue = baseHourlyRate * estimatedHours;
     }
+    console.log('🧮 calculatePrice - serviceValue calculado:', serviceValue);
 
     // Custos adicionais
     const additionalCosts = formData.logisticsValue + formData.equipmentValue + formData.assistanceValue;
+    console.log('🧮 calculatePrice - additionalCosts:', additionalCosts);
+    console.log('🧮 calculatePrice - logisticsValue:', formData.logisticsValue);
+    console.log('🧮 calculatePrice - equipmentValue:', formData.equipmentValue);
+    console.log('🧮 calculatePrice - assistanceValue:', formData.assistanceValue);
 
     // Valor total = valor do serviço + custos adicionais
     const totalCosts = serviceValue + additionalCosts;
+    console.log('🧮 calculatePrice - totalCosts:', totalCosts);
 
     // Aplicar desconto se houver
     const discountAmount = (totalCosts * formData.discountPercentage) / 100;
     const valueWithDiscount = totalCosts - discountAmount;
+    console.log('🧮 calculatePrice - discountPercentage:', formData.discountPercentage);
+    console.log('🧮 calculatePrice - discountAmount:', discountAmount);
+    console.log('🧮 calculatePrice - valueWithDiscount:', valueWithDiscount);
     
-    setCalculatedPrice({
+    const calculatedPriceData = {
       totalCosts,
       serviceValue,
       valueWithDiscount,
       hourlyRate: baseHourlyRate,
       additionalCosts
-    });
+    };
+    
+    console.log('🧮 calculatePrice - Resultado final:', calculatedPriceData);
+    setCalculatedPrice(calculatedPriceData);
 
     toast({
       title: "Preço Calculado!",
