@@ -176,24 +176,17 @@ const RecentJobs = () => {
   };
 
   const handleJobSaved = async () => {
-    console.log('🔄 Job salvo, recarregando dados...');
     try {
       // Recarregar jobs do banco de dados
       await refreshJobs();
-      console.log('✅ Jobs recarregados com sucesso');
       
       // Fechar modal de edição
       setEditingJob(null);
       
       // Abrir histórico para mostrar as mudanças
       setHistoryOpen(true);
-      
-      toast({
-        title: "Sucesso",
-        description: "Job atualizado e lista recarregada.",
-      });
     } catch (error) {
-      console.error('❌ Erro ao recarregar jobs:', error);
+      console.error('Erro ao recarregar jobs:', error);
       toast({
         title: "Aviso",
         description: "Job atualizado, mas houve um problema ao recarregar a lista.",
