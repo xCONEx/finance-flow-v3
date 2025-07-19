@@ -196,8 +196,13 @@ const RecentJobs = () => {
   };
 
   const getSafeJobValue = (job: any) => {
+    console.log('🔍 getSafeJobValue - Job completo:', job);
+    console.log('🔍 getSafeJobValue - valueWithDiscount:', job?.valueWithDiscount);
+    console.log('🔍 getSafeJobValue - serviceValue:', job?.serviceValue);
+    console.log('🔍 getSafeJobValue - totalCosts:', job?.totalCosts);
+    
     const value = job?.valueWithDiscount || job?.serviceValue || 0;
-    console.log('💰 getSafeJobValue para job:', job.id, 'valor:', value);
+    console.log('💰 getSafeJobValue para job:', job.id, 'valor final:', value);
     return Number(value) || 0;
   };
 
